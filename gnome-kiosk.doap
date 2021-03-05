@@ -1,0 +1,21 @@
+<Project xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+         xmlns:foaf="http://xmlns.com/foaf/0.1/"
+         xmlns:gnome="http://api.gnome.org/doap-extensions#"
+         xmlns="http://usefulinc.com/ns/doap#">
+
+  <name xml:lang="en">Kiosk</name>
+  <shortdesc xml:lang="en">mutter based compositor for kiosks</shortdesc>
+  <description>Kiosk provides a desktop enviroment suitable for fixed purpose,
+  or single application deployments like wall displays and point-of-sale systems.
+  </description>
+  <programming-language>C</programming-language>
+
+  <author>
+    <foaf:Person>
+      <foaf:name>Ray Strode </foaf:name>
+      <foaf:mbox rdf:resource="mailto:rstrode@redhat.com" />
+      <gnome:userid>halfline</gnome:userid>
+    </foaf:Person>
+  </author>
+</Project>

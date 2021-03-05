@@ -1,0 +1,3 @@
+#mesondefine GETTEXT_PACKAGE
+#mesondefine VERSION
+#mesondefine LOCALEDIR
