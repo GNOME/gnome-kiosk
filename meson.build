@@ -49,6 +49,12 @@ dbus_proxies += {
         'interface': 'locale1',
 }
 
+dbus_proxies += {
+        'prefix':   'org.gnome',
+        'namespace': 'Gsm',
+        'interface': 'SessionManager',
+}
+
 dbus_interface_sources_map = {}
 foreach dbus_proxy : dbus_proxies
         dbus_interface = dbus_proxy['prefix'] + '.' + dbus_proxy['interface']

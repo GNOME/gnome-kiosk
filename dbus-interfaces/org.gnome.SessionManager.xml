@@ -1,0 +1,87 @@
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+                      "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<!-- GDBus 2.66.7 -->
+<node>
+  <interface name="org.gnome.SessionManager">
+    <method name="Setenv">
+      <arg type="s" name="variable" direction="in"/>
+      <arg type="s" name="value" direction="in"/>
+    </method>
+    <method name="GetLocale">
+      <arg type="i" name="category" direction="in"/>
+      <arg type="s" name="value" direction="out"/>
+    </method>
+    <method name="InitializationError">
+      <arg type="s" name="message" direction="in"/>
+      <arg type="b" name="fatal" direction="in"/>
+    </method>
+    <method name="Initialized"/>
+    <method name="RegisterClient">
+      <arg type="s" name="app_id" direction="in"/>
+      <arg type="s" name="client_startup_id" direction="in"/>
+      <arg type="o" name="client_id" direction="out"/>
+    </method>
+    <method name="UnregisterClient">
+      <arg type="o" name="client_id" direction="in"/>
+    </method>
+    <method name="Inhibit">
+      <arg type="s" name="app_id" direction="in"/>
+      <arg type="u" name="toplevel_xid" direction="in"/>
+      <arg type="s" name="reason" direction="in"/>
+      <arg type="u" name="flags" direction="in"/>
+      <arg type="u" name="inhibit_cookie" direction="out"/>
+    </method>
+    <method name="Uninhibit">
+      <arg type="u" name="inhibit_cookie" direction="in"/>
+    </method>
+    <method name="IsInhibited">
+      <arg type="u" name="flags" direction="in"/>
+      <arg type="b" name="is_inhibited" direction="out"/>
+    </method>
+    <method name="GetClients">
+      <arg type="ao" name="clients" direction="out"/>
+    </method>
+    <method name="GetInhibitors">
+      <arg type="ao" name="inhibitors" direction="out"/>
+    </method>
+    <method name="IsAutostartConditionHandled">
+      <arg type="s" name="condition" direction="in"/>
+      <arg type="b" name="handled" direction="out"/>
+    </method>
+    <method name="Shutdown"/>
+    <method name="Reboot"/>
+    <method name="CanShutdown">
+      <arg type="b" name="is_available" direction="out"/>
+    </method>
+    <method name="SetRebootToFirmwareSetup">
+      <arg type="b" name="enable" direction="in"/>
+    </method>
+    <method name="CanRebootToFirmwareSetup">
+      <arg type="b" name="is_available" direction="out"/>
+    </method>
+    <method name="Logout">
+      <arg type="u" name="mode" direction="in"/>
+    </method>
+    <method name="IsSessionRunning">
+      <arg type="b" name="running" direction="out"/>
+    </method>
+    <signal name="ClientAdded">
+      <arg type="o" name="id"/>
+    </signal>
+    <signal name="ClientRemoved">
+      <arg type="o" name="id"/>
+    </signal>
+    <signal name="InhibitorAdded">
+      <arg type="o" name="id"/>
+    </signal>
+    <signal name="InhibitorRemoved">
+      <arg type="o" name="id"/>
+    </signal>
+    <signal name="SessionRunning"/>
+    <signal name="SessionOver"/>
+    <property type="s" name="SessionName" access="read"/>
+    <property type="s" name="Renderer" access="read"/>
+    <property type="b" name="SessionIsActive" access="read"/>
+    <property type="u" name="InhibitedActions" access="read"/>
+  </interface>
+</node>
