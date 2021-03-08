@@ -14,6 +14,7 @@
 
 #include "kiosk-backgrounds.h"
 #include "kiosk-input-sources-manager.h"
+#include "kiosk-service.h"
 
 #include "org.gnome.DisplayManager.Manager.h"
 
@@ -30,6 +31,7 @@ struct _KioskCompositor
         GCancellable *cancellable;
         KioskBackgrounds *backgrounds;
         KioskInputSourcesManager *input_sources_manager;
+        KioskService *service;
 };
 
 G_DEFINE_TYPE (KioskCompositor, kiosk_compositor, META_TYPE_PLUGIN)
@@ -122,6 +124,15 @@ kiosk_compositor_start (MetaPlugin *plugin)
         clutter_actor_show (self->stage);
 
         self->cancellable = g_cancellable_new ();
+
+        self->service = kiosk_service_new (self);
+        kiosk_service_start (self->service, &error);
+
+        if (error != NULL) {
+                g_debug ("KioskCompositor: Could not start D-Bus service: %s", error->message);
+                g_clear_error (&error);
+        }
+
         self->backgrounds = kiosk_backgrounds_new (self);
         self->input_sources_manager = kiosk_input_sources_manager_new (self);
 
@@ -392,4 +403,12 @@ kiosk_compositor_get_input_sources_manager (KioskCompositor *self)
         g_return_val_if_fail (KIOSK_IS_COMPOSITOR (self), NULL);
 
         return KIOSK_INPUT_SOURCES_MANAGER (self->input_sources_manager);
+}
+
+KioskService *
+kiosk_compositor_get_service (KioskCompositor *self)
+{
+        g_return_val_if_fail (KIOSK_IS_COMPOSITOR (self), NULL);
+
+        return KIOSK_SERVICE (self->service);
 }
