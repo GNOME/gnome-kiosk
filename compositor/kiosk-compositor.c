@@ -269,7 +269,9 @@ kiosk_compositor_keybinding_filter (MetaPlugin     *plugin,
 static void
 kiosk_compositor_confirm_display_change (MetaPlugin *plugin)
 {
-        meta_plugin_complete_display_change (plugin, TRUE);
+        KioskCompositor *self = KIOSK_COMPOSITOR (plugin);
+
+        meta_plugin_complete_display_change (META_PLUGIN (self), TRUE);
 }
 
 static const MetaPluginInfo info = {

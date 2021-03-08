@@ -7,6 +7,7 @@ add_project_arguments('-D_GNU_SOURCE',
 
 c_compiler = meson.get_compiler('c')
 
+gnome = import('gnome')
 i18n = import('i18n')
 
 prefix = get_option('prefix')
@@ -35,6 +36,24 @@ meson.add_install_script ('meson/postinstall.py')
 mutter_dependency = dependency('libmutter-8')
 mutter_libdir = mutter_dependency.get_pkgconfig_variable('typelibdir')
 
+dbus_proxies = []
+dbus_proxies += {
+        'prefix':   'org.gnome.DisplayManager',
+        'namespace': 'Gdm',
+        'interface': 'Manager',
+}
+
+dbus_interface_sources_map = {}
+foreach dbus_proxy : dbus_proxies
+        dbus_interface = dbus_proxy['prefix'] + '.' + dbus_proxy['interface']
+        dbus_interface_file = join_paths('dbus-interfaces', dbus_interface + '.xml')
+        sources = gnome.gdbus_codegen(dbus_interface, dbus_interface_file,
+                namespace: dbus_proxy['namespace'],
+                interface_prefix: dbus_proxy['prefix'],
+        )
+        dbus_interface_sources_map += { dbus_interface: sources }
+endforeach
+
 compositor_dependencies = []
 compositor_dependencies += c_compiler.find_library('m')
 compositor_dependencies += dependency('gio-2.0')
@@ -49,6 +68,10 @@ compositor_sources = []
 compositor_sources += 'compositor/kiosk-backgrounds.c'
 compositor_sources += 'compositor/kiosk-compositor.c'
 compositor_sources += 'compositor/main.c'
+
+foreach dbus_interface, sources: dbus_interface_sources_map
+        compositor_sources += sources
+endforeach
 
 executable('gnome-kiosk', compositor_sources,
         dependencies: compositor_dependencies,
