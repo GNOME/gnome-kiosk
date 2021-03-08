@@ -14,6 +14,8 @@
 
 #include "kiosk-backgrounds.h"
 
+#include "org.gnome.DisplayManager.Manager.h"
+
 struct _KioskCompositor
 {
         MetaPlugin parent;
@@ -54,27 +56,47 @@ kiosk_compositor_dispose (GObject *object)
 static void
 register_with_display_manager (KioskCompositor *self)
 {
-        g_autoptr (GDBusConnection) system_bus;
-        GVariantBuilder *builder;
+        g_autoptr (GDBusConnection) system_bus = NULL;
+        g_autoptr (GdmManager) display_manager = NULL;
+        GVariantBuilder builder;
         g_autoptr (GError) error = NULL;
         g_autoptr (GVariant) reply = NULL;
 
         system_bus = g_bus_get_sync (G_BUS_TYPE_SYSTEM,
                                      self->cancellable,
                                      &error);
+        if (error != NULL) {
+                g_debug ("KioskCompositor: Could not contact system bus: %s",
+                         error->message);
+                return;
+        }
 
-        builder = g_variant_builder_new (G_VARIANT_TYPE ("a{sv}"));
-        reply = g_dbus_connection_call_sync (system_bus,
-                                             "org.gnome.DisplayManager",
-                                             "/org/gnome/DisplayManager/Manager",
-                                             "org.gnome.DisplayManager.Manager",
-                                             "RegisterSession",
-                                             g_variant_builder_end (builder),
-                                             NULL,
-                                             G_DBUS_CALL_FLAGS_NONE,
-                                             -1,
-                                             self->cancellable,
-                                             &error);
+        display_manager = gdm_manager_proxy_new_sync (system_bus,
+                                                      G_DBUS_PROXY_FLAGS_DO_NOT_LOAD_PROPERTIES |
+                                                      G_DBUS_PROXY_FLAGS_DO_NOT_CONNECT_SIGNALS,
+                                                      "org.gnome.DisplayManager",
+                                                      "/org/gnome/DisplayManager/Manager",
+                                                      self->cancellable,
+                                                      &error);
+
+        if (error != NULL) {
+                g_debug ("KioskCompositor: Could not contact display manager: %s",
+                         error->message);
+                return;
+        }
+
+        g_variant_builder_init (&builder, G_VARIANT_TYPE ("a{ss}"));
+
+        gdm_manager_call_register_display_sync (display_manager,
+                                                g_variant_builder_end (&builder),
+                                                self->cancellable,
+                                                &error);
+
+        if (error != NULL) {
+                g_debug ("KioskCompositor: Could not register with display manager: %s",
+                         error->message);
+                return;
+        }
 }
 
 static void
