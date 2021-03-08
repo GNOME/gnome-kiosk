@@ -71,8 +71,11 @@ dbus_interface_file = join_paths('dbus-interfaces', dbus_interface + '.xml')
 sources = gnome.gdbus_codegen(dbus_interface, dbus_interface_file,
         namespace: 'KioskDBus',
         interface_prefix: 'org.gnome.Kiosk',
+        object_manager: true,
         annotations: [
-                [ dbus_interface, 'org.gtk.GDBus.C.Name', 'Service' ]
+                [ dbus_interface, 'org.gtk.GDBus.C.Name', 'Service' ],
+                [ dbus_interface + '.InputSources', 'org.gtk.GDBus.C.Name', 'InputSourcesManager' ],
+                [ dbus_interface + '.InputSources.InputSource', 'org.gtk.GDBus.C.Name', 'InputSource' ],
         ]
 )
 dbus_interface_sources_map += { dbus_interface: sources }

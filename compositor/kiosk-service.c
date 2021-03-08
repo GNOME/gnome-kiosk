@@ -11,6 +11,9 @@
 #define KIOSK_SERVICE_BUS_NAME "org.gnome.Kiosk"
 #define KIOSK_SERVICE_OBJECT_PATH "/org/gnome/Kiosk"
 
+#define KIOSK_SERVICE_INPUT_SOURCES_OBJECTS_PATH_PREFIX KIOSK_SERVICE_OBJECT_PATH "/InputSources"
+#define KIOSK_SERVICE_INPUT_SOURCES_MANAGER_OBJECT_PATH KIOSK_SERVICE_INPUT_SOURCES_OBJECTS_PATH_PREFIX "/Manager"
+
 struct _KioskService
 {
         GObject parent;
@@ -20,6 +23,9 @@ struct _KioskService
 
         /* strong references */
         KioskDBusServiceSkeleton *service_skeleton;
+
+        KioskDBusInputSourcesManagerSkeleton *input_sources_manager_skeleton;
+        GDBusObjectManagerServer *input_sources_object_manager;
 
         /* handles */
         guint bus_id;
@@ -123,6 +129,9 @@ kiosk_service_init (KioskService *self)
 {
         g_debug ("KioskService: Initializing");
         self->service_skeleton = KIOSK_DBUS_SERVICE_SKELETON (kiosk_dbus_service_skeleton_new ());
+
+        self->input_sources_manager_skeleton = KIOSK_DBUS_INPUT_SOURCES_MANAGER_SKELETON (kiosk_dbus_input_sources_manager_skeleton_new ());
+        self->input_sources_object_manager = g_dbus_object_manager_server_new (KIOSK_SERVICE_INPUT_SOURCES_OBJECTS_PATH_PREFIX);
 }
 
 static void
@@ -141,16 +150,31 @@ export_service (KioskService    *self,
                 g_clear_error (&error);
         }
 }
+
+static void
+export_input_sources_manager (KioskService    *self,
+                              GDBusConnection *connection)
+{
+        g_autoptr (GDBusObjectSkeleton) object = NULL;
+
+        g_debug ("KioskService: Exporting input sources manager over bus");
+
+        object = g_dbus_object_skeleton_new (KIOSK_SERVICE_INPUT_SOURCES_MANAGER_OBJECT_PATH);
+        g_dbus_object_skeleton_add_interface (object, G_DBUS_INTERFACE_SKELETON (self->input_sources_manager_skeleton));
+        g_dbus_object_manager_server_export (G_DBUS_OBJECT_MANAGER_SERVER (self->input_sources_object_manager), G_DBUS_OBJECT_SKELETON (object));
+
+        g_dbus_object_manager_server_set_connection (G_DBUS_OBJECT_MANAGER_SERVER (self->input_sources_object_manager), connection);
+}
+
 static void
 on_user_bus_acquired (GDBusConnection *connection,
                       const char      *unique_name,
                       KioskService    *self)
 {
-        g_autoptr (GError) error = NULL;
-
         g_debug ("KioskService: Connected to user bus");
 
         export_service (self, connection);
+        export_input_sources_manager (self, connection);
 }
 
 static void
@@ -217,8 +241,22 @@ kiosk_service_stop (KioskService *self)
         g_debug ("KioskService: Stopping");
 
         g_dbus_interface_skeleton_unexport (G_DBUS_INTERFACE_SKELETON (self->service_skeleton));
+        g_dbus_object_manager_server_unexport (G_DBUS_OBJECT_MANAGER_SERVER (self->input_sources_manager_skeleton),
+                                               KIOSK_SERVICE_INPUT_SOURCES_MANAGER_OBJECT_PATH);
 
         g_clear_handle_id (&self->bus_id, g_bus_unown_name);
+}
+
+KioskDBusInputSourcesManagerSkeleton *
+kiosk_service_get_input_sources_manager_skeleton (KioskService *self)
+{
+        return self->input_sources_manager_skeleton;
+}
+
+GDBusObjectManagerServer *
+kiosk_service_get_input_sources_object_manager (KioskService *self)
+{
+        return self->input_sources_object_manager;
 }
 
 static void
@@ -230,6 +268,8 @@ kiosk_service_dispose (GObject *object)
 
         kiosk_service_stop (self);
 
+        g_clear_object (&self->input_sources_manager_skeleton);
+        g_clear_object (&self->input_sources_object_manager);
         g_clear_weak_pointer (&self->compositor);
 
         G_OBJECT_CLASS (kiosk_service_parent_class)->dispose (object);

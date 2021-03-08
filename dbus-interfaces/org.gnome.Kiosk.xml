@@ -2,4 +2,83 @@
                       "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
 <node xmlns:doc="http://www.freedesktop.org/dbus/1.0/doc.dtd">
   <interface name="org.gnome.Kiosk"/>
+  <interface name="org.gnome.Kiosk.InputSources">
+    <method name="SetInputSources">
+        <arg name="input_sources" type="a(ss)" direction="in">
+            <doc:doc>
+               <doc:summary>A (backend_type,backend_id) list of XKB layouts and IBus input engines.</doc:summary>
+               <doc:description>
+                   The backend type can be either "xkb" or "ibus".
+                        - If the type is "xkb" the id should be of the form "layout" or
+                          "layout+variant"
+                        - If the type is "ibus" the id should be an ibus engine name like
+                          "libpinyin" or "m17n:ur:phonetic"
+               </doc:description>
+            </doc:doc>
+        </arg>
+        <arg name="options" type="as" direction="in">
+            <doc:summary>A list of XKB options to apply (for instance 'compose:ralt').</doc:summary>
+        </arg>
+        <doc:doc>
+            <doc:description>
+                Enables the passed in XKB keyboard layouts and IBus engines for the session.
+            </doc:description>
+        </doc:doc>
+    </method>
+    <method name="SetInputSourcesFromLocales">
+        <arg name="locales" type="as" direction="in">
+           <doc:summary>A list of locales to add keyboard layouts and input engines for (for instance 'bn_IN').</doc:summary>
+        </arg>
+        <arg name="options" type="as" direction="in">
+            <doc:summary>A list of XKB options to apply (for instance 'compose:ralt').</doc:summary>
+        </arg>
+        <doc:doc>
+            <doc:description>
+                 Enables appropriate XKB keyboard layouts and IBus engines for the session
+                 given the passed locales.
+            </doc:description>
+        </doc:doc>
+    </method>
+    <method name="SetInputSourcesFromSessionConfiguration">
+        <doc:doc>
+            <doc:description>
+                Enables the XKB keyboard layouts and IBus engines configured for the
+                session via the "org.gnome.desktop.input-sources sources" and
+                "org.gnome.desktop.input-sources xkb-options" gsettings.  If the session
+                has no configured input sources, it falls back to querying localed.
+            </doc:description>
+        </doc:doc>
+    </method>
+    <method name="SelectInputSource">
+        <arg name="input_source" type="o" direction="in"/>
+        <doc:doc>
+            <doc:description>
+                Selects which input source from the current list of set input sources is
+                active.
+            </doc:description>
+        </doc:doc>
+    </method>
+    <method name="SelectNextInputSource">
+        <doc:doc>
+            <doc:description>
+                Selects the next input source in the list of active input sources.
+            </doc:description>
+        </doc:doc>
+    </method>
+    <method name="SelectPreviousInputSource">
+        <doc:doc>
+            <doc:description>
+                Selects the next input source in the list of active input sources.
+            </doc:description>
+        </doc:doc>
+    </method>
+    <property name="SelectedInputSource" type="o" access="read"/>
+    <property name="InputSources" type="ao" access="read"/>
+  </interface>
+  <interface name="org.gnome.Kiosk.InputSources.InputSource">
+    <property name="ShortName" type="s" access="read"/>
+    <property name="FullName" type="s" access="read"/>
+    <property name="BackendType" type="s" access="read"/>
+    <property name="BackendId" type="s" access="read"/>
+  </interface>
 </node>

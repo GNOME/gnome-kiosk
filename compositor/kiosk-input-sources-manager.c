@@ -18,6 +18,7 @@
 
 #include "org.freedesktop.locale1.h"
 #include "kiosk-compositor.h"
+#include "kiosk-dbus-utils.h"
 #include "kiosk-gobject-utils.h"
 #include "kiosk-input-engine-manager.h"
 #include "kiosk-input-source-group.h"
@@ -29,9 +30,12 @@
 #define KIOSK_INPUT_SOURCE_GROUP_SETTING "sources"
 #define KIOSK_INPUT_OPTIONS_SETTING "xkb-options"
 
+#define KIOSK_INPUT_SOURCE_OBJECTS_PATH_PREFIX "/org/gnome/Kiosk/InputSources"
 #define KIOSK_KEYBINDINGS_SCHEMA "org.gnome.desktop.wm.keybindings"
 #define KIOSK_SWITCH_INPUT_SOURCES_KEYBINDING "switch-input-source"
 #define KIOSK_SWITCH_INPUT_SOURCES_BACKWARD_KEYBINDING "switch-input-source-backward"
+
+#define KIOSK_DBUS_INPUT_SOURCES_MANGER_INPUT_SOURCE_INTERFACE "org.gnome.Kiosk.InputSources.InputSource"
 
 struct _KioskInputSourcesManager
 {
@@ -40,6 +44,9 @@ struct _KioskInputSourcesManager
         /* weak references */
         KioskCompositor *compositor;
         MetaDisplay     *display;
+
+        KioskDBusInputSourcesManager *dbus_service;
+        GDBusObjectManagerServer     *dbus_object_manager;
 
         /* strong references */
         GCancellable *cancellable;
@@ -77,6 +84,9 @@ static void kiosk_input_sources_manager_get_property (GObject    *object,
 
 static void kiosk_input_sources_manager_constructed (GObject *object);
 static void kiosk_input_sources_manager_dispose (GObject *object);
+static void kiosk_input_sources_manager_switch_to_next_input_source (KioskInputSourcesManager *self);
+static void kiosk_input_sources_manager_switch_to_previous_input_source (KioskInputSourcesManager *self);
+static void sync_dbus_service (KioskInputSourcesManager *self);
 
 KioskInputSourcesManager *
 kiosk_input_sources_manager_new (KioskCompositor *compositor)
@@ -135,6 +145,7 @@ activate_first_available_input_source_group (KioskInputSourcesManager *self)
 
                 if (input_source_group_active) {
                         self->input_source_groups_index = i;
+                        sync_dbus_service (self);
                         return TRUE;
                 }
         }
@@ -157,6 +168,10 @@ activate_input_source_group_if_it_has_engine (KioskInputSourcesManager *self,
         }
 
         input_source_group_active = kiosk_input_source_group_activate (input_source_group);
+
+        if (input_source_group_active) {
+                sync_dbus_service (self);
+        }
 
         return input_source_group_active;
 }
@@ -211,6 +226,10 @@ activate_input_source_group_if_it_has_layout (KioskInputSourcesManager *self,
 
         if (layout_selected) {
                 input_source_group_active = kiosk_input_source_group_activate (input_source_group);
+        }
+
+        if (input_source_group_active) {
+                sync_dbus_service (self);
         }
 
         return input_source_group_active;
@@ -268,6 +287,239 @@ activate_best_available_input_source_group (KioskInputSourcesManager *self,
         return input_source_group_active;
 }
 
+static char *
+get_dbus_object_path_name_for_input_source (KioskInputSourcesManager *self,
+                                            const char               *type,
+                                            const char               *name)
+{
+        g_autofree char *escaped_name = NULL;
+        g_autofree char *base_name = NULL;
+        char *object_path;
+
+        escaped_name = kiosk_dbus_utils_escape_object_path (name, strlen (name));
+        base_name = g_strdup_printf ("%s_%s", type, escaped_name);
+
+        object_path = g_build_path ("/", KIOSK_INPUT_SOURCE_OBJECTS_PATH_PREFIX, base_name, NULL);
+
+        return object_path;
+}
+
+static void
+sync_selected_input_source_to_dbus_service (KioskInputSourcesManager *self)
+{
+        KioskInputSourceGroup *input_source_group;
+        const char *backend_type;
+        const char *backend_id;
+        const char *input_engine_name;
+        g_autofree char *selected_layout = NULL;
+        g_autofree char *object_path_name = NULL;
+
+        input_source_group = kiosk_input_sources_manager_get_selected_input_source_group (self);
+
+        if (input_source_group == NULL) {
+                return;
+        }
+
+        input_engine_name = kiosk_input_source_group_get_input_engine (input_source_group);
+
+        if (input_engine_name != NULL) {
+                backend_type = "ibus";
+                backend_id = input_engine_name;
+        } else {
+                selected_layout = kiosk_input_source_group_get_selected_layout (input_source_group);
+
+                if (selected_layout == NULL) {
+                        return;
+                }
+
+                backend_type = "xkb";
+                backend_id = selected_layout;
+        }
+
+        object_path_name = get_dbus_object_path_name_for_input_source (self, backend_type, backend_id);
+
+        g_debug ("KioskInputSourceGroup: Setting SelectedInputSource D-Bus property to %s", object_path_name);
+
+        kiosk_dbus_input_sources_manager_set_selected_input_source (self->dbus_service, object_path_name);
+}
+
+static void
+export_input_source_object_to_dbus_service (KioskInputSourcesManager *self,
+                                            const char               *object_path_name,
+                                            const char               *backend_type,
+                                            const char               *backend_id,
+                                            const char               *short_name,
+                                            const char               *full_name)
+{
+        g_autoptr (GDBusInterface) dbus_input_source = NULL;
+
+        g_autoptr (GDBusObject) object_path = NULL;
+
+        dbus_input_source = g_dbus_object_manager_get_interface (G_DBUS_OBJECT_MANAGER (self->dbus_object_manager),
+                                                                 object_path_name,
+                                                                 KIOSK_DBUS_INPUT_SOURCES_MANGER_INPUT_SOURCE_INTERFACE);
+
+        if (dbus_input_source == NULL) {
+                dbus_input_source = G_DBUS_INTERFACE (kiosk_dbus_input_source_skeleton_new ());
+        }
+
+        kiosk_dbus_input_source_set_backend_type (KIOSK_DBUS_INPUT_SOURCE (dbus_input_source), backend_type);
+        kiosk_dbus_input_source_set_full_name (KIOSK_DBUS_INPUT_SOURCE (dbus_input_source), full_name);
+        kiosk_dbus_input_source_set_short_name (KIOSK_DBUS_INPUT_SOURCE (dbus_input_source), short_name);
+        kiosk_dbus_input_source_set_backend_id (KIOSK_DBUS_INPUT_SOURCE (dbus_input_source), backend_id);
+
+        object_path = g_dbus_object_manager_get_object (G_DBUS_OBJECT_MANAGER (self->dbus_object_manager),
+                                                        object_path_name);
+
+        if (object_path == NULL) {
+                object_path = G_DBUS_OBJECT (kiosk_dbus_object_skeleton_new (object_path_name));
+                g_dbus_object_manager_server_export (self->dbus_object_manager, G_DBUS_OBJECT_SKELETON (object_path));
+        }
+
+        kiosk_dbus_object_skeleton_set_input_source (KIOSK_DBUS_OBJECT_SKELETON (object_path), KIOSK_DBUS_INPUT_SOURCE (dbus_input_source));
+}
+
+static GList *
+prune_object_path_from_list (KioskInputSourcesManager *self,
+                             const char               *name,
+                             GList                    *list)
+{
+        GList *node;
+
+        for (node = list; node != NULL; node = node->next) {
+                GDBusObject *dbus_object = node->data;
+                const char *candidate_name = g_dbus_object_get_object_path (dbus_object);
+
+                if (g_strcmp0 (candidate_name, name) == 0) {
+                        list = g_list_remove_link (list, node);
+                        g_object_unref (dbus_object);
+                        return list;
+                }
+        }
+
+        return list;
+}
+
+static void
+unexport_input_sources_from_dbus_service (KioskInputSourcesManager *self,
+                                          GList                    *list)
+{
+        GList *node;
+
+        for (node = list; node != NULL; node = node->next) {
+                GDBusObject *dbus_object = node->data;
+                g_autoptr (GDBusInterface) dbus_input_source = NULL;
+                const char *name = g_dbus_object_get_object_path (dbus_object);
+
+                dbus_input_source = g_dbus_object_get_interface (dbus_object, KIOSK_DBUS_INPUT_SOURCES_MANGER_INPUT_SOURCE_INTERFACE);
+                if (dbus_input_source == NULL) {
+                        continue;
+                }
+
+                g_dbus_object_manager_server_unexport (G_DBUS_OBJECT_MANAGER_SERVER (self->dbus_object_manager),
+                                                       name);
+        }
+}
+
+static void
+sync_all_input_sources_to_dbus_service (KioskInputSourcesManager *self)
+{
+        GList *stale_dbus_objects;
+        g_autoptr (GPtrArray) sorted_input_sources = NULL;
+        g_autofree char *input_sources_string;
+        size_t i;
+
+        stale_dbus_objects = g_dbus_object_manager_get_objects (G_DBUS_OBJECT_MANAGER (self->dbus_object_manager));
+
+        sorted_input_sources = g_ptr_array_new_full (self->input_source_groups->len * 3, g_free);
+        for (i = 0; i < self->input_source_groups->len; i++) {
+                KioskInputSourceGroup *input_source_group = g_ptr_array_index (self->input_source_groups, i);
+                const char *input_engine_name;
+                const char *backend_type;
+                const char *backend_id;
+                g_auto (GStrv) layouts = NULL;
+                size_t i;
+
+                input_engine_name = kiosk_input_source_group_get_input_engine (input_source_group);
+
+                if (input_engine_name != NULL) {
+                        char *object_path_name = NULL;
+                        g_autofree char *full_name = NULL;
+                        g_autofree char *short_name = NULL;
+
+                        backend_type = "ibus";
+                        backend_id = input_engine_name;
+
+                        kiosk_input_engine_manager_describe_engine (self->input_engine_manager, input_engine_name, &short_name, &full_name);
+
+                        object_path_name = get_dbus_object_path_name_for_input_source (self, backend_type, backend_id);
+                        stale_dbus_objects = prune_object_path_from_list (self,
+                                                                          object_path_name,
+                                                                          stale_dbus_objects);
+                        export_input_source_object_to_dbus_service (self, object_path_name, backend_type, backend_id, short_name, full_name);
+                        g_ptr_array_add (sorted_input_sources, object_path_name);
+                        continue;
+                }
+
+                layouts = kiosk_input_source_group_get_layouts (input_source_group);
+
+                backend_type = "xkb";
+                for (i = 0; layouts[i] != NULL; i++) {
+                        char *object_path_name = NULL;
+                        const char *short_name = NULL;
+                        const char *full_name = NULL;
+                        gboolean layout_info_found;
+
+                        backend_id = layouts[i];
+
+                        layout_info_found = gnome_xkb_info_get_layout_info (self->xkb_info,
+                                                                            backend_id,
+                                                                            &full_name,
+                                                                            &short_name,
+                                                                            NULL /* xkb layout */,
+                                                                            NULL /* xkb variant */);
+
+                        if (!layout_info_found) {
+                                continue;
+                        }
+
+                        object_path_name = get_dbus_object_path_name_for_input_source (self, backend_type, backend_id);
+                        stale_dbus_objects = prune_object_path_from_list (self,
+                                                                          object_path_name,
+                                                                          stale_dbus_objects);
+
+                        export_input_source_object_to_dbus_service (self, object_path_name, backend_type, backend_id, short_name, full_name);
+                        g_ptr_array_add (sorted_input_sources, object_path_name);
+                }
+        }
+        g_ptr_array_add (sorted_input_sources, NULL);
+        unexport_input_sources_from_dbus_service (self, stale_dbus_objects);
+        g_list_free_full (stale_dbus_objects, g_object_unref);
+
+        input_sources_string = g_strjoinv ("','", (GStrv) sorted_input_sources->pdata);
+        g_debug ("KioskInputSourcesManager: InputSources D-Bus property set to ['%s']", input_sources_string);
+        kiosk_dbus_input_sources_manager_set_input_sources (self->dbus_service, (const char* const *) sorted_input_sources->pdata);
+}
+
+static void
+sync_dbus_service_now (KioskInputSourcesManager *self)
+{
+        g_debug ("KioskInputSourcesManager: Synchronizing D-Bus service with internal state");
+
+        sync_all_input_sources_to_dbus_service (self);
+        sync_selected_input_source_to_dbus_service (self);
+}
+
+static void
+sync_dbus_service (KioskInputSourcesManager *self)
+{
+        kiosk_gobject_utils_queue_defer_callback (G_OBJECT (self),
+                                                  "[kiosk-input-sources-manager] on_deferred_dbus_service_sync",
+                                                  self->cancellable,
+                                                  KIOSK_OBJECT_CALLBACK (sync_dbus_service_now),
+                                                  NULL);
+}
+
 static gboolean
 kiosk_input_sources_manager_set_input_sources (KioskInputSourcesManager *self,
                                                GVariant                 *input_sources,
@@ -307,6 +559,8 @@ kiosk_input_sources_manager_set_input_sources (KioskInputSourcesManager *self,
 
         input_source_group_active = activate_best_available_input_source_group (self, old_input_engine, old_selected_layout);
 
+        sync_dbus_service (self);
+
         return input_source_group_active;
 }
 
@@ -340,6 +594,121 @@ kiosk_input_sources_manager_get_property (GObject    *object,
                         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, param_spec);
                         break;
         }
+}
+
+static gboolean
+on_dbus_service_handle_set_input_sources (KioskInputSourcesManager *self,
+                                          GDBusMethodInvocation   *invocation,
+                                          GVariant                *input_sources,
+                                          const char * const      *options)
+{
+        g_autoptr (GVariantIter) iter = NULL;
+        g_autofree char *input_sources_string = NULL;
+        g_autofree char *options_string = NULL;
+
+        input_sources_string = g_variant_print (input_sources, FALSE);
+        options_string = g_strjoinv (",", (GStrv) options);
+
+        g_debug ("KioskService: Handling SetInputSources(%s, [%s]) call",
+                 input_sources_string, options_string);
+
+        kiosk_input_sources_manager_set_input_sources (self, input_sources, options);
+
+        kiosk_dbus_input_sources_manager_complete_set_input_sources (self->dbus_service, invocation);
+
+        return TRUE;
+}
+
+static gboolean
+on_dbus_service_handle_set_input_sources_from_locales (KioskInputSourcesManager *self,
+                                                       GDBusMethodInvocation   *invocation,
+                                                       const char * const      *locales,
+                                                       const char * const      *options)
+{
+        g_autofree char *locales_string = NULL;
+        g_autofree char *options_string = NULL;
+
+        locales_string = g_strjoinv (",", (GStrv) locales);
+        options_string = g_strjoinv (",", (GStrv) options);
+
+        g_debug ("KioskService: Handling SetInputSourcesFromLocales([%s], [%s]) call",
+                 locales_string, options_string);
+
+        kiosk_input_sources_manager_set_input_sources_from_locales (self, locales, options_string);
+        kiosk_dbus_input_sources_manager_complete_set_input_sources_from_locales (self->dbus_service, invocation);
+
+        return TRUE;
+}
+
+static gboolean
+on_dbus_service_handle_set_input_sources_from_session_configuration (KioskInputSourcesManager *self,
+                                                                      GDBusMethodInvocation   *invocation)
+{
+        g_debug ("KioskService: Handling SetInputSourcesFromSessionConfiguration() call");
+
+        kiosk_input_sources_manager_set_input_sources_from_session_configuration (self);
+        kiosk_dbus_input_sources_manager_complete_set_input_sources_from_session_configuration (self->dbus_service, invocation);
+
+        return TRUE;
+}
+
+static gboolean
+on_dbus_service_handle_select_input_source (KioskInputSourcesManager *self,
+                                            GDBusMethodInvocation    *invocation,
+                                            const char               *object_path)
+{
+        g_autoptr (GDBusInterface) dbus_input_source = NULL;
+
+        g_debug ("KioskService: Handling SelectInputSource('%s') call", object_path);
+
+        dbus_input_source = g_dbus_object_manager_get_interface (G_DBUS_OBJECT_MANAGER (self->dbus_object_manager),
+                                                                 object_path,
+                                                                 KIOSK_DBUS_INPUT_SOURCES_MANGER_INPUT_SOURCE_INTERFACE);
+        if (dbus_input_source != NULL) {
+                const char *source_type = NULL;
+                const char *source_name = NULL;
+                const char *input_engine = NULL;
+                const char *layout_name = NULL;
+
+                source_type = kiosk_dbus_input_source_get_backend_type (KIOSK_DBUS_INPUT_SOURCE (dbus_input_source));
+                source_name = kiosk_dbus_input_source_get_backend_id (KIOSK_DBUS_INPUT_SOURCE (dbus_input_source));
+
+                if (g_strcmp0 (source_type, "ibus") == 0) {
+                        input_engine = source_name;
+                } else if (g_strcmp0 (source_type, "xkb") == 0) {
+                        layout_name = source_name;
+                }
+
+                activate_best_available_input_source_group (self, input_engine, layout_name);
+        }
+
+        kiosk_dbus_input_sources_manager_complete_select_input_source (self->dbus_service, invocation);
+
+        return TRUE;
+}
+
+static gboolean
+on_dbus_service_handle_select_next_input_source (KioskInputSourcesManager *self,
+                                                 GDBusMethodInvocation    *invocation)
+{
+        g_debug ("KioskService: Handling SelectNextInputSource() call");
+
+        kiosk_input_sources_manager_switch_to_next_input_source (self);
+        kiosk_dbus_input_sources_manager_complete_select_next_input_source (self->dbus_service, invocation);
+
+        return TRUE;
+}
+
+static gboolean
+on_dbus_service_handle_select_previous_input_source (KioskInputSourcesManager *self,
+                                                     GDBusMethodInvocation    *invocation)
+{
+        g_debug ("KioskService: Handling SelectPreviousInputSource() call");
+
+        kiosk_input_sources_manager_switch_to_previous_input_source (self);
+        kiosk_dbus_input_sources_manager_complete_select_previous_input_source (self->dbus_service, invocation);
+
+        return TRUE;
 }
 
 KioskInputEngineManager *
@@ -534,6 +903,7 @@ kiosk_input_sources_manager_set_input_sources_from_system_configuration (KioskIn
                 input_source_group_active = kiosk_input_sources_manager_set_input_sources_from_locales (self, locales, options);
         }
 
+        sync_dbus_service (self);
         self->overriding_configuration = FALSE;
 
         if (!input_source_group_active) {
@@ -616,6 +986,9 @@ kiosk_input_sources_manager_set_input_sources_from_locales (KioskInputSourcesMan
                                                             const char * const       *locales,
                                                             const char               *options)
 {
+        KioskInputSourceGroup *old_input_source_group;
+        g_autofree char *old_selected_layout = NULL;
+        g_autofree char *old_input_engine = NULL;
         g_autofree char *locales_string = NULL;
         gboolean input_source_group_active;
 
@@ -628,6 +1001,13 @@ kiosk_input_sources_manager_set_input_sources_from_locales (KioskInputSourcesMan
                  locales_string);
 
         self->overriding_configuration = TRUE;
+
+        old_input_source_group = kiosk_input_sources_manager_get_selected_input_source_group (self);
+
+        if (old_input_source_group != NULL) {
+                old_selected_layout = kiosk_input_source_group_get_selected_layout (old_input_source_group);
+                old_input_engine = g_strdup (kiosk_input_source_group_get_input_engine (old_input_source_group));
+        }
 
         kiosk_input_sources_manager_clear_input_sources (self);
 
@@ -662,6 +1042,8 @@ kiosk_input_sources_manager_set_input_sources_from_locales (KioskInputSourcesMan
         }
 
         input_source_group_active = activate_first_available_input_source_group (self);
+
+        sync_dbus_service (self);
 
         if (!input_source_group_active) {
                 g_debug ("KioskInputSourcesManager: Locales haves no valid associated keyboard mappings");
@@ -743,6 +1125,7 @@ static void
 kiosk_input_sources_manager_activate_input_sources (KioskInputSourcesManager *self)
 {
         KioskInputSourceGroup *input_source_group;
+        gboolean input_source_group_active;
 
         input_source_group = kiosk_input_sources_manager_get_selected_input_source_group (self);
 
@@ -751,7 +1134,11 @@ kiosk_input_sources_manager_activate_input_sources (KioskInputSourcesManager *se
                 return;
         }
 
-        kiosk_input_source_group_activate (input_source_group);
+        input_source_group_active = kiosk_input_source_group_activate (input_source_group);
+
+        if (input_source_group_active) {
+                sync_dbus_service (self);
+        }
 }
 
 static void
@@ -810,6 +1197,8 @@ kiosk_input_sources_manager_switch_to_next_input_source (KioskInputSourcesManage
         if (!had_next_layout) {
                 kiosk_input_sources_manager_cycle_input_sources_forward (self);
         }
+
+        sync_dbus_service (self);
 }
 
 static void
@@ -832,6 +1221,8 @@ kiosk_input_sources_manager_switch_to_previous_input_source (KioskInputSourcesMa
         if (!had_previous_layout) {
                 kiosk_input_sources_manager_cycle_input_sources_backward (self);
         }
+
+        sync_dbus_service (self);
 }
 
 static void
@@ -907,6 +1298,7 @@ kiosk_input_sources_manager_maybe_activate_higher_priority_input_engine (KioskIn
                 input_source_group_active = kiosk_input_source_group_activate (input_source_group);
 
                 if (input_source_group_active) {
+                        sync_dbus_service (self);
                         return;
                 }
         }
@@ -976,6 +1368,48 @@ kiosk_input_sources_manager_start_input_engine_manager (KioskInputSourcesManager
 }
 
 static void
+kiosk_input_sources_manager_handle_dbus_service (KioskInputSourcesManager *self)
+{
+        KioskService *service;
+
+        service = kiosk_compositor_get_service (self->compositor);
+
+        g_set_weak_pointer (&self->dbus_service, KIOSK_DBUS_INPUT_SOURCES_MANAGER (kiosk_service_get_input_sources_manager_skeleton (service)));
+        g_set_weak_pointer (&self->dbus_object_manager, kiosk_service_get_input_sources_object_manager (service));
+
+        g_signal_connect_object (G_OBJECT (self->dbus_service),
+                                 "handle-set-input-sources",
+                                 G_CALLBACK (on_dbus_service_handle_set_input_sources),
+                                 self,
+                                 G_CONNECT_SWAPPED);
+        g_signal_connect_object (G_OBJECT (self->dbus_service),
+                                 "handle-set-input-sources-from-locales",
+                                 G_CALLBACK (on_dbus_service_handle_set_input_sources_from_locales),
+                                 self,
+                                 G_CONNECT_SWAPPED);
+        g_signal_connect_object (G_OBJECT (self->dbus_service),
+                                 "handle-set-input-sources-from-session-configuration",
+                                 G_CALLBACK (on_dbus_service_handle_set_input_sources_from_session_configuration),
+                                 self,
+                                 G_CONNECT_SWAPPED);
+        g_signal_connect_object (G_OBJECT (self->dbus_service),
+                                 "handle-select-input-source",
+                                 G_CALLBACK (on_dbus_service_handle_select_input_source),
+                                 self,
+                                 G_CONNECT_SWAPPED);
+        g_signal_connect_object (G_OBJECT (self->dbus_service),
+                                 "handle-select-next-input-source",
+                                 G_CALLBACK (on_dbus_service_handle_select_next_input_source),
+                                 self,
+                                 G_CONNECT_SWAPPED);
+        g_signal_connect_object (G_OBJECT (self->dbus_service),
+                                 "handle-select-previous-input-source",
+                                 G_CALLBACK (on_dbus_service_handle_select_previous_input_source),
+                                 self,
+                                 G_CONNECT_SWAPPED);
+}
+
+static void
 kiosk_input_sources_manager_constructed (GObject *object)
 {
         KioskInputSourcesManager *self = KIOSK_INPUT_SOURCES_MANAGER (object);
@@ -990,6 +1424,8 @@ kiosk_input_sources_manager_constructed (GObject *object)
 
         self->xkb_info = gnome_xkb_info_new ();
         self->input_source_groups = g_ptr_array_new_full (1, g_object_unref);
+
+        kiosk_input_sources_manager_handle_dbus_service (self);
 
         kiosk_input_sources_manager_start_input_engine_manager (self);
 
@@ -1024,7 +1460,8 @@ kiosk_input_sources_manager_dispose (GObject *object)
         g_clear_object (&self->locale_proxy);
 
         kiosk_input_sources_manager_remove_key_bindings (self);
-
+        g_clear_weak_pointer (&self->dbus_service);
+        g_clear_weak_pointer (&self->dbus_object_manager);
         g_clear_weak_pointer (&self->display);
         g_clear_weak_pointer (&self->compositor);
 
