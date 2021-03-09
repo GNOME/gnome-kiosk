@@ -13,6 +13,7 @@
 #include <meta/util.h>
 
 #include "kiosk-backgrounds.h"
+#include "kiosk-input-sources-manager.h"
 
 #include "org.gnome.DisplayManager.Manager.h"
 
@@ -28,6 +29,7 @@ struct _KioskCompositor
         /* strong references */
         GCancellable *cancellable;
         KioskBackgrounds *backgrounds;
+        KioskInputSourcesManager *input_sources_manager;
 };
 
 G_DEFINE_TYPE (KioskCompositor, kiosk_compositor, META_TYPE_PLUGIN)
@@ -121,6 +123,7 @@ kiosk_compositor_start (MetaPlugin *plugin)
 
         self->cancellable = g_cancellable_new ();
         self->backgrounds = kiosk_backgrounds_new (self);
+        self->input_sources_manager = kiosk_input_sources_manager_new (self);
 
         register_session (self);
 }
@@ -381,4 +384,12 @@ kiosk_compositor_get_backgrounds (KioskCompositor *self)
         g_return_val_if_fail (KIOSK_IS_COMPOSITOR (self), NULL);
 
         return KIOSK_BACKGROUNDS (self->backgrounds);
+}
+
+KioskInputSourcesManager *
+kiosk_compositor_get_input_sources_manager (KioskCompositor *self)
+{
+        g_return_val_if_fail (KIOSK_IS_COMPOSITOR (self), NULL);
+
+        return KIOSK_INPUT_SOURCES_MANAGER (self->input_sources_manager);
 }
