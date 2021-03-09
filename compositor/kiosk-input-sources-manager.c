@@ -10,8 +10,14 @@
 #include <meta/meta-backend.h>
 #include <meta/meta-plugin.h>
 
+#define GNOME_DESKTOP_USE_UNSTABLE_API
+#include <libgnome-desktop/gnome-languages.h>
+#include <libgnome-desktop/gnome-xkb-info.h>
+
 #include "org.freedesktop.locale1.h"
 #include "kiosk-compositor.h"
+#include "kiosk-gobject-utils.h"
+#include "kiosk-input-source-group.h"
 
 #define SD_LOCALE1_BUS_NAME "org.freedesktop.locale1"
 #define SD_LOCALE1_OBJECT_PATH "/org/freedesktop/locale1"
@@ -26,6 +32,13 @@ struct _KioskInputSourcesManager
         /* strong references */
         GCancellable *cancellable;
         SdLocale1 *locale_proxy;
+        GnomeXkbInfo *xkb_info;
+
+        GPtrArray *input_source_groups;
+        ssize_t input_source_groups_index;
+
+        /* flags */
+        guint32 overriding_configuration : 1;
 };
 
 enum
@@ -38,13 +51,13 @@ static GParamSpec *kiosk_input_sources_manager_properties[NUMBER_OF_PROPERTIES] 
 G_DEFINE_TYPE (KioskInputSourcesManager, kiosk_input_sources_manager, G_TYPE_OBJECT)
 
 static void kiosk_input_sources_manager_set_property (GObject      *object,
-                                                     guint         property_id,
-                                                     const GValue *value,
-                                                     GParamSpec   *param_spec);
+                                                      guint         property_id,
+                                                      const GValue *value,
+                                                      GParamSpec   *param_spec);
 static void kiosk_input_sources_manager_get_property (GObject    *object,
-                                                     guint       property_id,
-                                                     GValue     *value,
-                                                     GParamSpec *param_spec);
+                                                      guint       property_id,
+                                                      GValue     *value,
+                                                      GParamSpec *param_spec);
 
 static void kiosk_input_sources_manager_constructed (GObject *object);
 static void kiosk_input_sources_manager_dispose (GObject *object);
@@ -85,9 +98,9 @@ kiosk_input_sources_manager_class_init (KioskInputSourcesManagerClass *input_sou
 
 static void
 kiosk_input_sources_manager_set_property (GObject      *object,
-                                         guint         property_id,
-                                         const GValue *value,
-                                         GParamSpec   *param_spec)
+                                          guint         property_id,
+                                          const GValue *value,
+                                          GParamSpec   *param_spec)
 {
         KioskInputSourcesManager *self = KIOSK_INPUT_SOURCES_MANAGER (object);
 
@@ -104,9 +117,9 @@ kiosk_input_sources_manager_set_property (GObject      *object,
 
 static void
 kiosk_input_sources_manager_get_property (GObject    *object,
-                                         guint       property_id,
-                                         GValue     *value,
-                                         GParamSpec *param_spec)
+                                          guint       property_id,
+                                          GValue     *value,
+                                          GParamSpec *param_spec)
 {
         switch (property_id) {
                 default:
@@ -115,29 +128,278 @@ kiosk_input_sources_manager_get_property (GObject    *object,
         }
 }
 
-static void
-set_keymap_from_system_configuration (KioskInputSourcesManager *self)
+void
+kiosk_input_sources_manager_clear_input_source_groups (KioskInputSourcesManager *self)
 {
-        const char *layout = NULL;
-        const char *options = NULL;
-        const char *variant = NULL;
+        g_debug ("KioskInputSourcesManager: Clearing selected keyboard mappings");
 
-        if (self->locale_proxy == NULL) {
+        g_ptr_array_set_size (self->input_source_groups, 0);
+        self->input_source_groups_index = 0;
+}
+
+static void
+kiosk_input_sources_manager_add_input_source_group (KioskInputSourcesManager *self,
+                                                    KioskInputSourceGroup    *input_source_group)
+{
+        g_ptr_array_add (self->input_source_groups, g_object_ref (input_source_group));
+}
+
+static KioskInputSourceGroup *
+kiosk_input_sources_manager_add_new_input_source_group (KioskInputSourcesManager *self,
+                                                        const char               *options)
+{
+        g_autoptr (KioskInputSourceGroup) input_source_group = NULL;
+
+        g_debug ("KioskInputSourcesManager: Adding new, empty keyboard mapping with options '%s'",
+                 options);
+
+        input_source_group = kiosk_input_source_group_new (self);
+        kiosk_input_source_group_set_options (input_source_group, options);
+
+        kiosk_input_sources_manager_add_input_source_group (self, input_source_group);
+
+        return input_source_group;
+}
+
+static KioskInputSourceGroup *
+kiosk_input_sources_manager_get_newest_input_source_group (KioskInputSourcesManager *self)
+{
+        if (self->input_source_groups->len == 0) {
+                return NULL;
+        }
+
+        return g_ptr_array_index (self->input_source_groups, self->input_source_groups->len - 1);
+}
+
+void
+kiosk_input_sources_manager_add_layout (KioskInputSourcesManager *self,
+                                        const char               *id,
+                                        const char               *options)
+{
+        KioskInputSourceGroup *input_source_group = NULL;
+        const char *xkb_layout = NULL;
+        const char *xkb_variant = NULL;
+        gboolean layout_info_found;
+        gboolean mapping_full;
+
+        g_debug ("KioskInputSourcesManager: Adding layout '%s' to keyboard mapping", id);
+
+        layout_info_found = gnome_xkb_info_get_layout_info (self->xkb_info,
+                                                            id,
+                                                            NULL /* display name */,
+                                                            NULL /* short name */,
+                                                            &xkb_layout,
+                                                            &xkb_variant);
+
+        if (!layout_info_found) {
+                g_debug ("KioskInputSourcesManager: Layout not found");
                 return;
         }
 
-        g_debug ("KiosInputSourcesManager: Setting keymap from system configuration");
+        input_source_group = kiosk_input_sources_manager_get_newest_input_source_group (self);
 
-        layout = sd_locale1_get_x11_layout (self->locale_proxy);
-        g_debug ("KioskInputSourcesManager: System layout is '%s'", layout);
+        if (input_source_group == NULL) {
+                g_debug ("KioskInputSourcesManager: No keyboard mappings found, creating one");
+
+                input_source_group = kiosk_input_sources_manager_add_new_input_source_group (self, options);
+        }
+
+        mapping_full = !kiosk_input_source_group_add_layout (input_source_group, xkb_layout, xkb_variant);
+
+        if (mapping_full) {
+                g_debug ("KioskInputSourcesManager: Keyboard mapping full, starting another one");
+
+                input_source_group = kiosk_input_sources_manager_add_new_input_source_group (self, options);
+
+                kiosk_input_source_group_add_layout (input_source_group, xkb_layout, xkb_variant);
+        }
+}
+
+static gboolean
+activate_first_available_input_source_group (KioskInputSourcesManager *self)
+{
+        size_t i;
+
+        for (i = 0; i < self->input_source_groups->len - 1; i++) {
+                KioskInputSourceGroup *input_source_group = g_ptr_array_index (self->input_source_groups, i);
+                gboolean input_sources_active;
+
+                input_sources_active = kiosk_input_source_group_activate (input_source_group);
+
+                if (input_sources_active)
+                        return TRUE;
+        }
+
+        return FALSE;
+}
+
+gboolean
+kiosk_input_sources_manager_set_input_sources_from_system_configuration (KioskInputSourcesManager *self)
+{
+        const char *layouts_string = NULL;
+        g_auto (GStrv) layouts = NULL;
+        size_t number_of_layouts = 0;
+
+        const char *variants_string = NULL;
+        g_auto (GStrv) variants = NULL;
+        size_t number_of_variants = 0;
+
+        const char *options = NULL;
+        size_t i, j;
+
+        gboolean input_sources_active;
+
+        g_return_val_if_fail (KIOSK_IS_INPUT_SOURCES_MANAGER (self), FALSE);
+
+        if (self->locale_proxy == NULL) {
+                return FALSE;
+        }
+
+        g_debug ("KioskInputSourcesManager: Setting keymap from system configuration");
+
+        layouts_string = sd_locale1_get_x11_layout (self->locale_proxy);
+        g_debug ("KioskInputSourcesManager: System layout is '%s'", layouts_string);
+
+        layouts = g_strsplit (layouts_string, ",", -1);
+        number_of_layouts = g_strv_length (layouts);
 
         options = sd_locale1_get_x11_options (self->locale_proxy);
         g_debug ("KioskInputSourcesManager: System layout options are '%s'", options);
 
-        variant = sd_locale1_get_x11_variant (self->locale_proxy);
-        g_debug ("KioskInputSourcesManager: System layout variant is '%s'", variant);
+        variants_string = sd_locale1_get_x11_variant (self->locale_proxy);
+        g_debug ("KioskInputSourcesManager: System layout variant is '%s'", variants_string);
+        variants = g_strsplit (variants_string, ",", -1);
+        number_of_variants = g_strv_length (variants);
 
-        meta_backend_set_keymap (meta_get_backend (), layout, options, variant);
+        if (number_of_layouts < number_of_variants) {
+                g_debug ("KioskInputSourcesManager: There is a layout variant mismatch");
+                return FALSE;
+        }
+
+        kiosk_input_sources_manager_clear_input_source_groups (self);
+
+        for (i = 0, j = 0; layouts[i] != NULL; i++) {
+                char *id = NULL;
+                const char *layout = layouts[i];
+                const char *variant = "";
+
+                if (variants[j] != NULL) {
+                        variant = variants[j++];
+                }
+
+                if (variant[0] == '\0') {
+                        id = g_strdup (layout);
+                } else {
+                        id = g_strdup_printf ("%s+%s", layout, variant);
+                }
+
+                kiosk_input_sources_manager_add_layout (self, id, options);
+        }
+
+        input_sources_active = activate_first_available_input_source_group (self);
+
+        if (!input_sources_active) {
+                const char * const *locales;
+
+                locales = sd_locale1_get_locale (self->locale_proxy);
+                input_sources_active = kiosk_input_sources_manager_set_input_sources_from_locales (self, locales, options);
+        }
+
+        self->overriding_configuration = FALSE;
+
+        if (!input_sources_active) {
+                g_debug ("KioskInputSourcesManager: System has no valid configured input sources");
+                return FALSE;
+        }
+
+        return TRUE;
+}
+
+gboolean
+kiosk_input_sources_manager_set_input_sources_from_locales (KioskInputSourcesManager *self,
+                                                           const char * const        *locales,
+                                                           const char                *options)
+{
+        g_autofree char *locales_string = NULL;
+        gboolean input_sources_active;
+
+        g_return_val_if_fail (KIOSK_IS_INPUT_SOURCES_MANAGER (self), FALSE);
+        g_return_val_if_fail (locales != NULL, FALSE);
+
+        locales_string = g_strjoinv (",", (GStrv) locales);
+
+        g_debug ("KioskInputSourcesManager: Setting keymap from locales '%s'",
+                 locales_string);
+
+        self->overriding_configuration = TRUE;
+
+        kiosk_input_sources_manager_clear_input_source_groups (self);
+
+        for (int i = 0; locales[i] != NULL; i++) {
+                const char *locale = locales[i];
+                const char *backend_type, *backend_id;
+                gboolean input_source_found;
+
+                input_source_found = gnome_get_input_source_from_locale (locale,
+                                                                         &backend_type,
+                                                                         &backend_id);
+
+                if (!input_source_found) {
+                        g_debug ("KioskInputSourcesManager: Could not find keymap details from locale '%s'",
+                                 locale);
+                        continue;
+                }
+
+                if (g_strcmp0 (backend_type, "xkb") == 0) {
+                        g_debug ("KioskInputSourcesManager: Found input source '%s' for locale '%s'",
+                                 backend_id, locale);
+
+                        kiosk_input_sources_manager_add_layout (self, backend_id, options);
+                } else {
+                        g_debug ("KioskInputSourcesManager: Unknown input source type '%s' for source '%s'", backend_type, backend_id);
+                }
+        }
+
+        input_sources_active = activate_first_available_input_source_group (self);
+
+        if (!input_sources_active) {
+                g_debug ("KioskInputSourcesManager: Locales haves no valid associated keyboard mappings");
+                return FALSE;
+        }
+
+        return TRUE;
+}
+
+static void
+on_system_configuration_changed (KioskInputSourcesManager *self)
+{
+        g_autofree char *localed_owner = NULL;
+
+        localed_owner = g_dbus_proxy_get_name_owner (G_DBUS_PROXY (self->locale_proxy));
+
+        if (localed_owner == NULL) {
+                g_debug ("KioskInputSourcesManager: System locale daemon exited");
+                return;
+        }
+
+        g_debug ("KioskInputSourcesManager: System locale configuration changed");
+
+        if (self->overriding_configuration) {
+                g_debug ("KioskInputSourcesManager: Ignoring change, because keymap is overriden");
+                return;
+        }
+
+        kiosk_input_sources_manager_set_input_sources_from_system_configuration (self);
+}
+
+static void
+on_localed_property_notify (KioskInputSourcesManager *self)
+{
+        kiosk_gobject_utils_queue_defer_callback (G_OBJECT (self),
+                                                  "[kiosk-input-sources-manager] on_system_configuration_changed",
+                                                  self->cancellable,
+                                                  KIOSK_OBJECT_CALLBACK (on_system_configuration_changed),
+                                                  NULL);
 }
 
 static gboolean
@@ -165,6 +427,12 @@ kiosk_input_sources_manager_connect_to_localed (KioskInputSourcesManager *self)
                 return FALSE;
         } else {
                 g_debug ("KioskInputSourcesManager: Connected to localed");
+
+                g_signal_connect_object (G_OBJECT (self->locale_proxy),
+                                         "notify",
+                                         G_CALLBACK (on_localed_property_notify),
+                                         self,
+                                         G_CONNECT_SWAPPED);
         }
 
         return TRUE;
@@ -179,8 +447,12 @@ kiosk_input_sources_manager_constructed (GObject *object)
 
         self->cancellable = g_cancellable_new ();
 
+        self->xkb_info = gnome_xkb_info_new ();
+        self->input_source_groups = g_ptr_array_new_full (1, g_object_unref);
+
         kiosk_input_sources_manager_connect_to_localed (self);
-        set_keymap_from_system_configuration (self);
+
+        kiosk_input_sources_manager_set_input_sources_from_system_configuration (self);
 }
 
 static void
@@ -198,6 +470,9 @@ kiosk_input_sources_manager_dispose (GObject *object)
                 g_clear_object (&self->cancellable);
         }
 
+        kiosk_input_sources_manager_clear_input_source_groups (self);
+
+        g_clear_object (&self->xkb_info);
         g_clear_object (&self->locale_proxy);
 
         g_clear_weak_pointer (&self->compositor);
