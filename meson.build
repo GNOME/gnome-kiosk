@@ -64,6 +64,7 @@ compositor_dependencies = []
 compositor_dependencies += c_compiler.find_library('m')
 compositor_dependencies += dependency('gio-2.0')
 compositor_dependencies += dependency('glib-2.0')
+compositor_dependencies += dependency('gnome-desktop-3.0')
 compositor_dependencies += dependency('gobject-2.0')
 compositor_dependencies += dependency('mutter-cogl-8')
 compositor_dependencies += dependency('mutter-cogl-pango-8')
