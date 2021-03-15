@@ -77,6 +77,17 @@ sources = gnome.gdbus_codegen(dbus_interface, dbus_interface_file,
 )
 dbus_interface_sources_map += { dbus_interface: sources }
 
+dbus_interface = 'org.gnome.Shell'
+dbus_interface_file = join_paths('dbus-interfaces', dbus_interface + '.xml')
+sources = gnome.gdbus_codegen(dbus_interface, dbus_interface_file,
+        namespace: 'Kiosk',
+        interface_prefix: 'org.gnome',
+        annotations: [
+                [ dbus_interface, 'org.gtk.GDBus.C.Name', 'ShellDBusService' ]
+        ]
+)
+dbus_interface_sources_map += { dbus_interface: sources }
+
 compositor_dependencies = []
 compositor_dependencies += c_compiler.find_library('m')
 compositor_dependencies += dependency('gio-2.0')
@@ -98,6 +109,7 @@ compositor_sources += 'compositor/kiosk-input-sources-manager.c'
 compositor_sources += 'compositor/kiosk-input-engine-manager.c'
 compositor_sources += 'compositor/kiosk-input-source-group.c'
 compositor_sources += 'compositor/kiosk-service.c'
+compositor_sources += 'compositor/kiosk-shell-service.c'
 compositor_sources += 'compositor/main.c'
 
 foreach dbus_interface, sources: dbus_interface_sources_map

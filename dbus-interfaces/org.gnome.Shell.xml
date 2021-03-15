@@ -1,0 +1,41 @@
+<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
+                      "http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
+<!-- GDBus 2.66.7 -->
+<node>
+  <interface name="org.gnome.Shell">
+    <method name="GrabAccelerator">
+      <arg type="s" name="accelerator" direction="in">
+      </arg>
+      <arg type="u" name="modeFlags" direction="in">
+      </arg>
+      <arg type="u" name="grabFlags" direction="in">
+      </arg>
+      <arg type="u" name="action" direction="out">
+      </arg>
+    </method>
+    <method name="GrabAccelerators">
+      <arg type="a(suu)" name="accelerators" direction="in">
+      </arg>
+      <arg type="au" name="actions" direction="out">
+      </arg>
+    </method>
+    <method name="UngrabAccelerator">
+      <arg type="u" name="action" direction="in">
+      </arg>
+      <arg type="b" name="success" direction="out">
+      </arg>
+    </method>
+    <method name="UngrabAccelerators">
+      <arg type="au" name="action" direction="in">
+      </arg>
+      <arg type="b" name="success" direction="out">
+      </arg>
+    </method>
+    <signal name="AcceleratorActivated">
+      <arg type="u" name="action">
+      </arg>
+      <arg type="a{sv}" name="parameters">
+      </arg>
+    </signal>
+  </interface>
+</node>
