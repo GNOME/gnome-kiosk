@@ -74,6 +74,7 @@ compositor_dependencies += mutter_dependency
 compositor_sources = []
 compositor_sources += 'compositor/kiosk-backgrounds.c'
 compositor_sources += 'compositor/kiosk-compositor.c'
+compositor_sources += 'compositor/kiosk-gobject-utils.c'
 compositor_sources += 'compositor/kiosk-input-sources-manager.c'
 compositor_sources += 'compositor/main.c'
 
