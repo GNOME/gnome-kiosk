@@ -244,6 +244,122 @@ kiosk_input_source_group_switch_to_layout (KioskInputSourceGroup *self,
         return TRUE;
 }
 
+void
+kiosk_input_source_group_switch_to_first_layout (KioskInputSourceGroup *self)
+{
+        size_t number_of_layouts;
+        g_autofree char *layout_to_activate = NULL;
+
+        g_debug ("KioskInputSourceGroup: Switching mapping to first layout");
+
+        number_of_layouts = kiosk_input_source_group_get_number_of_layouts (self);
+
+        if (number_of_layouts == 0) {
+                g_debug ("KioskInputSourceGroup: Mapping has no layouts");
+                return;
+        }
+
+        self->layout_index = 0;
+        layout_to_activate = kiosk_input_source_group_get_selected_layout (self);
+
+        g_debug ("KioskInputSourceGroup: First layout is '%s'", layout_to_activate);
+        meta_backend_lock_layout_group (meta_get_backend (), self->layout_index);
+}
+
+void
+kiosk_input_source_group_switch_to_last_layout (KioskInputSourceGroup *self)
+{
+        size_t number_of_layouts;
+        g_autofree char *layout_to_activate = NULL;
+
+        g_debug ("KioskInputSourceGroup: Switching mapping to last layout");
+
+        number_of_layouts = kiosk_input_source_group_get_number_of_layouts (self);
+
+        if (number_of_layouts == 0) {
+                g_debug ("KioskInputSourceGroup: Mapping has no layouts");
+                return;
+        }
+
+        self->layout_index = number_of_layouts - 1;
+        layout_to_activate = kiosk_input_source_group_get_selected_layout (self);
+
+        g_debug ("KioskInputSourceGroup: Last layout is '%s'", layout_to_activate);
+        meta_backend_lock_layout_group (meta_get_backend (), self->layout_index);
+}
+
+gboolean
+kiosk_input_source_group_switch_to_next_layout (KioskInputSourceGroup *self)
+{
+        size_t number_of_layouts, last_layout_index;
+        g_autofree char *active_layout = NULL;
+        g_autofree char *layout_to_activate = NULL;
+
+        g_debug ("KioskInputSourceGroup: Switching mapping forward one layout");
+
+        number_of_layouts = kiosk_input_source_group_get_number_of_layouts (self);
+
+        if (number_of_layouts == 0) {
+                g_debug ("KioskInputSourceGroup: Mapping has no layouts");
+                return FALSE;
+        }
+
+        last_layout_index = number_of_layouts - 1;
+
+        if (self->layout_index + 1 > last_layout_index) {
+                g_debug ("KioskInputSourceGroup: Mapping is at last layout");
+                return FALSE;
+        }
+
+        active_layout = kiosk_input_source_group_get_selected_layout (self);
+
+        self->layout_index++;
+
+        layout_to_activate = kiosk_input_source_group_get_selected_layout (self);
+
+        g_debug ("KioskInputSourceGroup: Switching from layout '%s' to next layout '%s'",
+                 active_layout, layout_to_activate);
+
+        meta_backend_lock_layout_group (meta_get_backend (), self->layout_index);
+
+        return TRUE;
+}
+
+gboolean
+kiosk_input_source_group_switch_to_previous_layout (KioskInputSourceGroup *self)
+{
+        size_t number_of_layouts;
+        g_autofree char *active_layout = NULL;
+        g_autofree char *layout_to_activate = NULL;
+
+        g_debug ("KioskInputSourceGroup: Switching mapping backward one layout");
+
+        number_of_layouts = kiosk_input_source_group_get_number_of_layouts (self);
+
+        if (number_of_layouts == 0) {
+                g_debug ("KioskInputSourceGroup: Mapping has no layouts");
+                return FALSE;
+        }
+
+        if (self->layout_index == 0) {
+                g_debug ("KioskInputSourceGroup: Mapping is at first layout");
+                return FALSE;
+        }
+
+        active_layout = kiosk_input_source_group_get_selected_layout (self);
+
+        self->layout_index--;
+
+        layout_to_activate = kiosk_input_source_group_get_selected_layout (self);
+
+        g_debug ("KioskInputSourceGroup: Switching from layout '%s' to previous layout '%s'",
+                 active_layout, layout_to_activate);
+
+        meta_backend_lock_layout_group (meta_get_backend (), self->layout_index);
+
+        return TRUE;
+}
+
 static void
 kiosk_input_source_group_class_init (KioskInputSourceGroupClass *input_sources_class)
 {

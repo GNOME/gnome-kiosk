@@ -4,7 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <xkbcommon/xkbcommon.h>
 #include <meta/display.h>
+#include <meta/keybindings.h>
 #include <meta/util.h>
 
 #include <meta/meta-backend.h>
@@ -26,20 +28,27 @@
 #define KIOSK_INPUT_SOURCE_GROUP_SETTING "sources"
 #define KIOSK_INPUT_OPTIONS_SETTING "xkb-options"
 
+#define KIOSK_KEYBINDINGS_SCHEMA "org.gnome.desktop.wm.keybindings"
+#define KIOSK_SWITCH_INPUT_SOURCES_KEYBINDING "switch-input-source"
+#define KIOSK_SWITCH_INPUT_SOURCES_BACKWARD_KEYBINDING "switch-input-source-backward"
+
 struct _KioskInputSourcesManager
 {
         GObject parent;
 
         /* weak references */
         KioskCompositor *compositor;
+        MetaDisplay     *display;
 
         /* strong references */
         GCancellable *cancellable;
         SdLocale1 *locale_proxy;
         GnomeXkbInfo *xkb_info;
         GSettings *input_sources_settings;
-
+        GSettings *key_binding_settings;
         GPtrArray *input_source_groups;
+
+        /* state */
         ssize_t input_source_groups_index;
 
         /* flags */
@@ -641,11 +650,161 @@ kiosk_input_sources_manager_connect_to_localed (KioskInputSourcesManager *self)
 }
 
 static void
+kiosk_input_sources_manager_activate_input_sources (KioskInputSourcesManager *self)
+{
+        KioskInputSourceGroup *input_source_group;
+
+        input_source_group = kiosk_input_sources_manager_get_selected_input_source_group (self);
+
+        if (input_source_group == NULL) {
+                g_debug ("KioskInputSourcesManager: No available keyboard mappings");
+                return;
+        }
+
+        kiosk_input_source_group_activate (input_source_group);
+}
+
+static void
+kiosk_input_sources_manager_cycle_input_sources_forward (KioskInputSourcesManager *self)
+{
+        g_debug ("KioskInputSourcesManager: Cycling input sources forward");
+
+        self->input_source_groups_index++;
+
+        if (self->input_source_groups_index >= self->input_source_groups->len) {
+                KioskInputSourceGroup *input_source_group;
+
+                self->input_source_groups_index -= self->input_source_groups->len;
+                input_source_group = kiosk_input_sources_manager_get_selected_input_source_group (self);
+                kiosk_input_source_group_switch_to_first_layout (input_source_group);
+        }
+
+        kiosk_input_sources_manager_activate_input_sources (self);
+}
+
+static void
+kiosk_input_sources_manager_cycle_input_sources_backward (KioskInputSourcesManager *self)
+{
+        g_debug ("KioskInputSourcesManager: Cycling input sources backward");
+
+        self->input_source_groups_index--;
+
+        if (self->input_source_groups_index < 0) {
+                KioskInputSourceGroup *input_source_group;
+
+                self->input_source_groups_index += self->input_source_groups->len;
+                input_source_group = kiosk_input_sources_manager_get_selected_input_source_group (self);
+                kiosk_input_source_group_switch_to_last_layout (input_source_group);
+        }
+
+        kiosk_input_sources_manager_activate_input_sources (self);
+}
+
+static void
+kiosk_input_sources_manager_switch_to_next_input_source (KioskInputSourcesManager *self)
+{
+        KioskInputSourceGroup *input_source_group = NULL;
+        gboolean had_next_layout;
+
+        g_debug ("KioskInputSourcesManager: Switching to next input sources");
+
+        input_source_group = kiosk_input_sources_manager_get_selected_input_source_group (self);
+
+        if (input_source_group == NULL) {
+                g_debug ("KioskInputSourcesManager: No input sources available");
+                return;
+        }
+
+        had_next_layout = kiosk_input_source_group_switch_to_next_layout (input_source_group);
+
+        if (!had_next_layout) {
+                kiosk_input_sources_manager_cycle_input_sources_forward (self);
+        }
+}
+
+static void
+kiosk_input_sources_manager_switch_to_previous_input_source (KioskInputSourcesManager *self)
+{
+        KioskInputSourceGroup *input_source_group = NULL;
+        gboolean had_previous_layout;
+
+        g_debug ("KioskInputSourcesManager: Switching to next input sources");
+
+        input_source_group = kiosk_input_sources_manager_get_selected_input_source_group (self);
+
+        if (input_source_group == NULL) {
+                g_debug ("KioskInputSourcesManager: No input sources available");
+                return;
+        }
+
+        had_previous_layout = kiosk_input_source_group_switch_to_previous_layout (input_source_group);
+
+        if (!had_previous_layout) {
+                kiosk_input_sources_manager_cycle_input_sources_backward (self);
+        }
+}
+
+static void
+on_switch_input_sources (MetaDisplay              *display,
+                         MetaWindow               *window,
+                         ClutterKeyEvent          *event,
+                         MetaKeyBinding           *binding,
+                         KioskInputSourcesManager *self)
+{
+        g_debug ("KioskInputSourcesManager: Keybinding pressed to change input source");
+
+        if (meta_key_binding_is_reversed (binding)) {
+                kiosk_input_sources_manager_switch_to_previous_input_source (self);
+        } else {
+                kiosk_input_sources_manager_switch_to_next_input_source (self);
+        }
+}
+
+static void
+kiosk_input_sources_manager_add_key_bindings (KioskInputSourcesManager *self)
+{
+        g_debug ("KioskInputSourcesManager: Adding key bindings for layout switching");
+
+        self->key_binding_settings = g_settings_new (KIOSK_KEYBINDINGS_SCHEMA);
+        meta_display_add_keybinding (self->display,
+                                     KIOSK_SWITCH_INPUT_SOURCES_KEYBINDING,
+                                     self->key_binding_settings,
+                                     META_KEY_BINDING_NONE,
+                                     (MetaKeyHandlerFunc)
+                                     on_switch_input_sources,
+                                     self,
+                                     NULL);
+
+        meta_display_add_keybinding (self->display,
+                                     KIOSK_SWITCH_INPUT_SOURCES_BACKWARD_KEYBINDING,
+                                     self->key_binding_settings,
+                                     META_KEY_BINDING_IS_REVERSED,
+                                     (MetaKeyHandlerFunc)
+                                     on_switch_input_sources,
+                                     self,
+                                     NULL);
+}
+
+static void
+kiosk_input_sources_manager_remove_key_bindings (KioskInputSourcesManager *self)
+{
+        g_debug ("KioskInputSourcesManager: Removing key bindings for layout switching");
+        meta_display_remove_keybinding (self->display, KIOSK_SWITCH_INPUT_SOURCES_BACKWARD_KEYBINDING);
+        meta_display_remove_keybinding (self->display, KIOSK_SWITCH_INPUT_SOURCES_KEYBINDING);
+
+        g_clear_object (&self->key_binding_settings);
+}
+
+static void
 kiosk_input_sources_manager_constructed (GObject *object)
 {
         KioskInputSourcesManager *self = KIOSK_INPUT_SOURCES_MANAGER (object);
 
         g_debug ("KioskInputSourcesManager: Initializing");
+
+        G_OBJECT_CLASS (kiosk_input_sources_manager_parent_class)->constructed (object);
+
+        g_set_weak_pointer (&self->display, meta_plugin_get_display (META_PLUGIN (self->compositor)));
 
         self->cancellable = g_cancellable_new ();
 
@@ -653,6 +812,8 @@ kiosk_input_sources_manager_constructed (GObject *object)
         self->input_source_groups = g_ptr_array_new_full (1, g_object_unref);
 
         kiosk_input_sources_manager_connect_to_localed (self);
+
+        kiosk_input_sources_manager_add_key_bindings (self);
 
         kiosk_input_sources_manager_set_input_sources_from_session_configuration (self);
 }
@@ -677,6 +838,9 @@ kiosk_input_sources_manager_dispose (GObject *object)
         g_clear_object (&self->xkb_info);
         g_clear_object (&self->locale_proxy);
 
+        kiosk_input_sources_manager_remove_key_bindings (self);
+
+        g_clear_weak_pointer (&self->display);
         g_clear_weak_pointer (&self->compositor);
 
         G_OBJECT_CLASS (kiosk_input_sources_manager_parent_class)->dispose (object);

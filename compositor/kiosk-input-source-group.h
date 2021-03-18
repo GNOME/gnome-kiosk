@@ -27,4 +27,8 @@ gboolean kiosk_input_source_group_activate (KioskInputSourceGroup *input_sources
 
 gboolean kiosk_input_source_group_switch_to_layout (KioskInputSourceGroup *input_sources,
                                                     const char            *layout_name);
+void kiosk_input_source_group_switch_to_first_layout (KioskInputSourceGroup *input_sources);
+void kiosk_input_source_group_switch_to_last_layout (KioskInputSourceGroup *input_sources);
+gboolean kiosk_input_source_group_switch_to_next_layout (KioskInputSourceGroup *input_sources);
+gboolean kiosk_input_source_group_switch_to_previous_layout (KioskInputSourceGroup *input_sources);
 G_END_DECLS
