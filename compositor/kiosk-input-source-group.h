@@ -17,10 +17,14 @@ KioskInputSourceGroup *kiosk_input_source_group_new (KioskInputSourcesManager *m
 gboolean kiosk_input_source_group_add_layout (KioskInputSourceGroup *input_sources,
                                         const char       *layout,
                                         const char       *variant);
+char *kiosk_input_source_group_get_selected_layout (KioskInputSourceGroup *input_sources);
+char **kiosk_input_source_group_get_layouts (KioskInputSourceGroup *input_sources);
 
 void kiosk_input_source_group_set_options (KioskInputSourceGroup *input_sources,
                                      const char       *options);
 
 gboolean kiosk_input_source_group_activate (KioskInputSourceGroup *input_sources);
 
+gboolean kiosk_input_source_group_switch_to_layout (KioskInputSourceGroup *input_sources,
+                                                    const char            *layout_name);
 G_END_DECLS

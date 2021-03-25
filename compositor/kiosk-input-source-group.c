@@ -73,6 +73,58 @@ kiosk_input_source_group_get_number_of_layouts (KioskInputSourceGroup *self)
         return self->layouts->len - 1;
 }
 
+char *
+kiosk_input_source_group_get_selected_layout (KioskInputSourceGroup *self)
+{
+        size_t number_of_layouts;
+        const char *layout, *variant;
+
+        number_of_layouts = kiosk_input_source_group_get_number_of_layouts (self);
+
+        if (number_of_layouts == 0) {
+                return NULL;
+        }
+
+        layout = g_ptr_array_index (self->layouts, self->layout_index);
+        variant = g_ptr_array_index (self->variants, self->layout_index);
+
+        return g_strdup_printf ("%s%s%s",
+                                layout,
+                                variant != NULL && variant[0] != '\0'? "+" : "",
+                                variant != NULL && variant[0] != '\0'? variant : "");
+}
+
+char **
+kiosk_input_source_group_get_layouts (KioskInputSourceGroup *self)
+{
+        g_autoptr (GPtrArray) array = NULL;
+        size_t i, number_of_layouts;
+
+        number_of_layouts = kiosk_input_source_group_get_number_of_layouts (self);
+
+        array = g_ptr_array_sized_new (number_of_layouts);
+
+        if (number_of_layouts == 0) {
+                goto out;
+        }
+
+        for (i = 0; i < number_of_layouts; i++) {
+                const char *layout, *variant;
+
+                layout = g_ptr_array_index (self->layouts, i);
+                variant = g_ptr_array_index (self->variants, i);
+
+                g_ptr_array_add (array, g_strdup_printf ("%s%s%s", layout,
+                                                         variant != NULL && variant[0] != '\0'? "+" : "",
+                                                         variant != NULL && variant[0] != '\0'? variant : ""));
+        }
+
+out:
+        g_ptr_array_add (array, NULL);
+
+        return (char **) g_ptr_array_steal (array, NULL);
+}
+
 static void
 add_layout (KioskInputSourceGroup *self,
             const char            *layout,
@@ -143,6 +195,50 @@ kiosk_input_source_group_activate (KioskInputSourceGroup *self)
                  layouts, variants, self->options);
 
         meta_backend_set_keymap (meta_get_backend (), layouts, variants, self->options);
+        meta_backend_lock_layout_group (meta_get_backend (), self->layout_index);
+
+        return TRUE;
+}
+
+static ssize_t
+get_index_of_layout (KioskInputSourceGroup *self,
+                     const char            *layout_name)
+{
+        g_auto (GStrv) layouts;
+        size_t i;
+
+        layouts = kiosk_input_source_group_get_layouts (self);
+        for (i = 0; layouts[i] != NULL; i++) {
+                if (g_strcmp0 (layout_name, layouts[i]) == 0) {
+                        return (ssize_t) i;
+                }
+        }
+
+        return -1;
+}
+
+gboolean
+kiosk_input_source_group_switch_to_layout (KioskInputSourceGroup *self,
+                                           const char            *layout_name)
+{
+        g_autofree char *active_layout = NULL;
+        ssize_t layout_index;
+
+        layout_index = get_index_of_layout (self, layout_name);
+
+        if (layout_index < 0) {
+                return FALSE;
+        }
+
+        g_debug ("KioskInputSourceGroup: Switching to layout %s", layout_name);
+
+        active_layout = kiosk_input_source_group_get_selected_layout (self);
+
+        self->layout_index = layout_index;
+
+        g_debug ("KioskInputSourceGroup: Switching from layout '%s' to next layout '%s'",
+                 active_layout, layout_name);
+
         meta_backend_lock_layout_group (meta_get_backend (), self->layout_index);
 
         return TRUE;
