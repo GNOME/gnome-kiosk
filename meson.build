@@ -66,6 +66,7 @@ compositor_dependencies += dependency('gio-2.0')
 compositor_dependencies += dependency('glib-2.0')
 compositor_dependencies += dependency('gnome-desktop-3.0')
 compositor_dependencies += dependency('gobject-2.0')
+compositor_dependencies += dependency('ibus-1.0')
 compositor_dependencies += dependency('mutter-cogl-8')
 compositor_dependencies += dependency('mutter-cogl-pango-8')
 compositor_dependencies += dependency('mutter-clutter-8')
@@ -76,6 +77,7 @@ compositor_sources += 'compositor/kiosk-backgrounds.c'
 compositor_sources += 'compositor/kiosk-compositor.c'
 compositor_sources += 'compositor/kiosk-gobject-utils.c'
 compositor_sources += 'compositor/kiosk-input-sources-manager.c'
+compositor_sources += 'compositor/kiosk-input-engine-manager.c'
 compositor_sources += 'compositor/kiosk-input-source-group.c'
 compositor_sources += 'compositor/main.c'
 
