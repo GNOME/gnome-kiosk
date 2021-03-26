@@ -19,6 +19,7 @@
 #include "org.freedesktop.locale1.h"
 #include "kiosk-compositor.h"
 #include "kiosk-gobject-utils.h"
+#include "kiosk-input-engine-manager.h"
 #include "kiosk-input-source-group.h"
 
 #define SD_LOCALE1_BUS_NAME "org.freedesktop.locale1"
@@ -42,6 +43,7 @@ struct _KioskInputSourcesManager
 
         /* strong references */
         GCancellable *cancellable;
+        KioskInputEngineManager *input_engine_manager;
         SdLocale1 *locale_proxy;
         GnomeXkbInfo *xkb_info;
         GSettings *input_sources_settings;
@@ -141,6 +143,57 @@ activate_first_available_input_source_group (KioskInputSourcesManager *self)
 }
 
 static gboolean
+activate_input_source_group_if_it_has_engine (KioskInputSourcesManager *self,
+                                              KioskInputSourceGroup    *input_source_group,
+                                              const char               *name)
+{
+        const char *input_engine_name = NULL;
+        gboolean input_source_group_active;
+
+        input_engine_name = kiosk_input_source_group_get_input_engine (input_source_group);
+
+        if (g_strcmp0 (input_engine_name, name) != 0) {
+                return FALSE;
+        }
+
+        input_source_group_active = kiosk_input_source_group_activate (input_source_group);
+
+        return input_source_group_active;
+}
+
+static gboolean
+activate_input_source_group_with_engine (KioskInputSourcesManager *self,
+                                         const char               *name)
+{
+        KioskInputSourceGroup *input_source_group;
+        gboolean input_source_group_active = FALSE;
+        size_t i;
+
+        input_source_group = kiosk_input_sources_manager_get_selected_input_source_group (self);
+
+        if (input_source_group != NULL) {
+                input_source_group_active = activate_input_source_group_if_it_has_engine (self, input_source_group, name);
+        }
+
+        if (input_source_group_active) {
+                return TRUE;
+        }
+
+        for (i = 0; i < self->input_source_groups->len; i++) {
+                input_source_group = g_ptr_array_index (self->input_source_groups, i);
+
+                input_source_group_active = activate_input_source_group_if_it_has_engine (self, input_source_group, name);
+
+                if (input_source_group_active) {
+                        self->input_source_groups_index = i;
+                        return TRUE;
+                }
+        }
+
+        return FALSE;
+}
+
+static gboolean
 activate_input_source_group_if_it_has_layout (KioskInputSourcesManager *self,
                                               KioskInputSourceGroup    *input_source_group,
                                               const char               *name)
@@ -197,11 +250,14 @@ activate_input_source_group_with_layout (KioskInputSourcesManager *self,
 
 static gboolean
 activate_best_available_input_source_group (KioskInputSourcesManager *self,
+                                            const char               *input_engine,
                                             const char               *selected_layout)
 {
         gboolean input_source_group_active = FALSE;
 
-        if (selected_layout != NULL) {
+        if (input_engine != NULL) {
+                input_source_group_active = activate_input_source_group_with_engine (self, input_engine);
+        } else if (selected_layout != NULL) {
                 input_source_group_active = activate_input_source_group_with_layout (self, selected_layout);
         }
 
@@ -218,6 +274,7 @@ kiosk_input_sources_manager_set_input_sources (KioskInputSourcesManager *self,
                                                const char * const       *options)
 {
         KioskInputSourceGroup *old_input_source_group;
+        g_autofree char *old_input_engine = NULL;
         g_autofree char *old_selected_layout = NULL;
         g_autoptr (GVariantIter) iter = NULL;
         g_autofree char *options_string = NULL;
@@ -227,6 +284,7 @@ kiosk_input_sources_manager_set_input_sources (KioskInputSourcesManager *self,
         old_input_source_group = kiosk_input_sources_manager_get_selected_input_source_group (self);
 
         if (old_input_source_group != NULL) {
+                old_input_engine = g_strdup (kiosk_input_source_group_get_input_engine (old_input_source_group));
                 old_selected_layout = kiosk_input_source_group_get_selected_layout (old_input_source_group);
         }
 
@@ -239,12 +297,15 @@ kiosk_input_sources_manager_set_input_sources (KioskInputSourcesManager *self,
                 if (g_strcmp0 (backend_type, "xkb") == 0) {
                         g_debug ("KioskInputSourcesManager:         %s", backend_id);
                         kiosk_input_sources_manager_add_layout (self, backend_id, options_string);
+                } else if (g_strcmp0 (backend_type, "ibus") == 0) {
+                        g_debug ("KioskInputSourcesManager:         %s", backend_id);
+                        kiosk_input_sources_manager_add_input_engine (self, backend_id, options_string);
                 } else {
                         g_debug ("KioskInputSourcesManager: Unknown input source type '%s' for source '%s'", backend_type, backend_id);
                 }
         }
 
-        input_source_group_active = activate_best_available_input_source_group (self, old_selected_layout);
+        input_source_group_active = activate_best_available_input_source_group (self, old_input_engine, old_selected_layout);
 
         return input_source_group_active;
 }
@@ -279,6 +340,12 @@ kiosk_input_sources_manager_get_property (GObject    *object,
                         G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, param_spec);
                         break;
         }
+}
+
+KioskInputEngineManager *
+kiosk_input_sources_manager_get_input_engine_manager (KioskInputSourcesManager *self)
+{
+        return self->input_engine_manager;
 }
 
 void
@@ -368,10 +435,27 @@ kiosk_input_sources_manager_add_layout (KioskInputSourcesManager *self,
         }
 }
 
+void
+kiosk_input_sources_manager_add_input_engine (KioskInputSourcesManager *self,
+                                             const char              *engine_name,
+                                             const char              *options)
+{
+        KioskInputSourceGroup *input_source_group = NULL;
+
+        g_debug ("KioskInputSourcesManager: Adding input engine '%s'", engine_name);
+
+        input_source_group = kiosk_input_sources_manager_add_new_input_source_group (self, options);
+
+        kiosk_input_source_group_set_input_engine (input_source_group, engine_name);
+        kiosk_input_source_group_set_options (input_source_group, options);
+}
+
+
 gboolean
 kiosk_input_sources_manager_set_input_sources_from_system_configuration (KioskInputSourcesManager *self)
 {
         KioskInputSourceGroup *old_input_source_group;
+        g_autofree char *old_input_engine = NULL;
         g_autofree char *old_selected_layout = NULL;
 
         const char *layouts_string = NULL;
@@ -417,6 +501,7 @@ kiosk_input_sources_manager_set_input_sources_from_system_configuration (KioskIn
         old_input_source_group = kiosk_input_sources_manager_get_selected_input_source_group (self);
 
         if (old_input_source_group != NULL) {
+                old_input_engine = g_strdup (kiosk_input_source_group_get_input_engine (old_input_source_group));
                 old_selected_layout = kiosk_input_source_group_get_selected_layout (old_input_source_group);
         }
 
@@ -440,7 +525,7 @@ kiosk_input_sources_manager_set_input_sources_from_system_configuration (KioskIn
                 kiosk_input_sources_manager_add_layout (self, id, options);
         }
 
-        input_source_group_active = activate_best_available_input_source_group (self, old_selected_layout);
+        input_source_group_active = activate_best_available_input_source_group (self, old_input_engine, old_selected_layout);
 
         if (!input_source_group_active) {
                 const char * const *locales;
@@ -562,10 +647,15 @@ kiosk_input_sources_manager_set_input_sources_from_locales (KioskInputSourcesMan
                 }
 
                 if (g_strcmp0 (backend_type, "xkb") == 0) {
-                        g_debug ("KioskInputSourcesManager: Found input source '%s' for locale '%s'",
+                        g_debug ("KioskInputSourcesManager: Found XKB input source '%s' for locale '%s'",
                                  backend_id, locale);
 
                         kiosk_input_sources_manager_add_layout (self, backend_id, options);
+                } else if (g_strcmp0 (backend_type, "ibus") == 0) {
+                        g_debug ("KioskInputSourcesManager: Found IBus input source '%s' for locale '%s'",
+                                 backend_id, locale);
+
+                        kiosk_input_sources_manager_add_input_engine (self, backend_id, options);
                 } else {
                         g_debug ("KioskInputSourcesManager: Unknown input source type '%s' for source '%s'", backend_type, backend_id);
                 }
@@ -796,6 +886,96 @@ kiosk_input_sources_manager_remove_key_bindings (KioskInputSourcesManager *self)
 }
 
 static void
+kiosk_input_sources_manager_maybe_activate_higher_priority_input_engine (KioskInputSourcesManager *self)
+{
+        size_t i;
+
+        /* It's possible the user has an input engine configured to be used, but it wasn't ready
+         * before. If so, now that it's ready, we should activate it.
+         */
+        for (i = 0; i < self->input_source_groups_index; i++) {
+                KioskInputSourceGroup *input_source_group = g_ptr_array_index (self->input_source_groups, i);
+                const char *input_engine_name = NULL;
+                gboolean input_source_group_active;
+
+                input_engine_name = kiosk_input_source_group_get_input_engine (input_source_group);
+
+                if (input_engine_name == NULL) {
+                        break;
+                }
+
+                input_source_group_active = kiosk_input_source_group_activate (input_source_group);
+
+                if (input_source_group_active) {
+                        return;
+                }
+        }
+
+        g_debug ("KioskInputSourcesManager: No higher priority input engines found, reactivating existing input source");
+        kiosk_input_sources_manager_activate_input_sources (self);
+}
+
+static void
+on_input_engine_manager_is_loaded_changed (KioskInputSourcesManager *self)
+{
+        gboolean input_engine_manager_is_loaded;
+
+        input_engine_manager_is_loaded = kiosk_input_engine_manager_is_loaded (self->input_engine_manager);
+
+        if (!input_engine_manager_is_loaded) {
+                g_debug ("KioskInputSourcesManager: Input engine manager unloaded, activating first available input source");
+
+                activate_first_available_input_source_group (self);
+                return;
+        }
+
+        g_debug ("KioskInputSourcesManager: Input engine manager loaded, reevaluating available input sources");
+        kiosk_input_sources_manager_maybe_activate_higher_priority_input_engine (self);
+}
+
+static void
+on_input_engine_manager_active_engine_changed (KioskInputSourcesManager *self)
+{
+        gboolean is_loaded;
+        const char *active_input_engine;
+
+        is_loaded = kiosk_input_engine_manager_is_loaded (self->input_engine_manager);
+
+        if (!is_loaded) {
+                g_debug ("KioskInputSourcesManager: Input engine changed while input engine manager unloaded. Ignoring...");
+                return;
+        }
+
+        active_input_engine = kiosk_input_engine_manager_get_active_engine (self->input_engine_manager);
+
+        if (active_input_engine == NULL) {
+                g_debug ("KioskInputSourcesManager: Input engine deactivated, activating first available input source");
+                activate_first_available_input_source_group (self);
+                return;
+        }
+
+        activate_input_source_group_with_engine (self, active_input_engine);
+}
+
+static void
+kiosk_input_sources_manager_start_input_engine_manager (KioskInputSourcesManager *self)
+{
+        self->input_engine_manager = kiosk_input_engine_manager_new (self);
+
+        g_signal_connect_object (G_OBJECT (self->input_engine_manager),
+                                 "notify::is-loaded",
+                                 G_CALLBACK (on_input_engine_manager_is_loaded_changed),
+                                 self,
+                                 G_CONNECT_SWAPPED);
+
+        g_signal_connect_object (G_OBJECT (self->input_engine_manager),
+                                 "notify::active-engine",
+                                 G_CALLBACK (on_input_engine_manager_active_engine_changed),
+                                 self,
+                                 G_CONNECT_SWAPPED);
+}
+
+static void
 kiosk_input_sources_manager_constructed (GObject *object)
 {
         KioskInputSourcesManager *self = KIOSK_INPUT_SOURCES_MANAGER (object);
@@ -810,6 +990,8 @@ kiosk_input_sources_manager_constructed (GObject *object)
 
         self->xkb_info = gnome_xkb_info_new ();
         self->input_source_groups = g_ptr_array_new_full (1, g_object_unref);
+
+        kiosk_input_sources_manager_start_input_engine_manager (self);
 
         kiosk_input_sources_manager_connect_to_localed (self);
 
@@ -835,7 +1017,10 @@ kiosk_input_sources_manager_dispose (GObject *object)
 
         kiosk_input_sources_manager_clear_input_sources (self);
 
+        g_clear_object (&self->input_engine_manager);
+
         g_clear_object (&self->xkb_info);
+
         g_clear_object (&self->locale_proxy);
 
         kiosk_input_sources_manager_remove_key_bindings (self);

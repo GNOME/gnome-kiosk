@@ -14,6 +14,8 @@ G_DECLARE_FINAL_TYPE (KioskInputEngineManager,
                       GObject)
 
 KioskInputEngineManager *kiosk_input_engine_manager_new (KioskInputSourcesManager *manager);
+gboolean kiosk_input_engine_manager_is_loaded (KioskInputEngineManager *self);
+const char *kiosk_input_engine_manager_get_active_engine (KioskInputEngineManager *self);
 
 gboolean kiosk_input_engine_manager_find_layout_for_engine (KioskInputEngineManager  *manager,
                                                             const char               *engine_name,

@@ -23,8 +23,10 @@ struct _KioskInputSourceGroup
 
         /* weak references */
         KioskInputSourcesManager *input_sources_manager;
+        KioskInputEngineManager *input_engine_manager;
 
         /* strong references */
+        char *input_engine_name;
         GPtrArray *layouts;
         GPtrArray *variants;
         char *options;
@@ -159,12 +161,75 @@ kiosk_input_source_group_add_layout (KioskInputSourceGroup *self,
         size_t number_of_layouts;
 
         number_of_layouts = kiosk_input_source_group_get_number_of_layouts (self);
-        if (number_of_layouts >= KIOSK_INPUT_SOURCE_GROUP_MAX_LAYOUTS)
+        if (number_of_layouts >= KIOSK_INPUT_SOURCE_GROUP_MAX_LAYOUTS) {
                 return FALSE;
+        }
+
+        if (self->input_engine_name != NULL) {
+                return FALSE;
+        }
 
         add_layout (self, layout, variant);
 
         return TRUE;
+}
+
+static void
+kiosk_input_source_group_ensure_layout_for_input_engine (KioskInputSourceGroup *self)
+{
+        const char *layout = NULL;
+        const char *variant = NULL;
+        size_t number_of_layouts;
+        gboolean layout_found;
+
+        if (self->input_engine_name == NULL) {
+                return;
+        }
+
+        number_of_layouts = kiosk_input_source_group_get_number_of_layouts (self);
+
+        if (number_of_layouts == 1) {
+                return;
+        }
+
+        g_ptr_array_set_size (self->layouts, 0);
+        g_ptr_array_set_size (self->variants, 0);
+
+        g_ptr_array_add (self->layouts, NULL);
+        g_ptr_array_add (self->variants, NULL);
+
+        layout_found = kiosk_input_engine_manager_find_layout_for_engine (self->input_engine_manager,
+                                                                          self->input_engine_name,
+                                                                          &layout,
+                                                                          &variant);
+
+        if (layout_found) {
+                add_layout (self, layout, variant);
+        }
+}
+
+gboolean
+kiosk_input_source_group_set_input_engine (KioskInputSourceGroup *self,
+                                     const char       *engine_name)
+{
+        g_debug ("KioskInputSourceGroup: Setting input engine to '%s'", engine_name);
+
+        g_free (self->input_engine_name);
+        self->input_engine_name = g_strdup (engine_name);
+
+        g_ptr_array_set_size (self->layouts, 0);
+        g_ptr_array_set_size (self->variants, 0);
+
+        g_ptr_array_add (self->layouts, NULL);
+        g_ptr_array_add (self->variants, NULL);
+
+        return TRUE;
+}
+
+const char *
+kiosk_input_source_group_get_input_engine (KioskInputSourceGroup *self)
+{
+        return self->input_engine_name;
 }
 
 void
@@ -182,6 +247,12 @@ kiosk_input_source_group_activate (KioskInputSourceGroup *self)
         g_autofree char *layouts = NULL;
         g_autofree char *variants = NULL;
 
+        g_debug ("KioskInputSourceGroup: Activating input source");
+
+        if (self->input_engine_name != NULL) {
+                kiosk_input_source_group_ensure_layout_for_input_engine (self);
+        }
+
         number_of_layouts = kiosk_input_source_group_get_number_of_layouts (self);
 
         if (number_of_layouts == 0) {
@@ -190,6 +261,19 @@ kiosk_input_source_group_activate (KioskInputSourceGroup *self)
 
         layouts = g_strjoinv (",", (GStrv) self->layouts->pdata);
         variants = g_strjoinv (",", (GStrv) self->variants->pdata);
+
+        if (self->input_engine_name != NULL) {
+                gboolean activated;
+
+                activated = kiosk_input_engine_manager_activate_engine (self->input_engine_manager, self->input_engine_name);
+
+                if (!activated) {
+                        g_debug ("KioskInputSourceGroup: Could not activate input engine '%s'", self->input_engine_name);
+                        return FALSE;
+                }
+        } else {
+                kiosk_input_engine_manager_activate_engine (self->input_engine_manager, NULL);
+        }
 
         g_debug ("KioskInputSourceGroup: Setting keyboard mapping to [%s] (%s) [%s]",
                  layouts, variants, self->options);
@@ -430,7 +514,11 @@ kiosk_input_source_group_init (KioskInputSourceGroup *self)
 static void
 kiosk_input_source_group_constructed (GObject *object)
 {
+        KioskInputSourceGroup *self = KIOSK_INPUT_SOURCE_GROUP (object);
+
         G_OBJECT_CLASS (kiosk_input_source_group_parent_class)->constructed (object);
+
+        g_set_weak_pointer (&self->input_engine_manager, kiosk_input_sources_manager_get_input_engine_manager (self->input_sources_manager));
 }
 
 static void
@@ -445,6 +533,7 @@ kiosk_input_source_group_dispose (GObject *object)
         g_clear_pointer (&self->variants, g_ptr_array_unref);
         g_clear_pointer (&self->layouts, g_ptr_array_unref);
 
+        g_clear_weak_pointer (&self->input_engine_manager);
         g_clear_weak_pointer (&self->input_sources_manager);
 
         G_OBJECT_CLASS (kiosk_input_source_group_parent_class)->dispose (object);

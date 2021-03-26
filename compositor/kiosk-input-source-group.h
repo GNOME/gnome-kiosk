@@ -20,6 +20,10 @@ gboolean kiosk_input_source_group_add_layout (KioskInputSourceGroup *input_sourc
 char *kiosk_input_source_group_get_selected_layout (KioskInputSourceGroup *input_sources);
 char **kiosk_input_source_group_get_layouts (KioskInputSourceGroup *input_sources);
 
+gboolean kiosk_input_source_group_set_input_engine (KioskInputSourceGroup *input_sources,
+                                              const char       *engine_name);
+const char *kiosk_input_source_group_get_input_engine (KioskInputSourceGroup *input_sources);
+
 void kiosk_input_source_group_set_options (KioskInputSourceGroup *input_sources,
                                      const char       *options);
 
