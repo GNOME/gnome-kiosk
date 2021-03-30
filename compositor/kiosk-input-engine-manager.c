@@ -14,6 +14,8 @@
 
 #include <meta/meta-backend.h>
 
+#include "org.gnome.SessionManager.h"
+
 #include "kiosk-gobject-utils.h"
 #include "kiosk-input-sources-manager.h"
 
@@ -471,13 +473,65 @@ kiosk_input_engine_manager_activate_engine (KioskInputEngineManager *self,
 }
 
 static void
+tell_session_manager_about_ibus (KioskInputEngineManager *self)
+{
+        g_autoptr (GDBusConnection) user_bus = NULL;
+        g_autoptr (GsmSessionManager) session_manager = NULL;
+        g_autoptr (GError) error = NULL;
+        g_autoptr (GVariant) reply = NULL;
+
+        g_debug ("KioskInputEngineManager: Telling session manager about IBus");
+
+        user_bus = g_bus_get_sync (G_BUS_TYPE_SESSION,
+                                   self->cancellable,
+                                   &error);
+        if (error != NULL) {
+                g_debug ("KioskInputEngineManager: Could not contact user bus: %s",
+                         error->message);
+                return;
+        }
+
+        session_manager = gsm_session_manager_proxy_new_sync (user_bus,
+                                                              G_DBUS_PROXY_FLAGS_DO_NOT_LOAD_PROPERTIES |
+                                                              G_DBUS_PROXY_FLAGS_DO_NOT_CONNECT_SIGNALS,
+                                                              "org.gnome.SessionManager",
+                                                              "/org/gnome/SessionManager",
+                                                              self->cancellable,
+                                                              &error);
+
+        if (error != NULL) {
+                g_debug ("KioskInputEngineManager: Could not contact session manager: %s",
+                         error->message);
+                return;
+        }
+
+        gsm_session_manager_call_setenv_sync (session_manager,
+                                              "GTK_IM_MODULE",
+                                              "ibus",
+                                              self->cancellable,
+                                              &error);
+
+        if (error != NULL) {
+                g_debug ("KioskInputEngineManager: Could not tell session manager about IBus: %s",
+                         error->message);
+                return;
+        }
+}
+
+static void
 kiosk_input_engine_manager_init (KioskInputEngineManager *self)
 {
+        gboolean connected_to_ibus;
+
         g_debug ("KioskInputEngineManager: Initializing");
 
         self->cancellable = g_cancellable_new ();
 
-        kiosk_input_engine_manager_connect_to_ibus (self);
+        connected_to_ibus = kiosk_input_engine_manager_connect_to_ibus (self);
+
+        if (connected_to_ibus) {
+                tell_session_manager_about_ibus (self);
+        }
 }
 
 static void
