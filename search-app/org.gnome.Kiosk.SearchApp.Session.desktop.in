@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Search Appliance Session
+Comment=This session logs you into a search appliance
+Exec=gnome-session --session org.gnome.Kiosk.SearchApp
+TryExec=gnome-session
+Type=Application
+DesktopNames=GNOME-Kiosk;GNOME;
+X-GDM-SessionRegisters=true

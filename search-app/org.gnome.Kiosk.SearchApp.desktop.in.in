@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Search Appliance
+Comment=Sample Search Appliance Application for GNOME Kiosk
+Exec=@bindir@/firefox --kiosk --private-window --new-instance  http://www.google.com
+Categories=GNOME;GTK;Core;
+OnlyShowIn=GNOME;
+NoDisplay=true
+X-GNOME-AutoRestart=true
