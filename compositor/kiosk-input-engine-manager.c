@@ -20,6 +20,7 @@
 #include "kiosk-input-sources-manager.h"
 
 #define DEFAULT_INPUT_ENGINE_NAME "xkb:us::eng"
+#define DEFAULT_LAYOUT_NAME "us"
 
 struct _KioskInputEngineManager
 {
@@ -382,6 +383,11 @@ kiosk_input_engine_manager_find_layout_for_engine (KioskInputEngineManager  *sel
         }
 
         *layout = ibus_engine_desc_get_layout (engine_description);
+
+        if (g_strcmp0 (*layout, "default") == 0) {
+                *layout = DEFAULT_LAYOUT_NAME;
+        }
+
         *variant = ibus_engine_desc_get_layout_variant (engine_description);
 
         return TRUE;
