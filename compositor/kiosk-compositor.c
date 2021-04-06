@@ -175,6 +175,13 @@ on_faded_in (KioskCompositor   *self,
              ClutterTransition *transition)
 {
         MetaWindowActor *actor = g_object_get_data (G_OBJECT (transition), "actor");
+        MetaWindow *window;
+
+        window = meta_window_actor_get_meta_window (actor);
+
+        if (!meta_window_allows_resize (window) && !meta_window_is_override_redirect (window)) {
+                meta_window_make_above (window);
+        }
 
         meta_plugin_map_completed (META_PLUGIN (self), actor);
 }
@@ -194,9 +201,6 @@ kiosk_compositor_map (MetaPlugin      *plugin,
                 meta_window_make_fullscreen (window);
                 easing_duration = 3000;
         } else {
-                if (!meta_window_is_override_redirect (window)) {
-                        meta_window_make_above (window);
-                }
                 easing_duration = 500;
         }
 

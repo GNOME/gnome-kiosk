@@ -153,6 +153,8 @@ session_file = configure_file(
         configuration: session_config_data
 )
 
+subdir('input-selector')
+
 i18n.merge_file('desktop',
         input: session_file,
         output: 'org.gnome.Kiosk.SearchApp.session',
