@@ -1,0 +1,34 @@
+stages:
+        - build
+
+build-fedora:
+        image: fedora:34
+        stage: build
+        before_script:
+                - dnf -y install
+                                desktop-file-utils
+                                gcc
+                                gettext
+                                git
+                                glib2-devel
+                                gnome-desktop3-devel
+                                gnome-settings-daemon
+                                gsettings-desktop-schemas
+                                gtk4-devel
+                                ibus-devel
+                                mesa-libEGL-devel
+                                mesa-libGL-devel
+                                meson
+                                mutter-devel
+        script:
+                - export BUILD_ROOT=_build
+                - meson . $BUILD_ROOT --prefix=/usr --sysconfdir=/etc --localstatedir=/var --mandir=/usr/share/man --libdir=/usr/lib64
+                - ninja -C $BUILD_ROOT
+                - ninja -C $BUILD_ROOT install
+                - ninja -C $BUILD_ROOT dist
+                - ninja -C $BUILD_ROOT test
+        except:
+                - tags
+        artifacts:
+                paths:
+                        - _build/meson-dist
