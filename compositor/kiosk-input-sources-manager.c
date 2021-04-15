@@ -26,8 +26,8 @@
 #define SD_LOCALE1_BUS_NAME "org.freedesktop.locale1"
 #define SD_LOCALE1_OBJECT_PATH "/org/freedesktop/locale1"
 
-#define KIOSK_INPUT_SOURCE_GROUP_SCHEMA "org.gnome.desktop.input-sources"
-#define KIOSK_INPUT_SOURCE_GROUP_SETTING "sources"
+#define KIOSK_INPUT_SOURCES_SCHEMA "org.gnome.desktop.input-sources"
+#define KIOSK_INPUT_SOURCES_SETTING "sources"
 #define KIOSK_INPUT_OPTIONS_SETTING "xkb-options"
 
 #define KIOSK_INPUT_SOURCE_OBJECTS_PATH_PREFIX "/org/gnome/Kiosk/InputSources"
@@ -940,9 +940,9 @@ on_session_input_sources_setting_changed (KioskInputSourcesManager *self)
 gboolean
 kiosk_input_sources_manager_set_input_sources_from_session_configuration (KioskInputSourcesManager *self)
 {
-        g_autoptr (GVariant) input_source_group = NULL;
+        g_autoptr (GVariant) input_sources = NULL;
         g_auto (GStrv) options = NULL;
-        gboolean input_source_group_active;
+        gboolean input_sources_active;
 
         g_return_val_if_fail (KIOSK_IS_INPUT_SOURCES_MANAGER (self), FALSE);
 
@@ -951,10 +951,10 @@ kiosk_input_sources_manager_set_input_sources_from_session_configuration (KioskI
         self->overriding_configuration = FALSE;
 
         if (self->input_sources_settings == NULL) {
-                self->input_sources_settings = g_settings_new (KIOSK_INPUT_SOURCE_GROUP_SCHEMA);
+                self->input_sources_settings = g_settings_new (KIOSK_INPUT_SOURCES_SCHEMA);
 
                 g_signal_connect_object (G_OBJECT (self->input_sources_settings),
-                                         "changed::" KIOSK_INPUT_SOURCE_GROUP_SETTING,
+                                         "changed::" KIOSK_INPUT_SOURCES_SETTING,
                                          G_CALLBACK (on_session_input_sources_setting_changed),
                                          self,
                                          G_CONNECT_SWAPPED);
@@ -968,12 +968,12 @@ kiosk_input_sources_manager_set_input_sources_from_session_configuration (KioskI
 
         options = g_settings_get_strv (self->input_sources_settings, KIOSK_INPUT_OPTIONS_SETTING);
 
-        input_source_group = g_settings_get_value (self->input_sources_settings,
-                                              KIOSK_INPUT_SOURCE_GROUP_SETTING);
+        input_sources = g_settings_get_value (self->input_sources_settings,
+                                              KIOSK_INPUT_SOURCES_SETTING);
 
-        input_source_group_active = kiosk_input_sources_manager_set_input_sources (self, input_source_group, (const char * const *) options);
+        input_sources_active = kiosk_input_sources_manager_set_input_sources (self, input_sources, (const char * const *) options);
 
-        if (!input_source_group_active) {
+        if (!input_sources_active) {
                 g_debug ("KioskInputSourcesManager: Session has no valid configured input sources");
                 return kiosk_input_sources_manager_set_input_sources_from_system_configuration (self);
         }
