@@ -22,6 +22,7 @@
 #include "kiosk-gobject-utils.h"
 #include "kiosk-input-engine-manager.h"
 #include "kiosk-input-source-group.h"
+#include "kiosk-x-keyboard-manager.h"
 
 #define SD_LOCALE1_BUS_NAME "org.freedesktop.locale1"
 #define SD_LOCALE1_OBJECT_PATH "/org/freedesktop/locale1"
@@ -51,6 +52,7 @@ struct _KioskInputSourcesManager
         /* strong references */
         GCancellable *cancellable;
         KioskInputEngineManager *input_engine_manager;
+        KioskXKeyboardManager *x_keyboard_manager;
         SdLocale1 *locale_proxy;
         GnomeXkbInfo *xkb_info;
         GSettings *input_sources_settings;
@@ -717,6 +719,12 @@ kiosk_input_sources_manager_get_input_engine_manager (KioskInputSourcesManager *
         return self->input_engine_manager;
 }
 
+KioskXKeyboardManager *
+kiosk_input_sources_manager_get_x_keyboard_manager (KioskInputSourcesManager *self)
+{
+        return self->x_keyboard_manager;
+}
+
 void
 kiosk_input_sources_manager_clear_input_sources (KioskInputSourcesManager *self)
 {
@@ -1368,6 +1376,126 @@ kiosk_input_sources_manager_start_input_engine_manager (KioskInputSourcesManager
 }
 
 static void
+process_x_keyboard_manager_selected_layout_change (KioskInputSourcesManager *self)
+{
+        const char *selected_layout;
+
+        selected_layout = kiosk_x_keyboard_manager_get_selected_layout (self->x_keyboard_manager);
+
+        if (selected_layout == NULL) {
+                return;
+        }
+
+        g_debug ("KioskInputSourcesManager: X server changed active layout to %s", selected_layout);
+
+        activate_input_source_group_with_layout (self, selected_layout);
+
+        sync_dbus_service (self);
+}
+
+static void
+on_x_keyboard_manager_selected_layout_changed (KioskInputSourcesManager *self)
+{
+        /* We defer processing the layout change for a bit, because often in practice there is more than
+         * one layout change at the same time, and only the last one is the desired one
+         */
+        kiosk_gobject_utils_queue_defer_callback (G_OBJECT (self),
+                                                  "[kiosk-input-sources-manager] process_x_keyboard_manager_selected_layout_change",
+                                                  self->cancellable,
+                                                  KIOSK_OBJECT_CALLBACK (process_x_keyboard_manager_selected_layout_change),
+                                                  NULL);
+}
+
+static gboolean
+layouts_match_selected_input_source_group (KioskInputSourcesManager  *self,
+                                           const char * const        *layouts,
+                                           const char                *options)
+{
+        KioskInputSourceGroup *input_source_group;
+
+        g_auto (GStrv) current_layouts = NULL;
+        const char *input_source_group_options;
+        const char *input_engine_name;
+
+        input_source_group = kiosk_input_sources_manager_get_selected_input_source_group (self);
+
+        if (input_source_group == NULL) {
+                return FALSE;
+        }
+
+        input_engine_name = kiosk_input_source_group_get_input_engine (input_source_group);
+
+        if (input_engine_name != NULL) {
+                return FALSE;
+        }
+
+        current_layouts = kiosk_input_source_group_get_layouts (input_source_group);
+
+        if (!g_strv_equal ((const char * const *) current_layouts, layouts)) {
+                return FALSE;
+        }
+
+        input_source_group_options = kiosk_input_source_group_get_options (input_source_group);
+
+        if (g_strcmp0 (input_source_group_options, options) != 0) {
+                return FALSE;
+        }
+
+        return TRUE;
+}
+
+static void
+on_x_keyboard_manager_layouts_changed (KioskInputSourcesManager *self)
+{
+        const char * const *new_layouts;
+        const char *selected_layout;
+        const char *options;
+        gboolean layouts_match;
+        size_t i;
+
+        new_layouts = kiosk_x_keyboard_manager_get_layouts (self->x_keyboard_manager);
+        options = kiosk_x_keyboard_manager_get_options (self->x_keyboard_manager);
+        layouts_match = layouts_match_selected_input_source_group (self, new_layouts, options);
+
+        if (layouts_match) {
+                return;
+        }
+
+        g_debug ("KioskInputSorcesManager: X server keyboard layouts changed");
+
+        self->overriding_configuration = TRUE;
+        kiosk_input_sources_manager_clear_input_sources (self);
+
+        for (i = 0; new_layouts[i] != NULL; i++) {
+                kiosk_input_sources_manager_add_layout (self, new_layouts[i], options);
+        }
+
+        selected_layout = kiosk_x_keyboard_manager_get_selected_layout (self->x_keyboard_manager);
+
+        if (selected_layout != NULL) {
+                activate_best_available_input_source_group (self, NULL, selected_layout);
+        }
+}
+
+static void
+kiosk_input_source_manager_start_x_keyboard_manager (KioskInputSourcesManager *self)
+{
+        g_debug ("KioskInputSourcesManager: Starting X Keyboard Manager");
+        self->x_keyboard_manager = kiosk_x_keyboard_manager_new (self->compositor);
+
+        g_signal_connect_object (G_OBJECT (self->x_keyboard_manager),
+                                 "notify::selected-layout",
+                                 G_CALLBACK (on_x_keyboard_manager_selected_layout_changed),
+                                 self,
+                                 G_CONNECT_SWAPPED);
+        g_signal_connect_object (G_OBJECT (self->x_keyboard_manager),
+                                 "notify::layouts",
+                                 G_CALLBACK (on_x_keyboard_manager_layouts_changed),
+                                 self,
+                                 G_CONNECT_SWAPPED);
+}
+
+static void
 kiosk_input_sources_manager_handle_dbus_service (KioskInputSourcesManager *self)
 {
         KioskService *service;
@@ -1434,6 +1562,20 @@ kiosk_input_sources_manager_constructed (GObject *object)
         kiosk_input_sources_manager_add_key_bindings (self);
 
         kiosk_input_sources_manager_set_input_sources_from_session_configuration (self);
+
+        /* We start the X keyboard manager after we've already loaded and locked in
+         * GSettings etc, so the session settings take precedence over xorg.conf
+         */
+        if (!meta_is_wayland_compositor ()) {
+                g_debug ("KioskInputSourcesManager: Will start X keyboard manager shortly");
+                kiosk_gobject_utils_queue_defer_callback (G_OBJECT (self),
+                                                          "[kiosk-input-sources-manager] kiosk_input_source_manager_start_x_keyboard_manager",
+                                                          self->cancellable,
+                                                          KIOSK_OBJECT_CALLBACK (kiosk_input_source_manager_start_x_keyboard_manager),
+                                                          NULL);
+        } else {
+                g_debug ("KioskInputSourcesManager: Won't start X keyboard manager on wayland");
+        }
 }
 
 static void
@@ -1454,6 +1596,7 @@ kiosk_input_sources_manager_dispose (GObject *object)
         kiosk_input_sources_manager_clear_input_sources (self);
 
         g_clear_object (&self->input_engine_manager);
+        g_clear_object (&self->x_keyboard_manager);
 
         g_clear_object (&self->xkb_info);
 

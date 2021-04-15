@@ -113,6 +113,7 @@ compositor_sources += 'compositor/kiosk-input-engine-manager.c'
 compositor_sources += 'compositor/kiosk-input-source-group.c'
 compositor_sources += 'compositor/kiosk-service.c'
 compositor_sources += 'compositor/kiosk-shell-service.c'
+compositor_sources += 'compositor/kiosk-x-keyboard-manager.c'
 compositor_sources += 'compositor/main.c'
 
 foreach dbus_interface, sources: dbus_interface_sources_map
