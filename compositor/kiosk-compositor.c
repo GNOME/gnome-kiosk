@@ -34,6 +34,13 @@ struct _KioskCompositor
         KioskService *service;
 };
 
+enum {
+        X_SERVER_EVENT,
+        NUMBER_OF_SIGNALS
+};
+
+static guint signals [NUMBER_OF_SIGNALS] = { 0, };
+
 G_DEFINE_TYPE (KioskCompositor, kiosk_compositor, META_TYPE_PLUGIN)
 
 static void kiosk_compositor_dispose (GObject *object);
@@ -294,8 +301,10 @@ kiosk_compositor_show_window_menu_for_rect (MetaPlugin *plugin,
 
 static gboolean
 kiosk_compositor_xevent_filter (MetaPlugin *plugin,
-                                XEvent     *xev)
+                                XEvent     *x_server_event)
 {
+        KioskCompositor *self = KIOSK_COMPOSITOR (plugin);
+        g_signal_emit (G_OBJECT (self), signals[X_SERVER_EVENT], 0, x_server_event);
         return FALSE;
 }
 
@@ -385,6 +394,17 @@ kiosk_compositor_class_init (KioskCompositorClass *compositor_class)
         plugin_class->create_inhibit_shortcuts_dialog = kiosk_compositor_create_inhibit_shortcuts_dialog;
 
         plugin_class->locate_pointer = kiosk_compositor_locate_pointer;
+
+        signals [X_SERVER_EVENT] =
+                g_signal_new ("x-server-event",
+                              G_TYPE_FROM_CLASS (object_class),
+                              G_SIGNAL_RUN_LAST,
+                              0,
+                              NULL,
+                              NULL,
+                              g_cclosure_marshal_VOID__POINTER,
+                              G_TYPE_NONE,
+                              1, G_TYPE_POINTER);
 }
 
 static void
