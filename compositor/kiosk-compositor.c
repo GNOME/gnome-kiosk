@@ -8,9 +8,11 @@
 
 #include <clutter/clutter.h>
 #include <clutter/x11/clutter-x11.h>
+#include <meta/common.h>
 #include <meta/display.h>
 #include <meta/main.h>
 #include <meta/util.h>
+#include <meta/meta-window-group.h>
 
 #include "kiosk-backgrounds.h"
 #include "kiosk-input-sources-manager.h"
@@ -170,18 +172,64 @@ kiosk_compositor_size_change (MetaPlugin      *plugin,
         g_assert (META_PLUGIN_CLASS (kiosk_compositor_parent_class)->size_change == NULL);
 }
 
+static gboolean
+kiosk_compositor_wants_window_fullscreen (KioskCompositor *self,
+                                          MetaWindow      *window)
+{
+        MetaWindowType window_type;
+        g_autoptr (GList) windows = NULL;
+        GList *node;
+
+        if (!meta_window_allows_resize (window)) {
+                g_debug ("KioskCompositor: Window does not allow resizes");
+                return FALSE;
+        }
+
+        if (meta_window_is_override_redirect (window)) {
+                g_debug ("KioskCompositor: Window is override redirect");
+                return FALSE;
+        }
+
+        window_type = meta_window_get_window_type (window);
+
+        if (window_type != META_WINDOW_NORMAL) {
+                g_debug ("KioskCompositor: Window is not normal");
+                return FALSE;
+        }
+
+        windows = meta_display_get_tab_list (self->display, META_TAB_LIST_NORMAL_ALL, NULL);
+
+        for (node = windows; node != NULL; node = node->next) {
+                MetaWindow *existing_window = node->data;
+
+                if (meta_window_is_fullscreen (existing_window)) {
+                        return FALSE;
+                }
+        }
+
+        return TRUE;
+}
+
+static gboolean
+kiosk_compositor_wants_window_above (KioskCompositor *self,
+                                     MetaWindow      *window)
+{
+        if (meta_window_is_screen_sized (window)) {
+                return FALSE;
+        }
+
+        if (meta_window_is_monitor_sized (window)) {
+                return FALSE;
+        }
+
+        return TRUE;
+}
+
 static void
 on_faded_in (KioskCompositor   *self,
              ClutterTransition *transition)
 {
         MetaWindowActor *actor = g_object_get_data (G_OBJECT (transition), "actor");
-        MetaWindow *window;
-
-        window = meta_window_actor_get_meta_window (actor);
-
-        if (!meta_window_allows_resize (window) && !meta_window_is_override_redirect (window)) {
-                meta_window_make_above (window);
-        }
 
         meta_plugin_map_completed (META_PLUGIN (self), actor);
 }
@@ -197,10 +245,24 @@ kiosk_compositor_map (MetaPlugin      *plugin,
 
         window = meta_window_actor_get_meta_window (actor);
 
-        if (meta_window_allows_resize (window)) {
+        if (kiosk_compositor_wants_window_fullscreen (self, window)) {
+                g_debug ("KioskCompositor: Mapping window that does need to be fullscreened");
                 meta_window_make_fullscreen (window);
                 easing_duration = 3000;
         } else {
+                ClutterActor *window_group;
+
+                g_debug ("KioskCompositor: Mapping window that does not need to be fullscreened");
+                window_group = meta_get_top_window_group_for_display (self->display);
+
+                if (kiosk_compositor_wants_window_above (self, window)) {
+                        g_object_ref (G_OBJECT (actor));
+                        clutter_actor_remove_child (clutter_actor_get_parent (CLUTTER_ACTOR (actor)), CLUTTER_ACTOR (actor));
+                        clutter_actor_add_child (window_group, CLUTTER_ACTOR (actor));
+                        clutter_actor_set_child_below_sibling (window_group, CLUTTER_ACTOR (actor), NULL);
+                        g_object_unref (G_OBJECT (actor));
+                }
+
                 easing_duration = 500;
         }
 
