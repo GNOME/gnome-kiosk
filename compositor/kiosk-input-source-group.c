@@ -24,6 +24,7 @@ struct _KioskInputSourceGroup
         /* weak references */
         KioskInputSourcesManager *input_sources_manager;
         KioskInputEngineManager *input_engine_manager;
+        KioskXKeyboardManager *x_keyboard_manager;
 
         /* strong references */
         char *input_engine_name;
@@ -34,7 +35,6 @@ struct _KioskInputSourceGroup
         /* state */
         xkb_layout_index_t layout_index;
 };
-
 enum
 {
   PROP_INPUT_SOURCES_MANAGER = 1,
@@ -240,12 +240,20 @@ kiosk_input_source_group_set_options (KioskInputSourceGroup *self,
         self->options = g_strdup (options);
 }
 
+const char *
+kiosk_input_source_group_get_options (KioskInputSourceGroup *self)
+{
+        return self->options;
+}
+
 gboolean
 kiosk_input_source_group_activate (KioskInputSourceGroup *self)
 {
         size_t number_of_layouts;
         g_autofree char *layouts = NULL;
         g_autofree char *variants = NULL;
+        gboolean keymap_already_set = FALSE;
+        gboolean layout_group_already_locked = FALSE;
 
         g_debug ("KioskInputSourceGroup: Activating input source");
 
@@ -275,11 +283,27 @@ kiosk_input_source_group_activate (KioskInputSourceGroup *self)
                 kiosk_input_engine_manager_activate_engine (self->input_engine_manager, NULL);
         }
 
-        g_debug ("KioskInputSourceGroup: Setting keyboard mapping to [%s] (%s) [%s]",
-                 layouts, variants, self->options);
+        if (self->x_keyboard_manager != NULL) {
+                keymap_already_set = kiosk_x_keyboard_manager_keymap_is_active (self->x_keyboard_manager, (const char * const *) self->layouts->pdata, (const char * const *) self->variants->pdata, self->options);
+                layout_group_already_locked = kiosk_x_keyboard_manager_layout_group_is_locked (self->x_keyboard_manager, self->layout_index);
 
-        meta_backend_set_keymap (meta_get_backend (), layouts, variants, self->options);
-        meta_backend_lock_layout_group (meta_get_backend (), self->layout_index);
+        }
+
+        if (!keymap_already_set) {
+                g_debug ("KioskInputSourceGroup: Setting keyboard mapping to [%s] (%s) [%s]",
+                         layouts, variants, self->options);
+
+                meta_backend_set_keymap (meta_get_backend (), layouts, variants, self->options);
+        }
+
+        if (!layout_group_already_locked) {
+                g_debug ("KioskInputSourceGroup: Locking layout to index %d", self->layout_index);
+                meta_backend_lock_layout_group (meta_get_backend (), self->layout_index);
+        }
+
+        if (keymap_already_set && layout_group_already_locked) {
+                g_debug ("KioskInputSourceGroup: Input source already active");
+        }
 
         return TRUE;
 }
@@ -299,6 +323,17 @@ get_index_of_layout (KioskInputSourceGroup *self,
         }
 
         return -1;
+}
+
+gboolean
+kiosk_input_source_group_only_has_layouts (KioskInputSourceGroup *self,
+                                           const char * const    *layouts_to_check)
+{
+        g_auto (GStrv) layouts;
+
+        layouts = kiosk_input_source_group_get_layouts (self);
+
+        return g_strv_equal (layouts_to_check, (const char * const *) layouts);
 }
 
 gboolean
@@ -519,6 +554,7 @@ kiosk_input_source_group_constructed (GObject *object)
         G_OBJECT_CLASS (kiosk_input_source_group_parent_class)->constructed (object);
 
         g_set_weak_pointer (&self->input_engine_manager, kiosk_input_sources_manager_get_input_engine_manager (self->input_sources_manager));
+        g_set_weak_pointer (&self->x_keyboard_manager, kiosk_input_sources_manager_get_x_keyboard_manager (self->input_sources_manager));
 }
 
 static void
@@ -533,6 +569,7 @@ kiosk_input_source_group_dispose (GObject *object)
         g_clear_pointer (&self->variants, g_ptr_array_unref);
         g_clear_pointer (&self->layouts, g_ptr_array_unref);
 
+        g_clear_weak_pointer (&self->x_keyboard_manager);
         g_clear_weak_pointer (&self->input_engine_manager);
         g_clear_weak_pointer (&self->input_sources_manager);
 

@@ -12,6 +12,8 @@ on_task_wait_complete (GObject *self,
         gboolean completed;
         g_autofree char *data_key = NULL;
 
+        g_debug ("KioskGObjectUtils: Executing deferred task '%s'", g_task_get_name (task));
+
         callback = g_object_get_data (G_OBJECT (task), "callback");
         user_data = g_object_get_data (G_OBJECT (task), "user-data");
 
@@ -62,14 +64,16 @@ kiosk_gobject_utils_queue_defer_callback (GObject             *self,
 
         timeout_source = g_timeout_source_new (COALESCE_INTERVAL);
 
-        if (name != NULL) {
-                g_source_set_name (timeout_source, name);
-        }
-
         task = g_task_new (self,
                            cancellable,
                            (GAsyncReadyCallback) on_task_wait_complete,
                            NULL);
+
+        if (name != NULL) {
+                g_task_set_name (task, name);
+                g_debug ("KioskGObjectUtils: Deferring task '%s' for %dms", name, COALESCE_INTERVAL);
+        }
+
         g_task_attach_source (task, timeout_source, G_SOURCE_FUNC (on_coalesce_timeout));
 
         g_object_set_data (G_OBJECT (task), "callback", callback);
