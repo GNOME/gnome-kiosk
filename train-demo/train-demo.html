@@ -1,0 +1,141 @@
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+.body {
+    background: white;
+    background-image: url('train-demo.jpg');
+    background-size: 100% 100%;
+    width:100%;
+    height:100%;
+    overflow: hidden;
+}
+
+.boxes {
+    margin: 0;
+    position: absolute;
+    left: 30%;
+    transform: translate(-15%, 0%);
+    background: white;
+}
+
+.box {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: thin solid black;
+    padding: .25em;
+}
+
+.circle {
+    border-radius: 50%;
+    width: 1.25em;
+    height: 1.25em;
+    text-align: center;
+    font: 1em sans-serif;
+    font-weight: bold;
+    display: inline-block;
+    padding: .15em;
+    margin: .15em;
+}
+
+.dest {
+    font: 1em sans-serif;
+}
+
+.time {
+    font: 1.25em sans-serif;
+    padding-left: 10em;
+}
+
+.count {
+    font: 1em sans-serif;
+}
+
+.orange {
+    background: orange;
+    color: white;
+}
+
+.blue {
+    background: blue;
+    color: white;
+}
+
+.green {
+    background: green;
+    color: white;
+}
+
+.direction {
+    padding: .15em;
+}
+
+.bottom {
+    color: white;
+    background: black;
+    position: absolute;
+    transform: translate(-2.5%, -1.55em);
+    top:100%;
+    left: 5%;
+    width:95%;
+    padding-top: .15em;
+    padding-bottom: .15em;
+}
+
+.clock {
+    margin-left: 1.25em;
+}
+
+.train {
+    position: absolute;
+    transform: translate(0, 0);
+    top: 30%;
+}
+
+</style>
+</head>
+<body class="body">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script>
+function refreshClock() {
+    var currentTime = new Date();
+    var hours = currentTime.getHours();
+    var minutes = currentTime.getMinutes();
+    var seconds = currentTime.getSeconds();
+
+    hours = (hours < 10 ? "0" : "") + hours;
+    minutes = (minutes < 10 ? "0" : "") + minutes;
+
+    var clockString = hours + "∶" + minutes;
+    $(".clock").html(clockString);
+}
+
+$(document).ready(function () {
+    refreshClock();
+    setInterval(function() {
+        refreshClock();
+    }, 1000);
+});
+</script>
+
+<div class="boxes">
+    <div class="box">
+        <span class="direction">⬅ </span><span class="count">1.</span> <div class="orange circle">B</div> <span class="dest">Brighton Beach</span> <span class="time">1 min</span>
+    </div>
+
+    <div class="box">
+        <span class="direction">➡ </span><span class="count">2.</span> <div class="blue circle">E</div> <span class="dest">World Trade Ctr</span> <span class="time">4 min</span>
+    </div>
+
+    <!--
+    <div class="box">
+        <span class="direction">🡆</span><span class="count">3.</span> <div class="green circle">A</div> <span class="dest">Schuyler Square</span> <span class="time">4 min</span>
+    </div>
+    -->
+</div>
+<div class="bottom">
+    <span class="clock">7:33 PM</span><span> ☁️  46°F</span>
+</div>
+</body>
+</html>

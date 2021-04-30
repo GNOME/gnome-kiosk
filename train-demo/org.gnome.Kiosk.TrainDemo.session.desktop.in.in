@@ -1,0 +1,3 @@
+[GNOME Session]
+Name=Train Demo
+RequiredComponents=org.gnome.Kiosk.TrainDemo;@required_components@

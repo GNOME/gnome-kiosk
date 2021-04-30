@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Train Demo Session
+Comment=This session logs you into the train demo
+Exec=gnome-session --session org.gnome.Kiosk.TrainDemo
+TryExec=gnome-session
+Type=Application
+DesktopNames=GNOME-Kiosk;GNOME;
+X-GDM-SessionRegisters=true

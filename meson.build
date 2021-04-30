@@ -129,6 +129,7 @@ executable('gnome-kiosk', compositor_sources,
 
 desktop_config_data = configuration_data()
 desktop_config_data.set('bindir', bindir)
+desktop_config_data.set('datadir', datadir)
 
 desktop_file = configure_file(
         input: 'compositor/data/org.gnome.Kiosk.desktop.in.in',
@@ -188,3 +189,55 @@ i18n.merge_file('desktop',
         install_dir: desktop_data_dir,
         type: 'desktop'
 )
+
+session_file = configure_file(
+        input: 'train-demo/org.gnome.Kiosk.TrainDemo.session.desktop.in.in',
+        output: 'org.gnome.Kiosk.TrainDemo.session.desktop.in',
+        configuration: session_config_data
+)
+
+i18n.merge_file('desktop',
+        input: session_file,
+        output: 'org.gnome.Kiosk.TrainDemo.session',
+        po_dir: po_dir,
+        install: true,
+        install_dir: session_dir,
+        type: 'desktop'
+)
+
+i18n.merge_file('desktop',
+        input: 'train-demo/org.gnome.Kiosk.TrainDemo.Session.desktop.in',
+        output: 'org.gnome.Kiosk.TrainDemo.Session.desktop',
+        po_dir: po_dir,
+        install: true,
+        install_dir: xsessions_dir,
+        type: 'desktop'
+)
+
+train_demo_desktop_file = configure_file(
+        input: 'train-demo/org.gnome.Kiosk.TrainDemo.desktop.in.in',
+        output: 'org.gnome.Kiosk.TrainDemo.desktop.in',
+        configuration: desktop_config_data
+)
+
+i18n.merge_file('desktop',
+        input: train_demo_desktop_file,
+        output: 'org.gnome.Kiosk.TrainDemo.desktop',
+        po_dir: po_dir,
+        install: true,
+        install_dir: desktop_data_dir,
+        type: 'desktop'
+)
+
+install_data('train-demo/gnome-kiosk-train-demo',
+        install_dir: bindir
+)
+
+install_data('train-demo/train-demo.jpg',
+        install_dir: join_paths(datadir, 'train-demo/')
+)
+
+install_data('train-demo/train-demo.html',
+        install_dir: join_paths(datadir, 'train-demo/')
+)
+

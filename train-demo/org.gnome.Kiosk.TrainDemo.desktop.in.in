@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Train Demo
+Comment=Sample train schedule demo for GNOME Kiosk
+Exec=@bindir@/gnome-kiosk-train-demo file://@datadir@/train-demo/train-demo.html
+Categories=GNOME;GTK;Core;
+OnlyShowIn=GNOME;
+NoDisplay=true
+X-GNOME-AutoRestart=true

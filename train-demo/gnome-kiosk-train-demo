@@ -1,0 +1,97 @@
+#!/usr/bin/gjs
+const System = imports.system;
+const Gettext = imports.gettext;
+imports.gi.versions.Gtk = '3.0';
+const { Gio, GLib, GObject, Gtk, Pango, Soup, WebKit2: WebKit } = imports.gi;
+
+var KioskWindow = GObject.registerClass(
+class KioskWindow extends Gtk.ApplicationWindow {
+    _init(application, url) {
+        super._init({ application: application });
+
+        this._uri = new Soup.URI(url);
+
+        this._webContext = WebKit.WebContext.new_ephemeral();
+        this._webContext.set_cache_model(WebKit.CacheModel.DOCUMENT_VIEWER);
+        this._webContext.set_network_proxy_settings(WebKit.NetworkProxyMode.NO_PROXY, null);
+
+        this._webView = WebKit.WebView.new_with_context(this._webContext);
+        this._webView.connect('decide-policy', this._onDecidePolicy.bind(this));
+        this._webView.connect('insecure-content-detected', this._onInsecureContentDetected.bind(this));
+        this._webView.connect('load-failed-with-tls-errors', this._onLoadFailedWithTlsErrors.bind(this));
+        this._webView.load_uri(url);
+
+        this.add(this._webView);
+        this._webView.show();
+        this.fullscreen();
+        this.present();
+    }
+
+    vfunc_delete_event(event) {
+        this.application.quit();
+        return false;
+    }
+
+    _onInsecureContentDetected() {
+        log('kiosk url is insecure');
+    }
+
+    _onLoadFailedWithTlsErrors(view, failingURI, certificate, errors) {
+        let uri = new Soup.URI(failingURI);
+        this._webContext.allow_tls_certificate_for_host(certificate, uri.get_host());
+        this._webView.load_uri(failingURI);
+        return true;
+    }
+
+    _onDecidePolicy(view, decision, type) {
+        if (type == WebKit.PolicyDecisionType.NEW_WINDOW_ACTION) {
+            let navigationAction = decision.get_navigation_action();
+            if (navigationAction.is_user_gesture()) {
+                this._webView.load_request(navigationAction.get_request());
+            }
+
+            decision.ignore();
+            return true;
+        }
+
+        if (type != WebKit.PolicyDecisionType.NAVIGATION_ACTION)
+            return false;
+
+        let request = decision.get_request();
+        let uri = new Soup.URI(request.get_uri());
+
+        this._uri = uri;
+
+        decision.use();
+        return true;
+    }
+});
+
+var KioskHelper = GObject.registerClass(
+class KioskHelper extends Gtk.Application {
+    _init() {
+        super._init({ application_id: null,
+                      flags: Gio.ApplicationFlags.NON_UNIQUE | Gio.ApplicationFlags.HANDLES_OPEN });
+    }
+
+    vfunc_open([file]) {
+        this.window = new KioskWindow(this, file.get_uri());
+    }
+
+    vfunc_activate() {
+        log('please pass a url');
+    }
+});
+
+function main(argv) {
+    Gettext.setlocale(Gettext.LocaleCategory.ALL, "");
+    if (!WebKit.WebContext.new_ephemeral) {
+        log('WebKitGTK 2.16 is required for this application');
+        return 1;
+    }
+
+    let app = new KioskHelper();
+    return app.run(argv);
+}
+
+main([System.programInvocationName].concat(ARGV));
