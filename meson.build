@@ -146,7 +146,7 @@ i18n.merge_file('desktop',
 )
 
 session_config_data = configuration_data()
-session_config_data.set('required_components', 'org.gnome.Kiosk;org.gnome.Kiosk.SearchApp;')
+session_config_data.set('required_components', 'org.gnome.Kiosk;')
 
 session_file = configure_file(
         input: 'search-app/org.gnome.Kiosk.SearchApp.session.desktop.in.in',
