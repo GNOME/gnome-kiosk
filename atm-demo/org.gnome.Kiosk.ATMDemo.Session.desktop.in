@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=ATM Demo Session
+Comment=This session logs you into the ATM demo
+Exec=gnome-session --session org.gnome.Kiosk.ATMDemo
+TryExec=gnome-session
+Type=Application
+DesktopNames=GNOME-Kiosk;GNOME;
+X-GDM-SessionRegisters=true

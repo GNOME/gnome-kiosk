@@ -1,0 +1,193 @@
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+.body {
+    background: white;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    cursor: pointer;
+    padding: 0px;
+    margin-left: 0px;
+}
+
+.top-filler {
+    height: 15%;
+}
+
+.title-box {
+    width: 100%;
+    height: 1.5em;
+    padding-bottom: 2.5em;
+}
+
+.title {
+    color: white;
+    background: #EE0000;
+    text-shadow: 1px 1px black;
+    font-size: 50px;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    padding-left: 1em;
+    margin-left: 0px;
+}
+
+.left-column {
+    width: 50%;
+    position: absolute;
+    left: 0px;
+    float: left;
+}
+
+.info {
+    width: 80%;
+    text-align: center;
+    font-size: 1.25em;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    margin-top: 2em;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.right-column {
+    left: 50%;
+    width: 50%;
+    float: right;
+    padding-right: 2em;
+}
+
+.amount-box {
+    margin-top: 2em;
+    margin-bottom: 2em;
+    margin-left: auto;
+    margin-right: auto;
+    border: 1px;
+    width: 100%;
+}
+.amount-title {
+    font-size: 1.25em;
+    text-align: center;
+    margin-bottom: 2em;
+}
+
+.amount-entry-box {
+    background: white;
+    border: 2px solid #999999;
+    border-radius: 8px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 4px;
+    padding-right: 4px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    box-shadow: inset 2px 2px 2px 0px #bbbbbb;
+    width: 25em;
+}
+
+.amount-entry {
+    font-size: 50px;
+    border: 2px solid black;
+    border-radius: 4px;
+    background: black;
+    overflow: clip;
+    width: 100%;
+    color: transparent;
+    text-shadow: 0 0 0 #ffffff;
+}
+
+.button-box {
+    margin-left: 4em;
+    margin-right: 4em;
+}
+
+.button {
+    background-color: #0088dd;
+    border: 2px inset;
+    border-radius: 2px;
+    color: white;
+    margin-left: auto;
+    margin-right: auto;
+    padding: .25em;
+    font-size: 1.75em;
+    font-weight: bold;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    display: inline-block;
+    width: 35%;
+    text-align: center;
+}
+
+.pad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+    padding-left: 4em;
+    padding-right: 4em;
+    padding-bottom: 4em;
+}
+
+.digit-button {
+    font-size: 1.75em;
+    font-weight: bold;
+}
+
+</style>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+</head>
+
+<body class="body">
+<div class="top-filler"></div>
+<div class="title-box">
+    <div class="title">Withdrawal</div>
+</div>
+<div class="left-column">
+    <div class="info">Enter your withdrawal amount, in multiples of $10 and select <b>Enter</b>.<br><br>To make corrections, select <b>Clear</b>.</div>
+</div>
+
+<div class="right-column">
+    <div class="amount-box">
+        <div class="amount-entry-box"><input class="amount-entry" id="amount-entry" autofocus></input></div>
+    </div>
+    <div class="pad">
+        <button class="digit-button">1</button>
+        <button class="digit-button">2</button>
+        <button class="digit-button">3</button>
+        <button class="digit-button">4</button>
+        <button class="digit-button">5</button>
+        <button class="digit-button">6</button>
+        <button class="digit-button">7</button>
+        <button class="digit-button">8</button>
+        <button class="digit-button">9</button>
+	<div class="pad-spacer"></div>
+        <button class="digit-button">0</button>
+	<div class="pad-spacer"></div>
+    </div>
+    <div class="button-box">
+        <div class="button" id="clear-button">Clear</div><div class="button" id="enter-button">Enter</div>
+    </div>
+</div>
+
+<script>
+$("#clear-button").click(function() {
+    $("#amount-entry").val('');
+    $("#amount-entry").focus();
+});
+$("#enter-button").click(function() {
+    window.location.href = "thank-you.html";
+});
+$(".digit-button").click(function() {
+    var oldValue = $("#amount-entry").val();
+    var newDigit = $(this).text();
+    var newValue = oldValue + "" + newDigit;
+    $("#amount-entry").val(newValue);
+    $("#amount-entry").focus();
+});
+</script>
+
+</body>
+</html>

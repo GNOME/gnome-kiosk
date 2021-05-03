@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=ATM Demo
+Comment=Sample ATM demo for GNOME Kiosk
+Exec=@bindir@/gnome-kiosk-atm-demo file://@datadir@/atm-demo/welcome.html
+Categories=GNOME;GTK;Core;
+OnlyShowIn=GNOME;
+NoDisplay=true
+X-GNOME-AutoRestart=true

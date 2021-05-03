@@ -1,0 +1,3 @@
+[GNOME Session]
+Name=ATM Demo
+RequiredComponents=org.gnome.Kiosk.ATMDemo;@required_components@

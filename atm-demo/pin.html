@@ -1,0 +1,138 @@
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+.body {
+    background: white;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    cursor: pointer;
+    padding: 0px;
+    margin-left: 0px;
+}
+
+.top-filler {
+    height: 15%;
+}
+
+.title-box {
+    width: 100%;
+    height: 1.5em;
+    padding-bottom: 2.5em;
+}
+
+.title {
+    color: white;
+    background: #EE0000;
+    text-shadow: 1px 1px black;
+    font-size: 50px;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    padding-left: 1em;
+    margin-left: 0px;
+}
+
+.info-box {
+    width: 100%;
+    height: 1.5em;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.info {
+    width: 80%;
+    text-align: center;
+    font-size: 1.25em;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    margin-top: 2em;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.pin-box {
+    margin-top: 2em;
+    margin-bottom: 2em;
+    margin-left: auto;
+    margin-right: auto;
+    border: 1px;
+    width: 60%;
+}
+
+.pin-title {
+    font-size: 1.25em;
+    text-align: center;
+    margin-bottom: 2em;
+}
+
+.pin-entry-box {
+    background: white;
+    border: 2px solid #999999;
+    border-radius: 8px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 4px;
+    padding-right: 4px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    box-shadow: inset 2px 2px 2px 0px #bbbbbb;
+    width: 25em;
+}
+
+.pin-entry {
+    font-size: 50px;
+    border: 2px solid black;
+    border-radius: 4px;
+    background: black;
+    overflow: clip;
+    width: 100%;
+    color: transparent;
+    text-shadow: 0 0 0 #ffffff;
+}
+
+.main-menu-button {
+    background-color: #0088dd;
+    border: 2px inset;
+    border-radius: 2px;
+    color: white;
+    margin-left: auto;
+    margin-right: auto;
+    padding: .75em;
+    font-size: 1.75em;
+    font-weight: bold;
+    width: 40%;
+    transform: translate(50%, 0%);
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+}
+
+</style>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+</head>
+
+<body class="body">
+<div class="top-filler"></div>
+<div class="title-box">
+    <div class="title">Enter Your PIN</div>
+</div>
+<div class="info-box">
+    <div class="info">For your security, chip cards are returned once your transaction processes.</div>
+</div>
+<div class="pin-box">
+    <div class="pin-title">Please <b>enter your PIN,</b> and then <b>select an option.</b></div>
+    <div class="pin-entry-box"><input class="pin-entry" type="password" autofocus></input></div>
+</div>
+<div class="main-menu-button" id="main-menu-button">Main Menu</div>
+
+<script>
+$("#main-menu-button").click(function() {
+    window.location.href = "main-menu.html";
+});
+</script>
+
+</body>
+</html>

@@ -241,3 +241,61 @@ install_data('train-demo/train-demo.html',
         install_dir: join_paths(datadir, 'train-demo/')
 )
 
+session_file = configure_file(
+        input: 'atm-demo/org.gnome.Kiosk.ATMDemo.session.desktop.in.in',
+        output: 'org.gnome.Kiosk.ATMDemo.session.desktop.in',
+        configuration: session_config_data
+)
+
+i18n.merge_file('desktop',
+        input: session_file,
+        output: 'org.gnome.Kiosk.ATMDemo.session',
+        po_dir: po_dir,
+        install: true,
+        install_dir: session_dir,
+        type: 'desktop'
+)
+
+i18n.merge_file('desktop',
+        input: 'atm-demo/org.gnome.Kiosk.ATMDemo.Session.desktop.in',
+        output: 'org.gnome.Kiosk.ATMDemo.Session.desktop',
+        po_dir: po_dir,
+        install: true,
+        install_dir: xsessions_dir,
+        type: 'desktop'
+)
+
+train_demo_desktop_file = configure_file(
+        input: 'atm-demo/org.gnome.Kiosk.ATMDemo.desktop.in.in',
+        output: 'org.gnome.Kiosk.ATMDemo.desktop.in',
+        configuration: desktop_config_data
+)
+
+i18n.merge_file('desktop',
+        input: train_demo_desktop_file,
+        output: 'org.gnome.Kiosk.ATMDemo.desktop',
+        po_dir: po_dir,
+        install: true,
+        install_dir: desktop_data_dir,
+        type: 'desktop'
+)
+
+install_data('atm-demo/gnome-kiosk-atm-demo',
+        install_dir: bindir
+)
+
+install_data('atm-demo/welcome.html',
+        install_dir: join_paths(datadir, 'atm-demo/')
+)
+
+install_data('atm-demo/pin.html',
+        install_dir: join_paths(datadir, 'atm-demo/')
+)
+
+install_data('atm-demo/main-menu.html',
+        install_dir: join_paths(datadir, 'atm-demo/')
+)
+
+install_data('atm-demo/thank-you.html',
+        install_dir: join_paths(datadir, 'atm-demo/')
+)
