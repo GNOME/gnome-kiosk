@@ -834,6 +834,7 @@ kiosk_input_sources_manager_set_input_sources_from_system_configuration (KioskIn
         KioskInputSourceGroup *old_input_source_group;
         g_autofree char *old_input_engine = NULL;
         g_autofree char *old_selected_layout = NULL;
+        g_autofree char *localed_name_owner = NULL;
 
         const char *layouts_string = NULL;
         g_auto (GStrv) layouts = NULL;
@@ -851,6 +852,12 @@ kiosk_input_sources_manager_set_input_sources_from_system_configuration (KioskIn
         g_return_val_if_fail (KIOSK_IS_INPUT_SOURCES_MANAGER (self), FALSE);
 
         if (self->locale_proxy == NULL) {
+                return FALSE;
+        }
+
+        localed_name_owner = g_dbus_proxy_get_name_owner (G_DBUS_PROXY (self->locale_proxy));
+
+        if (localed_name_owner == NULL) {
                 return FALSE;
         }
 
