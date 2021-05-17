@@ -1,5 +1,5 @@
 project('gnome-kiosk', 'c',
-        version: '40.alpha'
+        version: '40.0'
 )
 add_project_arguments('-D_GNU_SOURCE',
                       language: 'c'
