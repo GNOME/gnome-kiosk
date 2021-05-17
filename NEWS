@@ -1,4 +1,10 @@
 # NEWS
+## 40.0
+- Desktop file validation fixes
+- Only full screen one window at a time, not all windows
+- Code clean-ups
+- Support X sessions that set keyboard layout with libxklavier
+- Fix crasher if localed disappears at the wrong moment
 
 ## 40.alpha
 - Initial release
