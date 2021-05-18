@@ -20,6 +20,7 @@ build-fedora:
                                 mesa-libGL-devel
                                 meson
                                 mutter-devel
+                                standard-test-roles
         script:
                 - export BUILD_ROOT=_build
                 - meson . $BUILD_ROOT --prefix=/usr --sysconfdir=/etc --localstatedir=/var --mandir=/usr/share/man --libdir=/usr/lib64

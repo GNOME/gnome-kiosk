@@ -188,3 +188,14 @@ i18n.merge_file('desktop',
         install_dir: desktop_data_dir,
         type: 'desktop'
 )
+
+ansible_test_harness_data = configuration_data()
+test_harness_root = join_paths(meson.current_source_dir(), 'ansible-test-harness')
+ansible_test_harness_data.set('test_harness_root', test_harness_root)
+ansible_test_harness_data.set('project_build_root', meson.project_build_root())
+
+ansible_test_harness_script = configure_file(
+        input: 'ansible-test-harness/ansible-test-harness.sh.in',
+        output: 'ansible-test-harness.sh',
+        configuration: ansible_test_harness_data
+)

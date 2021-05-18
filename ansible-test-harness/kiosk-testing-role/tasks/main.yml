@@ -1,0 +1,56 @@
+---
+- name: Create a user
+  user:
+      name: virtualqe
+      state: present
+
+- name: Start testing harness
+  block:
+  - name: Allow virtualqe user access to artifacts dir
+    file:
+        path: "{{ remote_artifacts }}"
+        mode: 01777
+
+  - name: Determine log file name
+    set_fact:
+        log_file: "{{ remote_artifacts }}/gnome-kiosk.log"
+
+  - name: Delete any stale log file
+    file:
+        path: "{{ log_file }}"
+        state: absent
+
+  - name: Execute tests
+    become: yes
+    become_user: virtualqe
+    shell: |
+      set -e
+      log_file="{{ log_file }}"
+      exec 2>>$log_file 1>>$log_file
+      status="FAIL"
+      export PATH="{{ project_build_root }}:$PATH"
+      export XDG_SESSION_TYPE=x11
+      export TMPDIR={{ remote_artifacts }}
+      export G_MESSAGES_DEBUG=all
+      export LANG=en_US.utf8
+      env
+      xvfb-run -d -s '-screen 0 1024x768x24' dbus-run-session gnome-kiosk
+      if [ $? -eq 0 ]; then
+          status="PASS"
+      fi
+      echo "${status} $TEST" >> {{ remote_artifacts }}/test.log
+    args:
+        chdir: "{{ remote_artifacts }}"
+
+  - name: Check the results
+    shell: grep "^FAIL" {{ remote_artifacts }}/test.log
+    register: test_fails
+    failed_when: False
+
+  - name: Set role result
+    set_fact:
+      role_result_failed: "{{ (test_fails.stdout|d|length > 0) or (test_fails.stderr|d|length > 0) }}"
+      role_result_msg: "{{ test_fails.stdout|d('tests failed.') }}"
+
+  - include_role:
+      name: str-common-final

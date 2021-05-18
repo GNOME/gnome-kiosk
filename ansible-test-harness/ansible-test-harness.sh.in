@@ -1,0 +1,3 @@
+#!/bin/sh
+cd @test_harness_root@
+ansible-playbook -b tests.yml -e project_build_root=@project_build_root@
