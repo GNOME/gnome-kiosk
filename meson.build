@@ -36,6 +36,10 @@ meson.add_install_script ('meson/postinstall.py')
 mutter_dependency = dependency('libmutter-8')
 mutter_libdir = mutter_dependency.get_pkgconfig_variable('typelibdir')
 
+systemd_user_unit_dir = dependency('systemd').get_pkgconfig_variable('systemduserunitdir',
+                                                                     define_variable: ['prefix', prefix])
+systemd_dependency = dependency('libsystemd')
+
 dbus_proxies = []
 dbus_proxies += {
         'prefix':   'org.gnome.DisplayManager',
@@ -102,6 +106,7 @@ compositor_dependencies += dependency('mutter-cogl-8')
 compositor_dependencies += dependency('mutter-cogl-pango-8')
 compositor_dependencies += dependency('mutter-clutter-8')
 compositor_dependencies += mutter_dependency
+compositor_dependencies += systemd_dependency
 
 compositor_sources = []
 compositor_sources += 'compositor/kiosk-backgrounds.c'
@@ -144,6 +149,25 @@ i18n.merge_file('desktop',
         install_dir: desktop_data_dir,
         type: 'desktop'
 )
+
+systemd_service_config_data = configuration_data()
+systemd_service_config_data.set('bindir', bindir)
+
+systemd_service_files = []
+systemd_service_files += 'compositor/data/systemd/org.gnome.Kiosk@wayland.service.in'
+systemd_service_files += 'compositor/data/systemd/org.gnome.Kiosk@x11.service.in'
+
+foreach service_file : systemd_service_files
+        configure_file(
+                input: service_file,
+                output: '@BASENAME@',
+                configuration: systemd_service_config_data,
+                install_dir: systemd_user_unit_dir
+        )
+endforeach
+
+install_data('compositor/data/systemd/org.gnome.Kiosk.target',
+             install_dir: systemd_user_unit_dir)
 
 session_config_data = configuration_data()
 session_config_data.set('required_components', 'org.gnome.Kiosk;org.gnome.Kiosk.SearchApp;')

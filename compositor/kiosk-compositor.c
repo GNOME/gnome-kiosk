@@ -14,6 +14,8 @@
 #include <meta/util.h>
 #include <meta/meta-window-group.h>
 
+#include <systemd/sd-daemon.h>
+
 #include "kiosk-backgrounds.h"
 #include "kiosk-input-sources-manager.h"
 #include "kiosk-service.h"
@@ -113,11 +115,19 @@ register_with_display_manager (KioskCompositor *self)
 }
 
 static void
+register_with_systemd (KioskCompositor *self)
+{
+        sd_notify (TRUE, "READY=1");
+}
+
+static void
 register_session (KioskCompositor *self)
 {
         meta_register_with_session ();
 
         register_with_display_manager (self);
+
+        register_with_systemd (self);
 }
 
 static void
