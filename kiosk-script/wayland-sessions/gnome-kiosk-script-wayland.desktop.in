@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Kiosk Script Session (Wayland Display Server)
+Comment=This session logs you into the sessoin started by ~/.local/bin/gnome-kiosk-script
+Exec=gnome-session --session gnome-kiosk-script
+TryExec=gnome-session
+Type=Application
+DesktopNames=GNOME-Kiosk;GNOME;
+X-GDM-SessionRegisters=true
+

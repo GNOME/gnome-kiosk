@@ -1,0 +1,23 @@
+#!/usr/bin/sh
+
+if [ ! -e ~/.local/bin/gnome-kiosk-script ]; then
+    mkdir -p ~/.local/bin ~/.config
+    cat > ~/.local/bin/gnome-kiosk-script <<- "EOF"
+	#!/bin/sh
+	# This script is located in ~/.local/bin.
+	# It's provided as an example script to show how
+	# the kiosk session works.  At the moment, the script
+	# just starts a text editor open to itself, but it
+	# should get customized to instead start a full screen
+	# application designed for the kiosk deployment.
+	gedit ~/.local/bin/gnome-kiosk-script
+
+	sleep 1.0
+	exec "$0" "$@"
+EOF
+
+    chmod +x ~/.local/bin/gnome-kiosk-script
+    touch ~/.config/gnome-initial-setup-done
+fi
+
+exec ~/.local/bin/gnome-kiosk-script "$@"
