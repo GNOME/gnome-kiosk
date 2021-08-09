@@ -1,0 +1,10 @@
+[Unit]
+Description=GNOME Kiosk
+DefaultDependencies=no
+
+Requisite=gnome-session-initialized.target
+PartOf=gnome-session-initialized.target
+Before=gnome-session-initialized.target
+
+Wants=org.gnome.Kiosk@wayland.service
+Wants=org.gnome.Kiosk@x11.service

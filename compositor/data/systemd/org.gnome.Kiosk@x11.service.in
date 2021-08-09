@@ -1,0 +1,20 @@
+[Unit]
+Description=GNOME Kiosk on X11
+OnFailure=gnome-session-failed.target
+OnFailureJobMode=replace
+CollectMode=inactive-or-failed
+RefuseManualStart=on
+RefuseManualStop=on
+After=gnome-session-manager.target
+Requisite=gnome-session-initialized.target
+PartOf=gnome-session-initialized.target
+Before=gnome-session-initialized.target
+ConditionEnvironment=XDG_SESSION_TYPE=%I
+
+[Service]
+Slice=session.slice
+Type=notify
+ExecStart=/usr/bin/gnome-kiosk
+Restart=always
+RestartSec=0ms
+TimeoutStopSec=5

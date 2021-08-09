@@ -17,6 +17,7 @@ localedir = join_paths(datadir, 'locale')
 desktop_data_dir = join_paths(datadir, 'applications')
 session_dir = join_paths(datadir, 'gnome-session', 'sessions')
 xsessions_dir = join_paths(datadir, 'xsessions')
+wayland_sessions_dir = join_paths(datadir, 'wayland-sessions')
 
 po_dir = join_paths(meson.current_source_dir(), 'po')
 
@@ -35,6 +36,10 @@ meson.add_install_script ('meson/postinstall.py')
 
 mutter_dependency = dependency('libmutter-8')
 mutter_libdir = mutter_dependency.get_pkgconfig_variable('typelibdir')
+
+systemd_user_unit_dir = dependency('systemd').get_pkgconfig_variable('systemduserunitdir',
+                                                                     define_variable: ['prefix', prefix])
+systemd_dependency = dependency('libsystemd')
 
 dbus_proxies = []
 dbus_proxies += {
@@ -102,6 +107,7 @@ compositor_dependencies += dependency('mutter-cogl-8')
 compositor_dependencies += dependency('mutter-cogl-pango-8')
 compositor_dependencies += dependency('mutter-clutter-8')
 compositor_dependencies += mutter_dependency
+compositor_dependencies += systemd_dependency
 
 compositor_sources = []
 compositor_sources += 'compositor/kiosk-backgrounds.c'
@@ -142,6 +148,81 @@ i18n.merge_file('desktop',
         po_dir: po_dir,
         install: true,
         install_dir: desktop_data_dir,
+        type: 'desktop'
+)
+
+systemd_service_config_data = configuration_data()
+systemd_service_config_data.set('bindir', bindir)
+
+systemd_service_files = []
+systemd_service_files += 'compositor/data/systemd/org.gnome.Kiosk@wayland.service.in'
+systemd_service_files += 'compositor/data/systemd/org.gnome.Kiosk@x11.service.in'
+
+foreach service_file : systemd_service_files
+        configure_file(
+                input: service_file,
+                output: '@BASENAME@',
+                configuration: systemd_service_config_data,
+                install_dir: systemd_user_unit_dir
+        )
+endforeach
+
+install_data(
+        'compositor/data/systemd/org.gnome.Kiosk.target',
+        install_dir: systemd_user_unit_dir
+)
+
+install_data('kiosk-script/gnome-kiosk-script',
+        install_dir: bindir,
+	install_mode: 'rwxr-xr-x'
+)
+
+desktop_file = configure_file(
+        input: 'kiosk-script/desktop/org.gnome.Kiosk.Script.desktop.in.in',
+        output: 'org.gnome.Kiosk.Script.desktop.in',
+        configuration: desktop_config_data
+)
+
+i18n.merge_file('desktop',
+        input: desktop_file,
+        output: 'org.gnome.Kiosk.Script.desktop',
+        po_dir: po_dir,
+        install: true,
+        install_dir: desktop_data_dir,
+        type: 'desktop'
+)
+
+configure_file(
+       input: 'kiosk-script/systemd/org.gnome.Kiosk.Script.service.in',
+       output: '@BASENAME@',
+       configuration: systemd_service_config_data,
+       install_dir: systemd_user_unit_dir
+)
+
+kiosk_script_systemd_target_dir = join_paths(systemd_user_unit_dir, 'gnome-session@gnome-kiosk-script.target.d')
+install_data('kiosk-script/systemd/session.conf',
+        install_dir: kiosk_script_systemd_target_dir
+)
+
+install_data('kiosk-script/gnome-session/gnome-kiosk-script.session',
+        install_dir: session_dir,
+)
+
+i18n.merge_file('desktop',
+        input: 'kiosk-script/xsessions/gnome-kiosk-script-xorg.desktop.in',
+        output: '@BASENAME@',
+        po_dir: po_dir,
+        install: true,
+        install_dir: xsessions_dir,
+        type: 'desktop'
+)
+
+i18n.merge_file('desktop',
+        input: 'kiosk-script/wayland-sessions/gnome-kiosk-script-wayland.desktop.in',
+        output: '@BASENAME@',
+        po_dir: po_dir,
+        install: true,
+        install_dir: wayland_sessions_dir,
         type: 'desktop'
 )
 

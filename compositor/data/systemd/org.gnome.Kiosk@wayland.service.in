@@ -1,0 +1,20 @@
+[Unit]
+Description=GNOME Kiosk on Wayland
+OnFailure=gnome-session-shutdown.target
+OnFailureJobMode=replace-irreversibly
+CollectMode=inactive-or-failed
+RefuseManualStart=on
+RefuseManualStop=on
+After=gnome-session-manager.target
+Requisite=gnome-session-initialized.target
+PartOf=gnome-session-initialized.target
+Before=gnome-session-initialized.target
+ConditionEnvironment=XDG_SESSION_TYPE=%I
+
+[Service]
+Slice=session.slice
+Type=notify
+ExecStart=/usr/bin/gnome-kiosk
+ExecStopPost=-/bin/sh -c 'test "$SERVICE_RESULT" != "exec-condition" && systemctl --user unset-environment GNOME_SETUP_DISPLAY WAYLAND_DISPLAY DISPLAY XAUTHORITY'
+Restart=no
+TimeoutStopSec=5
