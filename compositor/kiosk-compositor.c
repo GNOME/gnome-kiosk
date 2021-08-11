@@ -10,6 +10,7 @@
 #include <clutter/x11/clutter-x11.h>
 #include <meta/common.h>
 #include <meta/display.h>
+#include <meta/keybindings.h>
 #include <meta/main.h>
 #include <meta/util.h>
 #include <meta/meta-window-group.h>
@@ -131,6 +132,81 @@ register_session (KioskCompositor *self)
 }
 
 static void
+on_builtin_keybinding_triggered (MetaDisplay     *display,
+                                 MetaWindow      *window,
+                                 ClutterKeyEvent *event,
+                                 MetaKeyBinding  *binding,
+                                 KioskCompositor *self)
+{
+        g_debug ("KioskCompositor: Ignoring '%s' request",
+                 meta_key_binding_get_name (binding));
+}
+
+static void
+neuter_builtin_keybindings (KioskCompositor *self)
+{
+        const char *builtin_keybindings[] = {
+                "switch-to-workspace-1",
+                "switch-to-workspace-2",
+                "switch-to-workspace-3",
+                "switch-to-workspace-4",
+                "switch-to-workspace-5",
+                "switch-to-workspace-6",
+                "switch-to-workspace-7",
+                "switch-to-workspace-8",
+                "switch-to-workspace-9",
+                "switch-to-workspace-10",
+                "switch-to-workspace-11",
+                "switch-to-workspace-12",
+                "switch-to-workspace-left",
+                "switch-to-workspace-right",
+                "switch-to-workspace-up",
+                "switch-to-workspace-down",
+                "switch-to-workspace-last",
+                "panel-main-menu",
+                "panel-run-dialog",
+                "set-spew-mark",
+                "switch-monitor",
+                "rotate-monitor",
+                "restore-shortcuts",
+                "activate-window-menu",
+                "toggle-above",
+                "toggle-shaded",
+                "minimize",
+                "toggle-on-all-workspaces",
+                "move-to-workspace-1",
+                "move-to-workspace-2",
+                "move-to-workspace-3",
+                "move-to-workspace-4",
+                "move-to-workspace-5",
+                "move-to-workspace-6",
+                "move-to-workspace-7",
+                "move-to-workspace-8",
+                "move-to-workspace-9",
+                "move-to-workspace-10",
+                "move-to-workspace-11",
+                "move-to-workspace-12",
+                "move-to-workspace-last",
+                "move-to-workspace-left",
+                "move-to-workspace-right",
+                "move-to-workspace-up",
+                "move-to-workspace-down",
+                NULL
+        };
+        size_t i;
+
+        g_debug ("KioskCompositor: Neutering builtin keybindings");
+
+        for (i = 0; builtin_keybindings[i] != NULL; i++) {
+                meta_keybindings_set_custom_handler (builtin_keybindings[i],
+                                                     (MetaKeyHandlerFunc)
+                                                     on_builtin_keybinding_triggered,
+                                                     self,
+                                                     NULL);
+        }
+}
+
+static void
 kiosk_compositor_start (MetaPlugin *plugin)
 {
         KioskCompositor *self = KIOSK_COMPOSITOR (plugin);
@@ -151,6 +227,8 @@ kiosk_compositor_start (MetaPlugin *plugin)
                 g_debug ("KioskCompositor: Could not start D-Bus service: %s", error->message);
                 g_clear_error (&error);
         }
+
+        neuter_builtin_keybindings (self);
 
         self->backgrounds = kiosk_backgrounds_new (self);
         self->input_sources_manager = kiosk_input_sources_manager_new (self);
