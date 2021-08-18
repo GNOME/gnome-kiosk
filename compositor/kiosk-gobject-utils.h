@@ -14,5 +14,10 @@ void kiosk_gobject_utils_queue_defer_callback (GObject             *self,
                                                GCancellable        *cancellable,
                                                KioskObjectCallback  callback,
                                                gpointer             user_data);
+void kiosk_gobject_utils_queue_immediate_callback (GObject             *self,
+                                                   const char          *name,
+                                                   GCancellable        *cancellable,
+                                                   KioskObjectCallback  callback,
+                                                   gpointer             user_data);
 
 G_END_DECLS
