@@ -7,17 +7,17 @@
 #include <glib-object.h>
 
 #include <clutter/clutter.h>
-#include <clutter/x11/clutter-x11.h>
 #include <meta/common.h>
 #include <meta/display.h>
 #include <meta/keybindings.h>
-#include <meta/main.h>
+#include <meta/meta-context.h>
 #include <meta/util.h>
 #include <meta/meta-window-group.h>
 
 #include <systemd/sd-daemon.h>
 
 #include "kiosk-backgrounds.h"
+#include "kiosk-gobject-utils.h"
 #include "kiosk-input-sources-manager.h"
 #include "kiosk-service.h"
 
@@ -29,6 +29,7 @@ struct _KioskCompositor
 
         /* weak references */
         MetaDisplay *display;
+        MetaContext *context;
         ClutterBackend *backend;
         ClutterActor *stage;
 
@@ -61,6 +62,7 @@ kiosk_compositor_dispose (GObject *object)
         }
 
         g_clear_weak_pointer (&self->stage);
+        g_clear_weak_pointer (&self->context);
         g_clear_weak_pointer (&self->display);
         g_clear_weak_pointer (&self->backend);
 
@@ -124,7 +126,7 @@ register_with_systemd (KioskCompositor *self)
 static void
 register_session (KioskCompositor *self)
 {
-        meta_register_with_session ();
+        meta_context_notify_ready (self->context);
 
         register_with_display_manager (self);
 
@@ -213,6 +215,7 @@ kiosk_compositor_start (MetaPlugin *plugin)
         g_autoptr (GError) error = NULL;
 
         g_set_weak_pointer (&self->display, meta_plugin_get_display (META_PLUGIN (self)));
+        g_set_weak_pointer (&self->context, meta_display_get_context (self->display));
         g_set_weak_pointer (&self->backend, clutter_get_default_backend ());
         g_set_weak_pointer (&self->stage, meta_get_stage_for_display (self->display));
 
@@ -233,7 +236,11 @@ kiosk_compositor_start (MetaPlugin *plugin)
         self->backgrounds = kiosk_backgrounds_new (self);
         self->input_sources_manager = kiosk_input_sources_manager_new (self);
 
-        register_session (self);
+        kiosk_gobject_utils_queue_immediate_callback (G_OBJECT (self),
+                                                      "[kiosk-compositor] register_session",
+                                                      self->cancellable,
+                                                      KIOSK_OBJECT_CALLBACK (register_session),
+                                                      NULL);
 }
 
 static void

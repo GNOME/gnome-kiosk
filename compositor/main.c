@@ -3,9 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <glib-unix.h>
 #include <glib/gi18n.h>
 
-#include <meta/main.h>
+#include <meta/meta-context.h>
 #include <meta/meta-plugin.h>
 #include <meta/prefs.h>
 
@@ -32,34 +33,73 @@ kiosk_options[] = {
         { NULL }
 };
 
-int
-main (int argc, char **argv)
+static void
+set_working_directory (void)
 {
-        g_autoptr (GOptionContext) option_context = NULL;
+        const char *working_directory;
+        int result;
+
+        working_directory = g_get_home_dir ();
+
+        if (working_directory == NULL)
+                working_directory = "/";
+
+        result = chdir (working_directory);
+
+        if (result != 0) {
+                g_warning ("Could not change working directory to '%s': %m",
+                           working_directory);
+        }
+}
+
+static gboolean
+on_termination_signal (MetaContext *context)
+{
+        meta_context_terminate (context);
+
+        return G_SOURCE_REMOVE;
+}
+
+int
+main (int    argc,
+      char **argv)
+{
+        g_autoptr (MetaContext) context = NULL;
         g_autoptr (GError) error = NULL;
-        int exit_code;
 
         bindtextdomain (GETTEXT_PACKAGE, LOCALEDIR);
         bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
         textdomain (GETTEXT_PACKAGE);
 
-        option_context = meta_get_option_context ();
-        g_option_context_add_main_entries (option_context, kiosk_options, GETTEXT_PACKAGE);
-        if (!g_option_context_parse (option_context, &argc, &argv, &error)) {
-                g_printerr ("%s: %s\n", argv[0], error->message);
+        signal (SIGPIPE, SIG_IGN);
+
+        set_working_directory ();
+
+        context = meta_create_context ("Kiosk");
+        meta_context_add_option_entries (context, kiosk_options, GETTEXT_PACKAGE);
+        if (!meta_context_configure (context, &argc, &argv, &error)) {
+                g_printerr ("%s: Configuration failed: %s\n", argv[0], error->message);
                 exit (1);
         }
 
-        meta_plugin_manager_set_plugin_type (KIOSK_TYPE_COMPOSITOR);
+        meta_context_set_plugin_gtype (context, KIOSK_TYPE_COMPOSITOR);
 
-        meta_set_wm_name ("Kiosk");
+        if (!meta_context_setup (context, &error)) {
+                g_printerr ("%s: Setup failed: %s\n", argv[0], error->message);
+                exit (1);
+        }
 
-        /* Prevent meta_init() from causing gtk to load the atk-bridge */
-        g_setenv ("NO_AT_BRIDGE", "1", TRUE);
-        meta_init ();
-        g_unsetenv ("NO_AT_BRIDGE");
+        if (!meta_context_start (context, &error)) {
+                g_printerr ("%s: Failed to start: %s\n", argv[0], error->message);
+                exit (1);
+        }
 
-        exit_code = meta_run ();
+        g_unix_signal_add (SIGTERM, (GSourceFunc) on_termination_signal, context);
 
-        return exit_code;
+        if (!meta_context_run_main_loop (context, &error)) {
+                g_printerr ("%s: Quit unexpectedly: %s\n", argv[0], error->message);
+                exit (1);
+        }
+
+        return 0;
 }
