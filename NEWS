@@ -1,4 +1,11 @@
 # NEWS
+## 41.beta
+- Port to mutter 41
+- New "Kiosk Script Session"
+- Support systemd --user
+- Neuter certain keybindings
+- Crasher fix
+
 ## 40.0
 - Desktop file validation fixes
 - Only full screen one window at a time, not all windows
