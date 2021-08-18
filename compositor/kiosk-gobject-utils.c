@@ -12,7 +12,7 @@ on_task_wait_complete (GObject *self,
         gboolean completed;
         g_autofree char *data_key = NULL;
 
-        g_debug ("KioskGObjectUtils: Executing deferred task '%s'", g_task_get_name (task));
+        g_debug ("KioskGObjectUtils: Executing queued task '%s'", g_task_get_name (task));
 
         callback = g_object_get_data (G_OBJECT (task), "callback");
         user_data = g_object_get_data (G_OBJECT (task), "user-data");
@@ -30,7 +30,7 @@ on_task_wait_complete (GObject *self,
 }
 
 static gboolean
-on_coalesce_timeout (GTask *task)
+on_called_back (GTask *task)
 {
         if (!g_task_return_error_if_cancelled (task)) {
                 g_task_return_boolean (task, TRUE);
@@ -39,15 +39,16 @@ on_coalesce_timeout (GTask *task)
         return G_SOURCE_REMOVE;
 }
 
-void
-kiosk_gobject_utils_queue_defer_callback (GObject             *self,
-                                          const char          *name,
-                                          GCancellable        *cancellable,
-                                          KioskObjectCallback  callback,
-                                          gpointer             user_data)
+static void
+kiosk_gobject_utils_queue_callback (GObject             *self,
+                                    const char          *name,
+                                    int                  timeout,
+                                    GCancellable        *cancellable,
+                                    KioskObjectCallback  callback,
+                                    gpointer             user_data)
 {
         g_autofree char *data_key = NULL;
-        g_autoptr (GSource) timeout_source = NULL;
+        g_autoptr (GSource) source = NULL;
         GTask *task;
 
         g_return_if_fail (G_IS_OBJECT (self));
@@ -62,7 +63,10 @@ kiosk_gobject_utils_queue_defer_callback (GObject             *self,
                 return;
         }
 
-        timeout_source = g_timeout_source_new (COALESCE_INTERVAL);
+        if (timeout <= 0)
+                source = g_idle_source_new ();
+        else
+                source = g_timeout_source_new (timeout);
 
         task = g_task_new (self,
                            cancellable,
@@ -71,10 +75,14 @@ kiosk_gobject_utils_queue_defer_callback (GObject             *self,
 
         if (name != NULL) {
                 g_task_set_name (task, name);
-                g_debug ("KioskGObjectUtils: Deferring task '%s' for %dms", name, COALESCE_INTERVAL);
+
+                if (timeout > 0)
+                        g_debug ("KioskGObjectUtils: Deferring task '%s' for %dms", name, timeout);
+                else
+                        g_debug ("KioskGObjectUtils: Queuing task '%s' to run on next iteration of event loop", name);
         }
 
-        g_task_attach_source (task, timeout_source, G_SOURCE_FUNC (on_coalesce_timeout));
+        g_task_attach_source (task, source, G_SOURCE_FUNC (on_called_back));
 
         g_object_set_data (G_OBJECT (task), "callback", callback);
         g_object_set_data (G_OBJECT (task), "user-data", user_data);
@@ -84,4 +92,24 @@ kiosk_gobject_utils_queue_defer_callback (GObject             *self,
                                 task,
                                 (GDestroyNotify)
                                 g_object_unref);
+}
+
+void
+kiosk_gobject_utils_queue_defer_callback (GObject             *self,
+                                          const char          *name,
+                                          GCancellable        *cancellable,
+                                          KioskObjectCallback  callback,
+                                          gpointer             user_data)
+{
+        kiosk_gobject_utils_queue_callback (self, name, COALESCE_INTERVAL, cancellable, callback, user_data);
+}
+
+void
+kiosk_gobject_utils_queue_immediate_callback (GObject             *self,
+                                              const char          *name,
+                                              GCancellable        *cancellable,
+                                              KioskObjectCallback  callback,
+                                              gpointer             user_data)
+{
+        kiosk_gobject_utils_queue_callback (self, name, 0, cancellable, callback, user_data);
 }
