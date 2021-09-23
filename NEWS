@@ -1,4 +1,7 @@
 # NEWS
+## 41.0
+- Whitespace cleanup in build goo
+
 ## 41.beta
 - Port to mutter 41
 - New "Kiosk Script Session"
