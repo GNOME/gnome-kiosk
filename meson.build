@@ -2,7 +2,7 @@ project('gnome-kiosk', 'c',
         version: '41.beta'
 )
 add_project_arguments('-D_GNU_SOURCE',
-                      language: 'c'
+        language: 'c'
 )
 
 c_compiler = meson.get_compiler('c')
