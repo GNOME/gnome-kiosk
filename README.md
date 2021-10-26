@@ -70,7 +70,7 @@ Kiosk may provide a transparent screen lock option, to assist the application.
 
 ## Contributing
 
-To contribute, open merge requests at https://gitlab.gnome.org/halfline/gnome-kiosk.
+To contribute, open merge requests at https://gitlab.gnome.org/GNOME/gnome-kiosk.
 
 ## License
 GNOME Kiosk is distributed under the terms of the GNU General Public License,
