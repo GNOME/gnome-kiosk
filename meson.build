@@ -183,7 +183,7 @@ desktop_file = configure_file(
         configuration: desktop_config_data
 )
 
-i18n.merge_file('desktop',
+i18n.merge_file(
         input: desktop_file,
         output: 'org.gnome.Kiosk.Script.desktop',
         po_dir: po_dir,
@@ -208,7 +208,7 @@ install_data('kiosk-script/gnome-session/gnome-kiosk-script.session',
         install_dir: session_dir,
 )
 
-i18n.merge_file('desktop',
+i18n.merge_file(
         input: 'kiosk-script/xsessions/gnome-kiosk-script-xorg.desktop.in',
         output: '@BASENAME@',
         po_dir: po_dir,
@@ -217,7 +217,7 @@ i18n.merge_file('desktop',
         type: 'desktop'
 )
 
-i18n.merge_file('desktop',
+i18n.merge_file(
         input: 'kiosk-script/wayland-sessions/gnome-kiosk-script-wayland.desktop.in',
         output: '@BASENAME@',
         po_dir: po_dir,
@@ -237,7 +237,7 @@ session_file = configure_file(
 
 subdir('input-selector')
 
-i18n.merge_file('desktop',
+i18n.merge_file(
         input: session_file,
         output: 'org.gnome.Kiosk.SearchApp.session',
         po_dir: po_dir,
@@ -246,7 +246,7 @@ i18n.merge_file('desktop',
         type: 'desktop'
 )
 
-i18n.merge_file('desktop',
+i18n.merge_file(
         input: 'search-app/org.gnome.Kiosk.SearchApp.Session.desktop.in',
         output: 'org.gnome.Kiosk.SearchApp.Session.desktop',
         po_dir: po_dir,
@@ -261,7 +261,7 @@ search_app_desktop_file = configure_file(
         configuration: desktop_config_data
 )
 
-i18n.merge_file('desktop',
+i18n.merge_file(
         input: search_app_desktop_file,
         output: 'org.gnome.Kiosk.SearchApp.desktop',
         po_dir: po_dir,
