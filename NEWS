@@ -1,4 +1,9 @@
 # NEWS
+## 42.alpha
+- Port to mutter 42
+- Docs fixes
+- Build goo fixes
+
 ## 41.0
 - Whitespace cleanup in build goo
 
