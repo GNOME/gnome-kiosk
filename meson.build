@@ -142,7 +142,7 @@ desktop_file = configure_file(
         configuration: desktop_config_data
 )
 
-i18n.merge_file('desktop',
+i18n.merge_file(
         input: desktop_file,
         output: 'org.gnome.Kiosk.desktop',
         po_dir: po_dir,
