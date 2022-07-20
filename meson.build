@@ -34,7 +34,7 @@ config_h = configure_file(
 
 meson.add_install_script ('meson/postinstall.py')
 
-mutter_dependency = dependency('libmutter-10')
+mutter_dependency = dependency('libmutter-11')
 mutter_libdir = mutter_dependency.get_pkgconfig_variable('typelibdir')
 
 systemd_user_unit_dir = dependency('systemd').get_pkgconfig_variable('systemduserunitdir',
@@ -103,9 +103,9 @@ compositor_dependencies += dependency('glib-2.0')
 compositor_dependencies += dependency('gnome-desktop-3.0')
 compositor_dependencies += dependency('gobject-2.0')
 compositor_dependencies += dependency('ibus-1.0')
-compositor_dependencies += dependency('mutter-cogl-10')
-compositor_dependencies += dependency('mutter-cogl-pango-10')
-compositor_dependencies += dependency('mutter-clutter-10')
+compositor_dependencies += dependency('mutter-cogl-11')
+compositor_dependencies += dependency('mutter-cogl-pango-11')
+compositor_dependencies += dependency('mutter-clutter-11')
 compositor_dependencies += mutter_dependency
 compositor_dependencies += systemd_dependency
 
