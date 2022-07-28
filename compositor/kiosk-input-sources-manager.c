@@ -40,36 +40,36 @@
 
 struct _KioskInputSourcesManager
 {
-        GObject parent;
+        GObject                       parent;
 
         /* weak references */
-        KioskCompositor *compositor;
-        MetaDisplay     *display;
+        KioskCompositor              *compositor;
+        MetaDisplay                  *display;
 
         KioskDBusInputSourcesManager *dbus_service;
         GDBusObjectManagerServer     *dbus_object_manager;
 
         /* strong references */
-        GCancellable *cancellable;
-        KioskInputEngineManager *input_engine_manager;
-        KioskXKeyboardManager *x_keyboard_manager;
-        SdLocale1 *locale_proxy;
-        GnomeXkbInfo *xkb_info;
-        GSettings *input_sources_settings;
-        GSettings *key_binding_settings;
-        GPtrArray *input_source_groups;
+        GCancellable                 *cancellable;
+        KioskInputEngineManager      *input_engine_manager;
+        KioskXKeyboardManager        *x_keyboard_manager;
+        SdLocale1                    *locale_proxy;
+        GnomeXkbInfo                 *xkb_info;
+        GSettings                    *input_sources_settings;
+        GSettings                    *key_binding_settings;
+        GPtrArray                    *input_source_groups;
 
         /* state */
-        ssize_t input_source_groups_index;
+        ssize_t                       input_source_groups_index;
 
         /* flags */
-        guint32 overriding_configuration : 1;
+        guint32                       overriding_configuration : 1;
 };
 
 enum
 {
-  PROP_COMPOSITOR = 1,
-  NUMBER_OF_PROPERTIES
+        PROP_COMPOSITOR = 1,
+        NUMBER_OF_PROPERTIES
 };
 static GParamSpec *kiosk_input_sources_manager_properties[NUMBER_OF_PROPERTIES] = { NULL, };
 
@@ -427,6 +427,7 @@ static void
 sync_all_input_sources_to_dbus_service (KioskInputSourcesManager *self)
 {
         GList *stale_dbus_objects;
+
         g_autoptr (GPtrArray) sorted_input_sources = NULL;
         g_autofree char *input_sources_string;
         size_t i;
@@ -500,7 +501,7 @@ sync_all_input_sources_to_dbus_service (KioskInputSourcesManager *self)
 
         input_sources_string = g_strjoinv ("','", (GStrv) sorted_input_sources->pdata);
         g_debug ("KioskInputSourcesManager: InputSources D-Bus property set to ['%s']", input_sources_string);
-        kiosk_dbus_input_sources_manager_set_input_sources (self->dbus_service, (const char* const *) sorted_input_sources->pdata);
+        kiosk_dbus_input_sources_manager_set_input_sources (self->dbus_service, (const char * const *) sorted_input_sources->pdata);
 }
 
 static void
@@ -530,6 +531,7 @@ kiosk_input_sources_manager_set_input_sources (KioskInputSourcesManager *self,
         KioskInputSourceGroup *old_input_source_group;
         g_autofree char *old_input_engine = NULL;
         g_autofree char *old_selected_layout = NULL;
+
         g_autoptr (GVariantIter) iter = NULL;
         g_autofree char *options_string = NULL;
         const char *backend_type = NULL, *backend_id = NULL;
@@ -575,13 +577,13 @@ kiosk_input_sources_manager_set_property (GObject      *object,
         KioskInputSourcesManager *self = KIOSK_INPUT_SOURCES_MANAGER (object);
 
         switch (property_id) {
-                case PROP_COMPOSITOR:
-                        g_set_weak_pointer (&self->compositor, g_value_get_object (value));
-                        break;
+        case PROP_COMPOSITOR:
+                g_set_weak_pointer (&self->compositor, g_value_get_object (value));
+                break;
 
-                default:
-                        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, param_spec);
-                        break;
+        default:
+                G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, param_spec);
+                break;
         }
 }
 
@@ -592,17 +594,17 @@ kiosk_input_sources_manager_get_property (GObject    *object,
                                           GParamSpec *param_spec)
 {
         switch (property_id) {
-                default:
-                        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, param_spec);
-                        break;
+        default:
+                G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, param_spec);
+                break;
         }
 }
 
 static gboolean
 on_dbus_service_handle_set_input_sources (KioskInputSourcesManager *self,
-                                          GDBusMethodInvocation   *invocation,
-                                          GVariant                *input_sources,
-                                          const char * const      *options)
+                                          GDBusMethodInvocation    *invocation,
+                                          GVariant                 *input_sources,
+                                          const char * const       *options)
 {
         g_autoptr (GVariantIter) iter = NULL;
         g_autofree char *input_sources_string = NULL;
@@ -623,9 +625,9 @@ on_dbus_service_handle_set_input_sources (KioskInputSourcesManager *self,
 
 static gboolean
 on_dbus_service_handle_set_input_sources_from_locales (KioskInputSourcesManager *self,
-                                                       GDBusMethodInvocation   *invocation,
-                                                       const char * const      *locales,
-                                                       const char * const      *options)
+                                                       GDBusMethodInvocation    *invocation,
+                                                       const char * const       *locales,
+                                                       const char * const       *options)
 {
         g_autofree char *locales_string = NULL;
         g_autofree char *options_string = NULL;
@@ -644,7 +646,7 @@ on_dbus_service_handle_set_input_sources_from_locales (KioskInputSourcesManager 
 
 static gboolean
 on_dbus_service_handle_set_input_sources_from_session_configuration (KioskInputSourcesManager *self,
-                                                                      GDBusMethodInvocation   *invocation)
+                                                                     GDBusMethodInvocation    *invocation)
 {
         g_debug ("KioskService: Handling SetInputSourcesFromSessionConfiguration() call");
 
@@ -814,8 +816,8 @@ kiosk_input_sources_manager_add_layout (KioskInputSourcesManager *self,
 
 void
 kiosk_input_sources_manager_add_input_engine (KioskInputSourcesManager *self,
-                                             const char              *engine_name,
-                                             const char              *options)
+                                              const char               *engine_name,
+                                              const char               *options)
 {
         KioskInputSourceGroup *input_source_group = NULL;
 
@@ -837,10 +839,12 @@ kiosk_input_sources_manager_set_input_sources_from_system_configuration (KioskIn
         g_autofree char *localed_name_owner = NULL;
 
         const char *layouts_string = NULL;
+
         g_auto (GStrv) layouts = NULL;
         size_t number_of_layouts = 0;
 
         const char *variants_string = NULL;
+
         g_auto (GStrv) variants = NULL;
         size_t number_of_variants = 0;
 
@@ -1414,9 +1418,9 @@ on_x_keyboard_manager_selected_layout_changed (KioskInputSourcesManager *self)
 }
 
 static gboolean
-layouts_match_selected_input_source_group (KioskInputSourcesManager  *self,
-                                           const char * const        *layouts,
-                                           const char                *options)
+layouts_match_selected_input_source_group (KioskInputSourcesManager *self,
+                                           const char * const       *layouts,
+                                           const char               *options)
 {
         KioskInputSourceGroup *input_source_group;
 

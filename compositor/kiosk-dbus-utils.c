@@ -29,7 +29,7 @@ kiosk_dbus_utils_escape_object_path (const char *data,
                     ((character >= ((guchar) 'A')) &&
                      (character <= ((guchar) 'Z'))) ||
                     ((character >= ((guchar) '0')) && (character <= ((guchar) '9')))) {
-                    g_string_append_c (string, (char) character);
+                        g_string_append_c (string, (char) character);
                         continue;
                 }
 
@@ -121,12 +121,13 @@ dashed_string_to_dbus_error_string (const char *dashed_string,
 }
 
 void
-kiosk_dbus_utils_register_error_domain (GQuark error_domain,
-                                        GType  error_enum)
+kiosk_dbus_utils_register_error_domain (GQuark  error_domain,
+                                        GType   error_enum)
 {
         const char *error_domain_string;
         g_autofree char *type_name = NULL;
         GType type;
+
         g_autoptr (GTypeClass) type_class = NULL;
         const GEnumClass *enum_class;
         guint i;

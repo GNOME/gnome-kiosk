@@ -25,27 +25,28 @@
 
 struct _KioskCompositor
 {
-        MetaPlugin parent;
+        MetaPlugin                parent;
 
         /* weak references */
-        MetaDisplay *display;
-        MetaContext *context;
-        ClutterBackend *backend;
-        ClutterActor *stage;
+        MetaDisplay              *display;
+        MetaContext              *context;
+        ClutterBackend           *backend;
+        ClutterActor             *stage;
 
         /* strong references */
-        GCancellable *cancellable;
-        KioskBackgrounds *backgrounds;
+        GCancellable             *cancellable;
+        KioskBackgrounds         *backgrounds;
         KioskInputSourcesManager *input_sources_manager;
-        KioskService *service;
+        KioskService             *service;
 };
 
-enum {
+enum
+{
         X_SERVER_EVENT,
         NUMBER_OF_SIGNALS
 };
 
-static guint signals [NUMBER_OF_SIGNALS] = { 0, };
+static guint signals[NUMBER_OF_SIGNALS] = { 0, };
 
 G_DEFINE_TYPE (KioskCompositor, kiosk_compositor, META_TYPE_PLUGIN)
 
@@ -212,6 +213,7 @@ static void
 kiosk_compositor_start (MetaPlugin *plugin)
 {
         KioskCompositor *self = KIOSK_COMPOSITOR (plugin);
+
         g_autoptr (GError) error = NULL;
 
         g_set_weak_pointer (&self->display, meta_plugin_get_display (META_PLUGIN (self)));
@@ -279,6 +281,7 @@ kiosk_compositor_wants_window_fullscreen (KioskCompositor *self,
                                           MetaWindow      *window)
 {
         MetaWindowType window_type;
+
         g_autoptr (GList) windows = NULL;
         GList *node;
 
@@ -448,10 +451,10 @@ kiosk_compositor_show_window_menu (MetaPlugin         *plugin,
 }
 
 static void
-kiosk_compositor_show_window_menu_for_rect (MetaPlugin *plugin,
-                                            MetaWindow *window,
-                                            MetaWindowMenuType menu,
-                                            MetaRectangle *rect)
+kiosk_compositor_show_window_menu_for_rect (MetaPlugin         *plugin,
+                                            MetaWindow         *window,
+                                            MetaWindowMenuType  menu,
+                                            MetaRectangle      *rect)
 {
         g_assert (META_PLUGIN_CLASS (kiosk_compositor_parent_class)->show_window_menu_for_rect == NULL);
 }
@@ -461,6 +464,7 @@ kiosk_compositor_xevent_filter (MetaPlugin *plugin,
                                 XEvent     *x_server_event)
 {
         KioskCompositor *self = KIOSK_COMPOSITOR (plugin);
+
         g_signal_emit (G_OBJECT (self), signals[X_SERVER_EVENT], 0, x_server_event);
         return FALSE;
 }
@@ -481,17 +485,16 @@ kiosk_compositor_confirm_display_change (MetaPlugin *plugin)
 }
 
 static const MetaPluginInfo info = {
-        .name = "GNOME Kiosk",
-        .version = VERSION,
-        .author = "Various",
-        .license = "GPLv2+",
+        .name        = "GNOME Kiosk",
+        .version     = VERSION,
+        .author      = "Various",
+        .license     = "GPLv2+",
         .description = "Provides Kiosk compositor plugin for mutter"
 };
 
 static const MetaPluginInfo *
 kiosk_compositor_plugin_info (MetaPlugin *plugin)
 {
-
         return &info;
 }
 

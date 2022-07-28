@@ -6,7 +6,8 @@
 
 G_BEGIN_DECLS
 
-typedef void (* KioskObjectCallback) (GObject *self, gpointer user_data);
+typedef void (* KioskObjectCallback) (GObject  *self,
+                                      gpointer  user_data);
 #define KIOSK_OBJECT_CALLBACK(_callback) ((KioskObjectCallback) _callback)
 
 void kiosk_gobject_utils_queue_defer_callback (GObject             *self,

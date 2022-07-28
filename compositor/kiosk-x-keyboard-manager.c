@@ -19,7 +19,7 @@
 
 struct _KioskXKeyboardManager
 {
-        GObject parent;
+        GObject          parent;
 
         /* weak references */
         KioskCompositor *compositor;
@@ -28,29 +28,29 @@ struct _KioskXKeyboardManager
         Display         *x_server_display;
 
         /* strong references */
-        GCancellable *cancellable;
-        GBytes       *xkb_rules_names_data;
-        char        **layouts;
-        char         *options;
+        GCancellable    *cancellable;
+        GBytes          *xkb_rules_names_data;
+        char           **layouts;
+        char            *options;
 
         /* state */
-        Window x_server_root_window;
-        Atom   xkb_rules_names_atom;
-        int    xkb_event_base;
+        Window           x_server_root_window;
+        Atom             xkb_rules_names_atom;
+        int              xkb_event_base;
 
-        size_t layout_index;
-        ssize_t pending_layout_index;
+        size_t           layout_index;
+        ssize_t          pending_layout_index;
 
         /* flags */
-        guint32 xkb_rules_names_data_changed: 1;
+        guint32          xkb_rules_names_data_changed : 1;
 };
 
 enum
 {
-  PROP_COMPOSITOR = 1,
-  PROP_LAYOUTS,
-  PROP_SELECTED_LAYOUT,
-  NUMBER_OF_PROPERTIES
+        PROP_COMPOSITOR = 1,
+        PROP_LAYOUTS,
+        PROP_SELECTED_LAYOUT,
+        NUMBER_OF_PROPERTIES
 };
 
 static GParamSpec *kiosk_x_keyboard_manager_properties[NUMBER_OF_PROPERTIES] = { NULL, };
@@ -130,12 +130,12 @@ kiosk_x_keyboard_manager_set_property (GObject      *object,
         KioskXKeyboardManager *self = KIOSK_X_KEYBOARD_MANAGER (object);
 
         switch (property_id) {
-                case PROP_COMPOSITOR:
-                        g_set_weak_pointer (&self->compositor, g_value_get_object (value));
-                        break;
-                default:
-                        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, param_spec);
-                        break;
+        case PROP_COMPOSITOR:
+                g_set_weak_pointer (&self->compositor, g_value_get_object (value));
+                break;
+        default:
+                G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, param_spec);
+                break;
         }
 }
 
@@ -148,15 +148,15 @@ kiosk_x_keyboard_manager_get_property (GObject    *object,
         KioskXKeyboardManager *self = KIOSK_X_KEYBOARD_MANAGER (object);
 
         switch (property_id) {
-                case PROP_SELECTED_LAYOUT:
-                        g_value_set_string (value, self->layouts[self->layout_index]);
-                        break;
-                case PROP_LAYOUTS:
-                        g_value_set_boxed (value, self->layouts);
-                        break;
-                default:
-                        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, param_spec);
-                        break;
+        case PROP_SELECTED_LAYOUT:
+                g_value_set_string (value, self->layouts[self->layout_index]);
+                break;
+        case PROP_LAYOUTS:
+                g_value_set_boxed (value, self->layouts);
+                break;
+        default:
+                G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, param_spec);
+                break;
         }
 }
 
@@ -260,7 +260,8 @@ kiosk_x_keyboard_manager_read_xkb_rules_names_data (KioskXKeyboardManager *self)
         gulong number_of_bytes_unread = 0;
         guchar *property_values;
         size_t i;
-        enum {
+        enum
+        {
                 RULES_NAME = 0,
                 MODEL,
                 LAYOUTS,
@@ -301,29 +302,29 @@ kiosk_x_keyboard_manager_read_xkb_rules_names_data (KioskXKeyboardManager *self)
 
         property_value_index = 0;
         for (i = 0; i < number_of_bytes_read; i++) {
-            g_autofree char *value = g_strdup ((char *) property_values + i);
-            size_t value_length = strlen (value);
+                g_autofree char *value = g_strdup ((char *) property_values + i);
+                size_t value_length = strlen (value);
 
-            switch (property_value_index) {
+                switch (property_value_index) {
                 case RULES_NAME:
                 case MODEL:
-                    break;
+                        break;
                 case LAYOUTS:
-                    layouts_string = g_steal_pointer (&value);
-                    g_debug ("KioskXKeyboardManager: Read layouts '%s'", layouts_string);
-                    break;
+                        layouts_string = g_steal_pointer (&value);
+                        g_debug ("KioskXKeyboardManager: Read layouts '%s'", layouts_string);
+                        break;
                 case VARIANTS:
-                    variants_string = g_steal_pointer (&value);
-                    g_debug ("KioskXKeyboardManager: Read variants '%s'", variants_string);
-                    break;
+                        variants_string = g_steal_pointer (&value);
+                        g_debug ("KioskXKeyboardManager: Read variants '%s'", variants_string);
+                        break;
                 case OPTIONS:
-                    options = g_steal_pointer (&value);
-                    g_debug ("KioskXKeyboardManager: Read options '%s'", options);
-                    break;
-            }
+                        options = g_steal_pointer (&value);
+                        g_debug ("KioskXKeyboardManager: Read options '%s'", options);
+                        break;
+                }
 
-            i += value_length;
-            property_value_index++;
+                i += value_length;
+                property_value_index++;
         }
 
         if (self->xkb_rules_names_data != NULL && g_bytes_equal (self->xkb_rules_names_data, new_xkb_rules_names_data)) {
@@ -337,7 +338,7 @@ kiosk_x_keyboard_manager_read_xkb_rules_names_data (KioskXKeyboardManager *self)
         layouts = g_strsplit (layouts_string, ",", -1);
         variants = g_strsplit (variants_string, ",", -1);
 
-        qualified_layouts = qualify_layouts_with_variants (self, (const char * const *)layouts, (const char * const *)variants);
+        qualified_layouts = qualify_layouts_with_variants (self, (const char * const *) layouts, (const char * const *) variants);
 
         if (qualified_layouts == NULL) {
                 g_debug ("KioskXKeyboardManager: Unable to qualify layouts with variants");
@@ -406,24 +407,23 @@ kiosk_x_keyboard_manager_handle_xkb_event (KioskXKeyboardManager *self,
 
         layout_index = XkbStateGroup (&x_server_event->state);
         switch (x_server_event->any.xkb_type) {
-                case XkbStateNotify:
-                        if (!(x_server_event->state.changed & XkbGroupStateMask)) {
-                                return;
-                        }
+        case XkbStateNotify:
+                if (!(x_server_event->state.changed & XkbGroupStateMask)) {
+                        return;
+                }
 
-                        /* Mutter immediately reverts all layout changes coming from
-                         * the outside, so we hide the event from it.
-                         */
-                        x_server_event->state.changed &= ~XkbGroupLockMask;
+                /* Mutter immediately reverts all layout changes coming from
+                 * the outside, so we hide the event from it.
+                 */
+                x_server_event->state.changed &= ~XkbGroupLockMask;
 
-                        if (self->xkb_rules_names_data_changed) {
-                                g_debug ("KioskXKeyboardManager: Ignoring spurious group change following layout change");
-                                self->xkb_rules_names_data_changed = FALSE;
-                                return;
-
-                        }
-                        g_debug ("KioskXKeyboardManager: Approving keyboard group change to group %lu", layout_index);
-                        kiosk_x_keyboard_manager_set_layout_index (self, layout_index);
+                if (self->xkb_rules_names_data_changed) {
+                        g_debug ("KioskXKeyboardManager: Ignoring spurious group change following layout change");
+                        self->xkb_rules_names_data_changed = FALSE;
+                        return;
+                }
+                g_debug ("KioskXKeyboardManager: Approving keyboard group change to group %lu", layout_index);
+                kiosk_x_keyboard_manager_set_layout_index (self, layout_index);
                 break;
         }
 }
@@ -432,7 +432,6 @@ static void
 on_x_server_event (KioskXKeyboardManager *self,
                    XEvent                *x_server_event)
 {
-
         if (self->x_server_display == NULL) {
                 self->x_server_display = x_server_event->xany.display;
                 self->x_server_root_window = DefaultRootWindow (self->x_server_display);
@@ -440,13 +439,13 @@ on_x_server_event (KioskXKeyboardManager *self,
         }
 
         switch (x_server_event->type) {
-                case PropertyNotify:
-                        kiosk_x_keyboard_manager_handle_x_server_property_notify (self, &x_server_event->xproperty);
-                        break;
-                default:
-                        if (x_server_event->type == self->xkb_event_base) {
-                                kiosk_x_keyboard_manager_handle_xkb_event (self, (XkbEvent *) x_server_event);
-                        }
+        case PropertyNotify:
+                kiosk_x_keyboard_manager_handle_x_server_property_notify (self, &x_server_event->xproperty);
+                break;
+        default:
+                if (x_server_event->type == self->xkb_event_base) {
+                        kiosk_x_keyboard_manager_handle_xkb_event (self, (XkbEvent *) x_server_event);
+                }
                 break;
         }
 }
