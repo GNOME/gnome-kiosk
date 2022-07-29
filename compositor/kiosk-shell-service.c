@@ -314,7 +314,6 @@ kiosk_shell_service_handle_grab_accelerators (KioskShellDBusService *object,
                                               GVariant              *accelerators)
 {
         KioskShellService *self = KIOSK_SHELL_SERVICE (object);
-
         g_autoptr (GVariantIter) iter = NULL;
         GVariantBuilder builder;
         const char *client_unique_name;
