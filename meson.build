@@ -269,3 +269,6 @@ i18n.merge_file(
         install_dir: desktop_data_dir,
         type: 'desktop'
 )
+
+test('check-format', find_program('scripts/check-format.sh'))
+

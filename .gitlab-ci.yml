@@ -1,5 +1,6 @@
 stages:
         - build
+        - test
 
 build-fedora:
         image: fedora:rawhide
@@ -20,15 +21,30 @@ build-fedora:
                                 mesa-libGL-devel
                                 meson
                                 mutter-devel
+                                patchutils
+                                uncrustify
         script:
                 - export BUILD_ROOT=_build
                 - meson . $BUILD_ROOT --prefix=/usr --sysconfdir=/etc --localstatedir=/var --mandir=/usr/share/man --libdir=/usr/lib64
                 - ninja -C $BUILD_ROOT
                 - ninja -C $BUILD_ROOT install
                 - ninja -C $BUILD_ROOT dist
-                - ninja -C $BUILD_ROOT test
         except:
                 - tags
         artifacts:
                 paths:
                         - _build/meson-dist
+        only:
+            - merge_requests
+
+test-fedora:
+        extends:
+                - build-fedora
+        stage: test
+        script:
+                - export BUILD_ROOT=_build
+                - meson . $BUILD_ROOT --prefix=/usr --sysconfdir=/etc --localstatedir=/var --mandir=/usr/share/man --libdir=/usr/lib64
+                - ninja -C $BUILD_ROOT
+                - ninja -C $BUILD_ROOT test
+        only:
+            - merge_requests
