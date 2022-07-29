@@ -7,8 +7,8 @@
 
 G_BEGIN_DECLS
 
-void kiosk_dbus_utils_register_error_domain (GQuark error_domain,
-                                             GType  error_enum);
+void kiosk_dbus_utils_register_error_domain (GQuark  error_domain,
+                                             GType   error_enum);
 
 char *kiosk_dbus_utils_escape_object_path (const char *data,
                                            gsize       length);

@@ -16,25 +16,25 @@
 
 struct _KioskService
 {
-        GObject parent;
+        GObject                               parent;
 
         /* weak references */
-        KioskCompositor *compositor;
+        KioskCompositor                      *compositor;
 
         /* strong references */
-        KioskDBusServiceSkeleton *service_skeleton;
+        KioskDBusServiceSkeleton             *service_skeleton;
 
         KioskDBusInputSourcesManagerSkeleton *input_sources_manager_skeleton;
-        GDBusObjectManagerServer *input_sources_object_manager;
+        GDBusObjectManagerServer             *input_sources_object_manager;
 
         /* handles */
-        guint bus_id;
+        guint                                 bus_id;
 };
 
 enum
 {
-  PROP_COMPOSITOR = 1,
-  NUMBER_OF_PROPERTIES
+        PROP_COMPOSITOR = 1,
+        NUMBER_OF_PROPERTIES
 };
 static GParamSpec *kiosk_service_properties[NUMBER_OF_PROPERTIES] = { NULL, };
 
@@ -95,13 +95,13 @@ kiosk_service_set_property (GObject      *object,
         KioskService *self = KIOSK_SERVICE (object);
 
         switch (property_id) {
-                case PROP_COMPOSITOR:
-                        g_set_weak_pointer (&self->compositor, g_value_get_object (value));
-                        break;
+        case PROP_COMPOSITOR:
+                g_set_weak_pointer (&self->compositor, g_value_get_object (value));
+                break;
 
-                default:
-                        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, param_spec);
-                        break;
+        default:
+                G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, param_spec);
+                break;
         }
 }
 
@@ -112,9 +112,9 @@ kiosk_service_get_property (GObject    *object,
                             GParamSpec *param_spec)
 {
         switch (property_id) {
-                default:
-                        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, param_spec);
-                        break;
+        default:
+                G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, param_spec);
+                break;
         }
 }
 
@@ -212,10 +212,9 @@ on_bus_name_lost (GDBusConnection *connection,
 }
 
 gboolean
-kiosk_service_start (KioskService  *self,
-                     GError       **error)
+kiosk_service_start (KioskService *self,
+                     GError      **error)
 {
-
         g_return_val_if_fail (KIOSK_IS_SERVICE (self), FALSE);
 
         g_debug ("KioskService: Starting");

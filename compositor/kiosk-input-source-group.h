@@ -11,17 +11,17 @@ G_BEGIN_DECLS
 G_DECLARE_FINAL_TYPE (KioskInputSourceGroup,
                       kiosk_input_source_group,
                       KIOSK, INPUT_SOURCE_GROUP,
-                      GObject)
+                      GObject);
 
 KioskInputSourceGroup *kiosk_input_source_group_new (KioskInputSourcesManager *manager);
 gboolean kiosk_input_source_group_add_layout (KioskInputSourceGroup *input_sources,
-                                        const char       *layout,
-                                        const char       *variant);
+                                              const char            *layout,
+                                              const char            *variant);
 char *kiosk_input_source_group_get_selected_layout (KioskInputSourceGroup *input_sources);
 char **kiosk_input_source_group_get_layouts (KioskInputSourceGroup *input_sources);
 
 gboolean kiosk_input_source_group_set_input_engine (KioskInputSourceGroup *input_sources,
-                                              const char       *engine_name);
+                                                    const char            *engine_name);
 const char *kiosk_input_source_group_get_input_engine (KioskInputSourceGroup *input_sources);
 
 void kiosk_input_source_group_set_options (KioskInputSourceGroup *input_sources,

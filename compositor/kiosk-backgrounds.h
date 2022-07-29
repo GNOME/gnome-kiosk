@@ -12,7 +12,7 @@ G_BEGIN_DECLS
 G_DECLARE_FINAL_TYPE (KioskBackgrounds,
                       kiosk_backgrounds,
                       KIOSK, BACKGROUNDS,
-                      MetaBackgroundGroup)
+                      MetaBackgroundGroup);
 
 KioskBackgrounds *kiosk_backgrounds_new (KioskCompositor *compositor);
 

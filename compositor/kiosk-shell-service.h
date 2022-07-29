@@ -13,11 +13,11 @@ G_BEGIN_DECLS
 G_DECLARE_FINAL_TYPE (KioskShellService,
                       kiosk_shell_service,
                       KIOSK, SHELL_SERVICE,
-                      KioskShellDBusServiceSkeleton)
+                      KioskShellDBusServiceSkeleton);
 
 KioskShellService *kiosk_shell_service_new (KioskCompositor *compositor);
-gboolean kiosk_shell_service_start (KioskShellService  *service,
-                                    GError            **error);
+gboolean kiosk_shell_service_start (KioskShellService *service,
+                                    GError           **error);
 void kiosk_shell_service_stop (KioskShellService *service);
 
 G_END_DECLS

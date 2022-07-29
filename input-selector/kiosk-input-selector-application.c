@@ -10,24 +10,23 @@
 
 struct _KioskInputSelectorApplication
 {
-        GtkApplication parent;
+        GtkApplication            parent;
 
         /* weak references */
-        GtkWidget *window;
-        GtkWidget *input_sources_menu_button;
-        GMenu *input_sources_menu;
+        GtkWidget                *window;
+        GtkWidget                *input_sources_menu_button;
+        GMenu                    *input_sources_menu;
 
         /* strong references */
-        GCancellable *cancellable;
+        GCancellable             *cancellable;
         KioskInputSourcesManager *input_sources_manager;
-        GDBusObjectManager *object_manager;
+        GDBusObjectManager       *object_manager;
 };
 
 G_DEFINE_TYPE (KioskInputSelectorApplication, kiosk_input_selector_application, GTK_TYPE_APPLICATION)
 
 KioskInputSelectorApplication *
-kiosk_input_selector_application_new (void)
-{
+kiosk_input_selector_application_new (void){
         GObject *object;
         guint flags = G_APPLICATION_NON_UNIQUE
                       | G_APPLICATION_HANDLES_COMMAND_LINE;
@@ -56,6 +55,7 @@ static void
 set_menu_label_from_selected_input_source (KioskInputSelectorApplication *self)
 {
         const char *object_path;
+
         g_autoptr (GDBusObject) object = NULL;
         g_autoptr (KioskInputSource) input_source = NULL;
 
@@ -202,6 +202,7 @@ static void
 kiosk_input_selector_application_startup (GApplication *application)
 {
         KioskInputSelectorApplication *self = KIOSK_INPUT_SELECTOR_APPLICATION (application);
+
         g_autoptr (GtkBuilder) builder = NULL;
 
         g_debug ("KioskInputSelectorApplication: Startup");
@@ -256,6 +257,4 @@ kiosk_input_selector_application_class_init (KioskInputSelectorApplicationClass 
         application_class->activate = kiosk_input_selector_application_activate;
         application_class->command_line = kiosk_input_selector_application_command_line;
         application_class->startup = kiosk_input_selector_application_startup;
-
 }
-

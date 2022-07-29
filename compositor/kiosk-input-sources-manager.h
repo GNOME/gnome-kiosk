@@ -15,7 +15,7 @@ G_BEGIN_DECLS
 G_DECLARE_FINAL_TYPE (KioskInputSourcesManager,
                       kiosk_input_sources_manager,
                       KIOSK, INPUT_SOURCES_MANAGER,
-                      GObject)
+                      GObject);
 
 KioskInputSourcesManager *kiosk_input_sources_manager_new (KioskCompositor *compositor);
 KioskInputEngineManager *kiosk_input_sources_manager_get_input_engine_manager (KioskInputSourcesManager *manager);

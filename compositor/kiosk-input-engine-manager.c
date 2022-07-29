@@ -24,27 +24,27 @@
 
 struct _KioskInputEngineManager
 {
-        GObject parent;
+        GObject                   parent;
 
         /* weak references */
         KioskInputSourcesManager *input_sources_manager;
 
         /* strong references */
-        GCancellable *cancellable;
-        IBusBus *bus;
-        GHashTable *engines;
-        char *active_engine;
+        GCancellable             *cancellable;
+        IBusBus                  *bus;
+        GHashTable               *engines;
+        char                     *active_engine;
 
         /* state */
-        guint32 is_loaded : 1;
+        guint32                   is_loaded : 1;
 };
 
 enum
 {
-  PROP_INPUT_SOURCES_MANAGER = 1,
-  PROP_IS_LOADED,
-  PROP_ACTIVE_ENGINE,
-  NUMBER_OF_PROPERTIES
+        PROP_INPUT_SOURCES_MANAGER = 1,
+        PROP_IS_LOADED,
+        PROP_ACTIVE_ENGINE,
+        NUMBER_OF_PROPERTIES
 };
 
 static GParamSpec *kiosk_input_engine_manager_properties[NUMBER_OF_PROPERTIES] = { NULL, };
@@ -86,14 +86,14 @@ kiosk_input_engine_manager_class_init (KioskInputEngineManagerClass *input_engin
         object_class->dispose = kiosk_input_engine_manager_dispose;
 
         kiosk_input_engine_manager_properties[PROP_INPUT_SOURCES_MANAGER] = g_param_spec_object ("input-sources-manager",
-                                                                                                "input-sources-manager",
-                                                                                                "input-sources-manager",
-                                                                                                KIOSK_TYPE_INPUT_SOURCES_MANAGER,
-                                                                                                G_PARAM_CONSTRUCT_ONLY
-                                                                                                | G_PARAM_WRITABLE
-                                                                                                | G_PARAM_STATIC_NAME
-                                                                                                | G_PARAM_STATIC_NICK
-                                                                                                | G_PARAM_STATIC_BLURB);
+                                                                                                 "input-sources-manager",
+                                                                                                 "input-sources-manager",
+                                                                                                 KIOSK_TYPE_INPUT_SOURCES_MANAGER,
+                                                                                                 G_PARAM_CONSTRUCT_ONLY
+                                                                                                 | G_PARAM_WRITABLE
+                                                                                                 | G_PARAM_STATIC_NAME
+                                                                                                 | G_PARAM_STATIC_NICK
+                                                                                                 | G_PARAM_STATIC_BLURB);
         kiosk_input_engine_manager_properties[PROP_IS_LOADED] = g_param_spec_boolean ("is-loaded",
                                                                                       "is-loaded",
                                                                                       "is-loaded",
@@ -119,18 +119,18 @@ static void
 kiosk_input_engine_manager_set_is_loaded (KioskInputEngineManager *self,
                                           gboolean                 is_loaded)
 {
-       if (self->is_loaded == is_loaded) {
+        if (self->is_loaded == is_loaded) {
                 return;
-       }
+        }
 
-       if (is_loaded) {
-               g_debug ("KioskInputEngineManager: Loaded");
-       } else {
-               g_debug ("KioskInputEngineManager: Unloaded");
-       }
+        if (is_loaded) {
+                g_debug ("KioskInputEngineManager: Loaded");
+        } else {
+                g_debug ("KioskInputEngineManager: Unloaded");
+        }
 
-       self->is_loaded = is_loaded;
-       g_object_notify (G_OBJECT (self), "is-loaded");
+        self->is_loaded = is_loaded;
+        g_object_notify (G_OBJECT (self), "is-loaded");
 }
 
 gboolean
@@ -145,20 +145,20 @@ static void
 kiosk_input_engine_manager_set_active_engine (KioskInputEngineManager *self,
                                               const char              *active_engine)
 {
-       if (g_strcmp0 (self->active_engine, active_engine) == 0) {
+        if (g_strcmp0 (self->active_engine, active_engine) == 0) {
                 return;
-       }
+        }
 
-       if (active_engine == NULL) {
-               g_debug ("KioskInputEngineManager: There is now no active input engine");
-       } else {
-               g_debug ("KioskInputEngineManager: Active input engine is now '%s'", active_engine);
-       }
+        if (active_engine == NULL) {
+                g_debug ("KioskInputEngineManager: There is now no active input engine");
+        } else {
+                g_debug ("KioskInputEngineManager: Active input engine is now '%s'", active_engine);
+        }
 
-       g_free (self->active_engine);
-       self->active_engine = g_strdup (active_engine);
+        g_free (self->active_engine);
+        self->active_engine = g_strdup (active_engine);
 
-       g_object_notify (G_OBJECT (self), "active-engine");
+        g_object_notify (G_OBJECT (self), "active-engine");
 }
 
 const char *
@@ -176,12 +176,12 @@ kiosk_input_engine_manager_set_property (GObject      *object,
         KioskInputEngineManager *self = KIOSK_INPUT_ENGINE_MANAGER (object);
 
         switch (property_id) {
-                case PROP_INPUT_SOURCES_MANAGER:
-                        g_set_weak_pointer (&self->input_sources_manager, g_value_get_object (value));
-                        break;
-                default:
-                        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, param_spec);
-                        break;
+        case PROP_INPUT_SOURCES_MANAGER:
+                g_set_weak_pointer (&self->input_sources_manager, g_value_get_object (value));
+                break;
+        default:
+                G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, param_spec);
+                break;
         }
 }
 
@@ -194,15 +194,15 @@ kiosk_input_engine_manager_get_property (GObject    *object,
         KioskInputEngineManager *self = KIOSK_INPUT_ENGINE_MANAGER (object);
 
         switch (property_id) {
-                case PROP_IS_LOADED:
-                    g_value_set_boolean (value, self->is_loaded);
-                    break;
-                case PROP_ACTIVE_ENGINE:
-                    g_value_set_string (value, self->active_engine);
-                    break;
-                default:
-                        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, param_spec);
-                        break;
+        case PROP_IS_LOADED:
+                g_value_set_boolean (value, self->is_loaded);
+                break;
+        case PROP_ACTIVE_ENGINE:
+                g_value_set_string (value, self->active_engine);
+                break;
+        default:
+                G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, param_spec);
+                break;
         }
 }
 
@@ -364,10 +364,10 @@ kiosk_input_engine_manager_connect_to_ibus (KioskInputEngineManager *self)
 }
 
 gboolean
-kiosk_input_engine_manager_find_layout_for_engine (KioskInputEngineManager  *self,
-                                                   const char               *engine_name,
-                                                   const char              **layout,
-                                                   const char              **variant)
+kiosk_input_engine_manager_find_layout_for_engine (KioskInputEngineManager *self,
+                                                   const char              *engine_name,
+                                                   const char             **layout,
+                                                   const char             **variant)
 {
         IBusEngineDesc *engine_description;
 
@@ -394,12 +394,11 @@ kiosk_input_engine_manager_find_layout_for_engine (KioskInputEngineManager  *sel
 }
 
 gboolean
-kiosk_input_engine_manager_describe_engine (KioskInputEngineManager  *self,
-                                            const char               *engine_name,
-                                            char                    **short_description,
-                                            char                    **full_description)
+kiosk_input_engine_manager_describe_engine (KioskInputEngineManager *self,
+                                            const char              *engine_name,
+                                            char                   **short_description,
+                                            char                   **full_description)
 {
-
         IBusEngineDesc *engine_description;
         const char *locale;
 

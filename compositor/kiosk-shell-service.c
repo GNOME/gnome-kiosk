@@ -16,21 +16,21 @@ struct _KioskShellService
         KioskShellDBusServiceSkeleton parent;
 
         /* weak references */
-        KioskCompositor *compositor;
-        MetaDisplay *display;
+        KioskCompositor              *compositor;
+        MetaDisplay                  *display;
 
         /* strong references */
-        GHashTable *client_bus_watch_ids;
-        GHashTable *grabbed_accelerators;
+        GHashTable                   *client_bus_watch_ids;
+        GHashTable                   *grabbed_accelerators;
 
         /* handles */
-        guint bus_id;
+        guint                         bus_id;
 };
 
 enum
 {
-  PROP_COMPOSITOR = 1,
-  NUMBER_OF_PROPERTIES
+        PROP_COMPOSITOR = 1,
+        NUMBER_OF_PROPERTIES
 };
 static GParamSpec *kiosk_shell_service_properties[NUMBER_OF_PROPERTIES] = { NULL, };
 
@@ -85,13 +85,13 @@ kiosk_shell_service_set_property (GObject      *object,
         KioskShellService *self = KIOSK_SHELL_SERVICE (object);
 
         switch (property_id) {
-                case PROP_COMPOSITOR:
-                        g_set_weak_pointer (&self->compositor, g_value_get_object (value));
-                        break;
+        case PROP_COMPOSITOR:
+                g_set_weak_pointer (&self->compositor, g_value_get_object (value));
+                break;
 
-                default:
-                        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, param_spec);
-                        break;
+        default:
+                G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, param_spec);
+                break;
         }
 }
 
@@ -102,9 +102,9 @@ kiosk_shell_service_get_property (GObject    *object,
                                   GParamSpec *param_spec)
 {
         switch (property_id) {
-                default:
-                        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, param_spec);
-                        break;
+        default:
+                G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, param_spec);
+                break;
         }
 }
 
@@ -141,7 +141,7 @@ stop_watching_client (KioskShellService *self,
         guint bus_watch_id;
 
         bus_watch_id = GPOINTER_TO_UINT (g_hash_table_lookup (self->client_bus_watch_ids,
-                                         client_unique_name));
+                                                              client_unique_name));
         if (bus_watch_id == 0) {
                 return;
         }
@@ -193,7 +193,6 @@ on_client_vanished (GDBusConnection   *connection,
 
                 g_debug ("KioskShellService: Ungrabbing accelerator with id %d",
                          action_id);
-
         }
 
         stop_watching_client (self, client_unique_name);
@@ -287,10 +286,10 @@ ungrab_accelerator_for_client (KioskShellService *self,
 
 static gboolean
 kiosk_shell_service_handle_grab_accelerator (KioskShellDBusService *object,
-                                             GDBusMethodInvocation   *invocation,
-                                             const char              *accelerator,
-                                             guint                    mode_flags,
-                                             guint                    grab_flags)
+                                             GDBusMethodInvocation *invocation,
+                                             const char            *accelerator,
+                                             guint                  mode_flags,
+                                             guint                  grab_flags)
 {
         KioskShellService *self = KIOSK_SHELL_SERVICE (object);
         const char *client_unique_name;
@@ -315,6 +314,7 @@ kiosk_shell_service_handle_grab_accelerators (KioskShellDBusService *object,
                                               GVariant              *accelerators)
 {
         KioskShellService *self = KIOSK_SHELL_SERVICE (object);
+
         g_autoptr (GVariantIter) iter = NULL;
         GVariantBuilder builder;
         const char *client_unique_name;
@@ -335,7 +335,6 @@ kiosk_shell_service_handle_grab_accelerators (KioskShellDBusService *object,
                 action_id = grab_accelerator_for_client (self, accelerator, mode_flags, grab_flags, client_unique_name);
 
                 g_variant_builder_add (&builder, "u", g_variant_new_uint32 (action_id));
-
         }
 
         kiosk_shell_dbus_service_complete_grab_accelerators (KIOSK_SHELL_DBUS_SERVICE (self),
@@ -347,8 +346,8 @@ kiosk_shell_service_handle_grab_accelerators (KioskShellDBusService *object,
 
 static gboolean
 kiosk_shell_service_handle_ungrab_accelerator (KioskShellDBusService *object,
-                                               GDBusMethodInvocation   *invocation,
-                                               guint                    action_id)
+                                               GDBusMethodInvocation *invocation,
+                                               guint                  action_id)
 {
         KioskShellService *self = KIOSK_SHELL_SERVICE (object);
         const char *client_unique_name;
@@ -369,12 +368,13 @@ kiosk_shell_service_handle_ungrab_accelerator (KioskShellDBusService *object,
 
 static gboolean
 kiosk_shell_service_handle_ungrab_accelerators (KioskShellDBusService *object,
-                                                GDBusMethodInvocation   *invocation,
-                                                GVariant                *action_ids)
+                                                GDBusMethodInvocation *invocation,
+                                                GVariant              *action_ids)
 {
         KioskShellService *self = KIOSK_SHELL_SERVICE (object);
         const char *client_unique_name;
         guint action_id;
+
         g_autoptr (GVariantIter) iter = NULL;
         gboolean ungrab_succeeded = TRUE;
 
@@ -424,9 +424,9 @@ kiosk_shell_service_new (KioskCompositor *compositor)
 }
 
 static void
-on_user_bus_acquired (GDBusConnection    *connection,
-                      const char         *unique_name,
-                      KioskShellService  *self)
+on_user_bus_acquired (GDBusConnection   *connection,
+                      const char        *unique_name,
+                      KioskShellService *self)
 {
         g_autoptr (GError) error = NULL;
 
@@ -504,8 +504,8 @@ on_accelerator_activated (KioskShellService  *self,
 }
 
 gboolean
-kiosk_shell_service_start (KioskShellService  *self,
-                           GError            **error)
+kiosk_shell_service_start (KioskShellService *self,
+                           GError           **error)
 {
         g_return_val_if_fail (KIOSK_IS_SHELL_SERVICE (self), FALSE);
 
@@ -538,5 +538,4 @@ kiosk_shell_service_stop (KioskShellService *self)
         stop_watching_clients (self);
         g_dbus_interface_skeleton_unexport (G_DBUS_INTERFACE_SKELETON (self));
         g_clear_handle_id (&self->bus_id, g_bus_unown_name);
-
 }

@@ -12,7 +12,7 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (KioskCompositor, kiosk_compositor,
                       KIOSK, COMPOSITOR,
-                      MetaPlugin)
+                      MetaPlugin);
 
 KioskBackgrounds *kiosk_compositor_get_backgrounds (KioskCompositor *compositor);
 KioskInputSourcesManager *kiosk_compositor_get_input_sources_manager (KioskCompositor *compositor);

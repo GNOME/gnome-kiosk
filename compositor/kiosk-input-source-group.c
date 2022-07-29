@@ -19,26 +19,26 @@
 
 struct _KioskInputSourceGroup
 {
-        GObject parent;
+        GObject                   parent;
 
         /* weak references */
         KioskInputSourcesManager *input_sources_manager;
-        KioskInputEngineManager *input_engine_manager;
-        KioskXKeyboardManager *x_keyboard_manager;
+        KioskInputEngineManager  *input_engine_manager;
+        KioskXKeyboardManager    *x_keyboard_manager;
 
         /* strong references */
-        char *input_engine_name;
-        GPtrArray *layouts;
-        GPtrArray *variants;
-        char *options;
+        char                     *input_engine_name;
+        GPtrArray                *layouts;
+        GPtrArray                *variants;
+        char                     *options;
 
         /* state */
-        xkb_layout_index_t layout_index;
+        xkb_layout_index_t        layout_index;
 };
 enum
 {
-  PROP_INPUT_SOURCES_MANAGER = 1,
-  NUMBER_OF_PROPERTIES
+        PROP_INPUT_SOURCES_MANAGER = 1,
+        NUMBER_OF_PROPERTIES
 };
 
 static GParamSpec *kiosk_input_source_group_properties[NUMBER_OF_PROPERTIES] = { NULL, };
@@ -210,7 +210,7 @@ kiosk_input_source_group_ensure_layout_for_input_engine (KioskInputSourceGroup *
 
 gboolean
 kiosk_input_source_group_set_input_engine (KioskInputSourceGroup *self,
-                                     const char       *engine_name)
+                                           const char            *engine_name)
 {
         g_debug ("KioskInputSourceGroup: Setting input engine to '%s'", engine_name);
 
@@ -286,7 +286,6 @@ kiosk_input_source_group_activate (KioskInputSourceGroup *self)
         if (self->x_keyboard_manager != NULL) {
                 keymap_already_set = kiosk_x_keyboard_manager_keymap_is_active (self->x_keyboard_manager, (const char * const *) self->layouts->pdata, (const char * const *) self->variants->pdata, self->options);
                 layout_group_already_locked = kiosk_x_keyboard_manager_layout_group_is_locked (self->x_keyboard_manager, self->layout_index);
-
         }
 
         if (!keymap_already_set) {
@@ -511,13 +510,13 @@ kiosk_input_source_group_set_property (GObject      *object,
         KioskInputSourceGroup *self = KIOSK_INPUT_SOURCE_GROUP (object);
 
         switch (property_id) {
-                case PROP_INPUT_SOURCES_MANAGER:
-                        g_set_weak_pointer (&self->input_sources_manager, g_value_get_object (value));
-                        break;
+        case PROP_INPUT_SOURCES_MANAGER:
+                g_set_weak_pointer (&self->input_sources_manager, g_value_get_object (value));
+                break;
 
-                default:
-                        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, param_spec);
-                        break;
+        default:
+                G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, param_spec);
+                break;
         }
 }
 
@@ -528,9 +527,9 @@ kiosk_input_source_group_get_property (GObject    *object,
                                        GParamSpec *param_spec)
 {
         switch (property_id) {
-                default:
-                        G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, param_spec);
-                        break;
+        default:
+                G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, param_spec);
+                break;
         }
 }
 

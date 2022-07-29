@@ -12,7 +12,7 @@ G_BEGIN_DECLS
 G_DECLARE_FINAL_TYPE (KioskXKeyboardManager,
                       kiosk_x_keyboard_manager,
                       KIOSK, X_KEYBOARD_MANAGER,
-                      GObject)
+                      GObject);
 
 KioskXKeyboardManager *kiosk_x_keyboard_manager_new (KioskCompositor *compositor);
 
