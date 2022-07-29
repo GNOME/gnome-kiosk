@@ -29,11 +29,12 @@ build-fedora:
                 - ninja -C $BUILD_ROOT
                 - ninja -C $BUILD_ROOT install
                 - ninja -C $BUILD_ROOT dist
+                - find -depth -type d -name '*.p' -exec rm -rf "{}" \;
         except:
                 - tags
         artifacts:
                 paths:
-                        - _build/meson-dist
+                        - _build
         only:
             - merge_requests
 
@@ -46,5 +47,9 @@ test-fedora:
                 - meson . $BUILD_ROOT --prefix=/usr --sysconfdir=/etc --localstatedir=/var --mandir=/usr/share/man --libdir=/usr/lib64
                 - ninja -C $BUILD_ROOT
                 - ninja -C $BUILD_ROOT test
+                - find -depth -type d -name '*.p' -exec rm -rf "{}" \;
+        artifacts:
+                paths:
+                        - _build
         only:
             - merge_requests
