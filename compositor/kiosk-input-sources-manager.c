@@ -354,7 +354,6 @@ export_input_source_object_to_dbus_service (KioskInputSourcesManager *self,
                                             const char               *full_name)
 {
         g_autoptr (GDBusInterface) dbus_input_source = NULL;
-
         g_autoptr (GDBusObject) object_path = NULL;
 
         dbus_input_source = g_dbus_object_manager_get_interface (G_DBUS_OBJECT_MANAGER (self->dbus_object_manager),

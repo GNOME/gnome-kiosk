@@ -127,7 +127,6 @@ kiosk_dbus_utils_register_error_domain (GQuark  error_domain,
         const char *error_domain_string;
         g_autofree char *type_name = NULL;
         GType type;
-
         g_autoptr (GTypeClass) type_class = NULL;
         const GEnumClass *enum_class;
         guint i;

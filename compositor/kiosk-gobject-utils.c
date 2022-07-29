@@ -48,7 +48,6 @@ kiosk_gobject_utils_queue_callback (GObject             *self,
                                     gpointer             user_data)
 {
         g_autofree char *data_key = NULL;
-
         g_autoptr (GSource) source = NULL;
         GTask *task;
 

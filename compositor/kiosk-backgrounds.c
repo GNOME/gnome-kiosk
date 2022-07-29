@@ -84,7 +84,6 @@ create_background_for_monitor (KioskBackgrounds *self,
         MetaRectangle geometry;
         ClutterActor *background_actor = NULL;
         MetaBackgroundContent *background_content;
-
         g_autoptr (MetaBackground) background = NULL;
         ClutterColor color;
 

@@ -55,7 +55,6 @@ static void
 set_menu_label_from_selected_input_source (KioskInputSelectorApplication *self)
 {
         const char *object_path;
-
         g_autoptr (GDBusObject) object = NULL;
         g_autoptr (KioskInputSource) input_source = NULL;
 

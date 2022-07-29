@@ -213,7 +213,6 @@ static void
 kiosk_compositor_start (MetaPlugin *plugin)
 {
         KioskCompositor *self = KIOSK_COMPOSITOR (plugin);
-
         g_autoptr (GError) error = NULL;
 
         g_set_weak_pointer (&self->display, meta_plugin_get_display (META_PLUGIN (self)));
