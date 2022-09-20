@@ -1,4 +1,9 @@
 # NEWS
+## 43.0
+- meson build fixes
+- require mutter 43
+- clean up code format
+
 ## 42.0
 - No updates
 
