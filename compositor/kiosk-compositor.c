@@ -306,7 +306,7 @@ kiosk_compositor_wants_window_fullscreen (KioskCompositor *self,
         for (node = windows; node != NULL; node = node->next) {
                 MetaWindow *existing_window = node->data;
 
-                if (meta_window_is_fullscreen (existing_window)) {
+                if (meta_window_is_monitor_sized (existing_window)) {
                         return FALSE;
                 }
         }
