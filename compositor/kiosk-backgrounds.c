@@ -18,20 +18,32 @@
 #include <meta/meta-background.h>
 
 #include "kiosk-compositor.h"
+#include "kiosk-gobject-utils.h"
+
+#define KIOSK_BACKGROUNDS_SCHEMA "org.gnome.desktop.background"
+#define KIOSK_BACKGROUNDS_PICTURE_OPTIONS_SETTING "picture-options"
+#define KIOSK_BACKGROUNDS_PICTURE_URI_SETTING "picture-uri"
+#define KIOSK_BACKGROUNDS_COLOR_SHADING_TYPE_SETTING "color-shading-type"
+#define KIOSK_BACKGROUNDS_PRIMARY_COLOR_SETTING "primary-color"
+#define KIOSK_BACKGROUNDS_SECONDARY_COLOR_SETTING "secondary-color"
 
 struct _KioskBackgrounds
 {
-        MetaBackgroundGroup parent;
+        MetaBackgroundGroup       parent;
 
         /* weak references */
-        KioskCompositor    *compositor;
-        MetaDisplay        *display;
-        ClutterActor       *window_group;
-        MetaMonitorManager *monitor_manager;
-        ClutterActor       *stage;
+        KioskCompositor          *compositor;
+        MetaDisplay              *display;
+        ClutterActor             *window_group;
+        MetaMonitorManager       *monitor_manager;
+        ClutterActor             *stage;
+
+        MetaBackgroundImageCache *image_cache;
 
         /* strong references */
-        ClutterActor       *background_group;
+        GCancellable             *cancellable;
+        GSettings                *settings;
+        ClutterActor             *background_group;
 };
 
 enum
@@ -78,28 +90,127 @@ kiosk_backgrounds_class_init (KioskBackgroundsClass *backgrounds_class)
 }
 
 static void
+set_background_color_from_settings (KioskBackgrounds *self,
+                                    MetaBackground   *background)
+{
+        GDesktopBackgroundShading color_shading_type;
+        g_autofree char *primary_color_as_string = NULL;
+        g_autofree char *secondary_color_as_string = NULL;
+        ClutterColor primary_color = { 0 };
+        ClutterColor secondary_color = { 0 };
+
+        color_shading_type = g_settings_get_enum (self->settings, KIOSK_BACKGROUNDS_COLOR_SHADING_TYPE_SETTING);
+        primary_color_as_string = g_settings_get_string (self->settings, KIOSK_BACKGROUNDS_PRIMARY_COLOR_SETTING);
+        clutter_color_from_string (&primary_color, primary_color_as_string);
+
+        switch (color_shading_type) {
+        case G_DESKTOP_BACKGROUND_SHADING_SOLID:
+                meta_background_set_color (background, &primary_color);
+                break;
+
+        case G_DESKTOP_BACKGROUND_SHADING_VERTICAL:
+        case G_DESKTOP_BACKGROUND_SHADING_HORIZONTAL:
+                secondary_color_as_string = g_settings_get_string (self->settings, KIOSK_BACKGROUNDS_SECONDARY_COLOR_SETTING);
+                clutter_color_from_string (&secondary_color, secondary_color_as_string);
+                meta_background_set_gradient (background, color_shading_type, &primary_color, &secondary_color);
+                break;
+        }
+}
+
+static void
+on_background_image_loaded (KioskBackgrounds    *self,
+                            MetaBackgroundImage *background_image)
+{
+        MetaBackground *background;
+        GDesktopBackgroundStyle background_style;
+        GFile *picture_file = NULL;
+
+        g_signal_handlers_disconnect_by_func (G_OBJECT (background_image),
+                                              on_background_image_loaded,
+                                              self);
+
+        background = g_object_get_data (G_OBJECT (background_image), "kiosk-background");
+
+        picture_file = g_object_get_data (G_OBJECT (background), "picture-file");
+        background_style = g_settings_get_enum (self->settings, KIOSK_BACKGROUNDS_PICTURE_OPTIONS_SETTING);
+
+        meta_background_set_file (background, picture_file, background_style);
+        set_background_color_from_settings (self, background);
+
+        g_object_set_data (G_OBJECT (background), "picture-file", NULL);
+
+        background = NULL;
+        g_object_set_data (G_OBJECT (background_image), "kiosk-background", NULL);
+
+        g_object_unref (background_image);
+}
+
+static void
+set_background_file_from_settings (KioskBackgrounds *self,
+                                   MetaBackground   *background)
+{
+        g_autofree char *uri = NULL;
+        g_autoptr (GFile) picture_file = NULL;
+        MetaBackgroundImage *background_image;
+
+        uri = g_settings_get_string (self->settings, KIOSK_BACKGROUNDS_PICTURE_URI_SETTING);
+        picture_file = g_file_new_for_commandline_arg (uri);
+
+        /* We explicitly prime the file in the cache so we can defer setting the background color
+         * until the image is fully loaded and avoid flicker at startup.
+         */
+        background_image = meta_background_image_cache_load (self->image_cache, picture_file);
+        g_object_set_data_full (G_OBJECT (background_image),
+                                "kiosk-background",
+                                g_object_ref (background),
+                                g_object_unref);
+        g_object_set_data_full (G_OBJECT (background),
+                                "picture-file",
+                                g_steal_pointer (&picture_file),
+                                g_object_unref);
+
+        if (meta_background_image_is_loaded (background_image)) {
+                kiosk_gobject_utils_queue_immediate_callback (G_OBJECT (self),
+                                                              "[kiosk-backgrounds] on_background_image_loaded",
+                                                              self->cancellable,
+                                                              KIOSK_OBJECT_CALLBACK (on_background_image_loaded),
+                                                              background);
+        } else {
+                g_signal_connect_object (G_OBJECT (background_image),
+                                         "loaded",
+                                         G_CALLBACK (on_background_image_loaded),
+                                         self,
+                                         G_CONNECT_SWAPPED);
+        }
+}
+
+static void
 create_background_for_monitor (KioskBackgrounds *self,
                                int               monitor_index)
 {
+        g_autoptr (MetaBackground) background = NULL;
+        GDesktopBackgroundStyle background_style;
         MetaRectangle geometry;
         ClutterActor *background_actor = NULL;
         MetaBackgroundContent *background_content;
-        g_autoptr (MetaBackground) background = NULL;
-        ClutterColor color;
 
         g_debug ("KioskBackgrounds: Creating background for monitor %d", monitor_index);
 
-        meta_display_get_monitor_geometry (self->display, monitor_index, &geometry);
+        background = meta_background_new (self->display);
+        background_style = g_settings_get_enum (self->settings, KIOSK_BACKGROUNDS_PICTURE_OPTIONS_SETTING);
+
+        if (background_style == G_DESKTOP_BACKGROUND_STYLE_NONE) {
+                set_background_color_from_settings (self, background);
+        } else {
+                set_background_file_from_settings (self, background);
+        }
 
         background_actor = meta_background_actor_new (self->display, monitor_index);
 
+        meta_display_get_monitor_geometry (self->display, monitor_index, &geometry);
+
         clutter_actor_set_position (background_actor, geometry.x, geometry.y);
         clutter_actor_set_size (background_actor, geometry.width, geometry.height);
-
-        clutter_color_init (&color, 50, 50, 50, 255);
-
-        background = meta_background_new (self->display);
-        meta_background_set_color (background, &color);
 
         background_content = META_BACKGROUND_CONTENT (clutter_actor_get_content (background_actor));
         meta_background_content_set_background (background_content, background);
@@ -161,16 +272,32 @@ static void
 kiosk_backgrounds_dispose (GObject *object)
 {
         KioskBackgrounds *self = KIOSK_BACKGROUNDS (object);
+        if (self->cancellable != NULL) {
+                g_cancellable_cancel (self->cancellable);
+                g_clear_object (&self->cancellable);
+        }
+
+        g_clear_object (&self->background_group);
+        g_clear_object (&self->settings);
 
         g_clear_weak_pointer (&self->stage);
         g_clear_weak_pointer (&self->display);
         g_clear_weak_pointer (&self->window_group);
         g_clear_weak_pointer (&self->monitor_manager);
         g_clear_weak_pointer (&self->compositor);
-
-        g_clear_object (&self->background_group);
+        g_clear_weak_pointer (&self->image_cache);
 
         G_OBJECT_CLASS (kiosk_backgrounds_parent_class)->dispose (object);
+}
+
+static void
+on_settings_changed (KioskBackgrounds *self)
+{
+        kiosk_gobject_utils_queue_defer_callback (G_OBJECT (self),
+                                                  "[kiosk-backgrounds] on_backgrounds_settings_changed",
+                                                  self->cancellable,
+                                                  KIOSK_OBJECT_CALLBACK (reinitialize_backgrounds),
+                                                  NULL);
 }
 
 static void
@@ -184,6 +311,9 @@ kiosk_backgrounds_constructed (GObject *object)
         g_set_weak_pointer (&self->stage, meta_get_stage_for_display (self->display));
         g_set_weak_pointer (&self->window_group, meta_get_window_group_for_display (self->display));
         g_set_weak_pointer (&self->monitor_manager, meta_monitor_manager_get ());
+        g_set_weak_pointer (&self->image_cache, meta_background_image_cache_get_default ());
+
+        self->cancellable = g_cancellable_new ();
 
         self->background_group = meta_background_group_new ();
         clutter_actor_insert_child_below (self->window_group, self->background_group, NULL);
@@ -193,6 +323,36 @@ kiosk_backgrounds_constructed (GObject *object)
                                  G_CALLBACK (reinitialize_backgrounds),
                                  self,
                                  G_CONNECT_SWAPPED);
+
+        self->settings = g_settings_new (KIOSK_BACKGROUNDS_SCHEMA);
+
+        g_signal_connect_object (G_OBJECT (self->settings),
+                                 "changed::" KIOSK_BACKGROUNDS_PICTURE_OPTIONS_SETTING,
+                                 G_CALLBACK (on_settings_changed),
+                                 self,
+                                 G_CONNECT_SWAPPED);
+        g_signal_connect_object (G_OBJECT (self->settings),
+                                 "changed::" KIOSK_BACKGROUNDS_PICTURE_URI_SETTING,
+                                 G_CALLBACK (on_settings_changed),
+                                 self,
+                                 G_CONNECT_SWAPPED);
+        g_signal_connect_object (G_OBJECT (self->settings),
+                                 "changed::" KIOSK_BACKGROUNDS_COLOR_SHADING_TYPE_SETTING,
+                                 G_CALLBACK (on_settings_changed),
+                                 self,
+                                 G_CONNECT_SWAPPED);
+        g_signal_connect_object (G_OBJECT (self->settings),
+                                 "changed::" KIOSK_BACKGROUNDS_PRIMARY_COLOR_SETTING,
+                                 G_CALLBACK (on_settings_changed),
+                                 self,
+                                 G_CONNECT_SWAPPED);
+
+        g_signal_connect_object (G_OBJECT (self->settings),
+                                 "changed::" KIOSK_BACKGROUNDS_SECONDARY_COLOR_SETTING,
+                                 G_CALLBACK (on_settings_changed),
+                                 self,
+                                 G_CONNECT_SWAPPED);
+
         reinitialize_backgrounds (self);
 }
 
