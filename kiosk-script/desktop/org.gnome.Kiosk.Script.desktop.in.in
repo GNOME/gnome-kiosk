@@ -2,3 +2,4 @@
 Name=Kiosk Script
 Type=Application
 Exec=gnome-kiosk-script
+X-GNOME-HiddenUnderSystemd=true
