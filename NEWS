@@ -1,4 +1,11 @@
 # NEWS
+## 44.beta
+- deprecation fixes
+- require mutter 44
+- Compat fix for Anaconda Installer project
+- Script session double-starting fix
+- Allow changing background in gsettings
+
 ## 43.0
 - meson build fixes
 - require mutter 43
