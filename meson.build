@@ -178,6 +178,39 @@ install_data(
         install_dir: systemd_user_unit_dir
 )
 
+systemd_service_config_data = configuration_data()
+systemd_service_config_data.set('bindir', bindir)
+
+dconf_config_data = configuration_data()
+dconf_config_data.set('PACKAGE', meson.project_name())
+dconf_config_data.set('DATADIR', datadir)
+
+dconf_profile_dir = join_paths(datadir, 'dconf/profile')
+dconf = configure_file(
+        input: 'compositor/data/dconf/gnome-kiosk.in',
+        output: '@BASENAME@.configured',
+        configuration: dconf_config_data,
+)
+install_data(dconf,
+        install_dir: dconf_profile_dir,
+        rename: 'gnome-kiosk'
+)
+
+dconf_dir = join_paths(datadir, meson.project_name())
+dconf_defaults_input_dir = join_paths (meson.current_source_dir(), 'compositor/data/dconf/defaults')
+dconf_defaults = custom_target('gnome-kiosk.dconf.compiled',
+        output: 'gnome-kiosk.dconf.compiled',
+        input:  'compositor/data/dconf/defaults/gnome-kiosk.dconf',
+        command: [
+                find_program('dconf'),
+                'compile',
+                '@OUTPUT@',
+                dconf_defaults_input_dir
+        ],
+        install: true,
+        install_dir: dconf_dir
+)
+
 install_data('kiosk-script/gnome-kiosk-script',
         install_dir: bindir,
 	install_mode: 'rwxr-xr-x'
