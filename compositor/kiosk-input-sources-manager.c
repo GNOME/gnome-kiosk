@@ -751,7 +751,7 @@ kiosk_input_sources_manager_add_new_input_source_group (KioskInputSourcesManager
         g_debug ("KioskInputSourcesManager: Adding new, empty keyboard mapping with options '%s'",
                  options);
 
-        input_source_group = kiosk_input_source_group_new (self);
+        input_source_group = kiosk_input_source_group_new (self->compositor, self);
         kiosk_input_source_group_set_options (input_source_group, options);
 
         kiosk_input_sources_manager_add_input_source_group (self, input_source_group);

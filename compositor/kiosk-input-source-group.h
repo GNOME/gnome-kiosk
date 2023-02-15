@@ -2,6 +2,8 @@
 
 #include <glib-object.h>
 
+typedef struct _KioskCompositor KioskCompositor;
+
 typedef struct _KioskInputSourcesManager KioskInputSourcesManager;
 
 G_BEGIN_DECLS
@@ -13,7 +15,8 @@ G_DECLARE_FINAL_TYPE (KioskInputSourceGroup,
                       KIOSK, INPUT_SOURCE_GROUP,
                       GObject);
 
-KioskInputSourceGroup *kiosk_input_source_group_new (KioskInputSourcesManager *manager);
+KioskInputSourceGroup *kiosk_input_source_group_new (KioskCompositor          *compositor,
+                                                     KioskInputSourcesManager *manager);
 gboolean kiosk_input_source_group_add_layout (KioskInputSourceGroup *input_sources,
                                               const char            *layout,
                                               const char            *variant);

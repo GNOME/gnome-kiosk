@@ -8,6 +8,7 @@
 #include <meta/util.h>
 
 #include <meta/meta-backend.h>
+#include <meta/meta-context.h>
 #include <meta/meta-x11-display.h>
 #include <meta/meta-x11-errors.h>
 
@@ -25,6 +26,7 @@ struct _KioskXKeyboardManager
         KioskCompositor *compositor;
         MetaBackend     *backend;
         MetaDisplay     *display;
+        MetaContext     *context;
         Display         *x_server_display;
 
         /* strong references */
@@ -528,8 +530,9 @@ kiosk_x_keyboard_manager_constructed (GObject *object)
 
         self->cancellable = g_cancellable_new ();
 
-        g_set_weak_pointer (&self->backend, meta_get_backend ());
         g_set_weak_pointer (&self->display, meta_plugin_get_display (META_PLUGIN (self->compositor)));
+        g_set_weak_pointer (&self->context, meta_display_get_context (self->display));
+        g_set_weak_pointer (&self->backend, meta_context_get_backend (self->context));
 
         self->pending_layout_index = -1;
 
@@ -557,6 +560,7 @@ kiosk_x_keyboard_manager_dispose (GObject *object)
         g_clear_pointer (&self->options, g_free);
 
         g_clear_weak_pointer (&self->display);
+        g_clear_weak_pointer (&self->context);
         g_clear_weak_pointer (&self->backend);
         g_clear_weak_pointer (&self->compositor);
 

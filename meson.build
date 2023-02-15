@@ -34,7 +34,7 @@ config_h = configure_file(
 
 meson.add_install_script ('meson/postinstall.py')
 
-mutter_api_version = 11
+mutter_api_version = 12
 libmutter_name = 'libmutter-@0@'.format(mutter_api_version)
 libmutter_cogl_name = 'mutter-cogl-@0@'.format(mutter_api_version)
 libmutter_cogl_pango_name = 'mutter-cogl-pango-@0@'.format(mutter_api_version)
