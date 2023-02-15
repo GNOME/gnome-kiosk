@@ -25,16 +25,24 @@ if [ "$DIRTY_TREE" -ne 0 ]; then
     git stash apply
 fi
 
-find -name '*.[ch]' -exec uncrustify -q -c scripts/latest-uncrustify.cfg --replace {} \;
+git ls-files '*.[ch]' | while read file; do
+    uncrustify -q -c scripts/latest-uncrustify.cfg --replace "${file}" \;
+done
 
 echo > after
-find -name '*.[ch]' -exec git diff -- {} \; >> after
+git ls-files '*.[ch]' | while read file; do
+    git diff -- "${file}" \; >> after
+done
 
 git reset --hard $UPSTREAM_BRANCH
-find -name '*.[ch]' -exec uncrustify -q -c scripts/latest-uncrustify.cfg --replace {} \;
+git ls-files '*.[ch]' | while read file; do
+    uncrustify -q -c scripts/latest-uncrustify.cfg --replace "${file}" \;
+done
 
 echo > before
-find -name '*.[ch]' -exec git diff -- {} \; >> before
+git ls-files '*.[ch]' | while read file; do
+    git diff -- "${file}" \; >> before
+done
 
 interdiff --no-revert-omitted before after > diff
 
