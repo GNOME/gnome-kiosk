@@ -192,7 +192,7 @@ kiosk_input_selector_application_command_line (GApplication            *applicat
         windows = gtk_application_get_windows (GTK_APPLICATION (self));
         window = GTK_WIDGET (g_list_first (windows)->data);
 
-        gtk_widget_show (GTK_WIDGET (window));
+        gtk_widget_set_visible (GTK_WIDGET (window), TRUE);
 
         return 0;
 }
