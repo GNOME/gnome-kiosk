@@ -3,26 +3,12 @@ stages:
         - test
 
 build-fedora:
-        image: fedora:rawhide
+        image: registry.gitlab.gnome.org/gnome/mutter/fedora/37:x86_64-2022-12-22.0
         stage: build
         before_script:
-                - dnf -y install
-                                desktop-file-utils
-                                gcc
-                                gettext
-                                git
-                                glib2-devel
-                                gnome-desktop3-devel
-                                gnome-settings-daemon
-                                gsettings-desktop-schemas
-                                gtk4-devel
-                                ibus-devel
-                                mesa-libEGL-devel
-                                mesa-libGL-devel
-                                meson
-                                mutter-devel
-                                patchutils
-                                uncrustify
+                - .gitlab-ci/checkout-mutter.sh
+                - meson mutter mutter/build --prefix=/usr
+                - meson install -C mutter/build
         script:
                 - export BUILD_ROOT=_build
                 - meson . $BUILD_ROOT --prefix=/usr --sysconfdir=/etc --localstatedir=/var --mandir=/usr/share/man --libdir=/usr/lib64
@@ -34,20 +20,25 @@ build-fedora:
                 - tags
         artifacts:
                 paths:
+                        - mutter
                         - _build
         only:
             - merge_requests
 
 test-fedora:
-        extends:
-                - build-fedora
+        image: registry.gitlab.gnome.org/gnome/mutter/fedora/37:x86_64-2022-12-22.0
         stage: test
+        before_script:
+                - dnf -y install patchutils
+                - meson install --no-rebuild -C mutter/build
         script:
                 - export BUILD_ROOT=_build
                 - meson . $BUILD_ROOT --prefix=/usr --sysconfdir=/etc --localstatedir=/var --mandir=/usr/share/man --libdir=/usr/lib64
                 - ninja -C $BUILD_ROOT
                 - ninja -C $BUILD_ROOT test
                 - find -depth -type d -name '*.p' -exec rm -rf "{}" \;
+        except:
+                - tags
         artifacts:
                 paths:
                         - _build
