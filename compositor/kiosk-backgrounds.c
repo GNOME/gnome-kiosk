@@ -9,6 +9,8 @@
 #include <meta/display.h>
 #include <meta/util.h>
 
+#include <meta/meta-context.h>
+#include <meta/meta-backend.h>
 #include <meta/meta-plugin.h>
 #include <meta/meta-monitor-manager.h>
 #include <meta/meta-background-actor.h>
@@ -35,6 +37,8 @@ struct _KioskBackgrounds
         KioskCompositor          *compositor;
         MetaDisplay              *display;
         ClutterActor             *window_group;
+        MetaContext              *context;
+        MetaBackend              *backend;
         MetaMonitorManager       *monitor_manager;
         ClutterActor             *stage;
 
@@ -280,6 +284,8 @@ kiosk_backgrounds_dispose (GObject *object)
         g_clear_object (&self->background_group);
         g_clear_object (&self->settings);
 
+        g_clear_weak_pointer (&self->context);
+        g_clear_weak_pointer (&self->backend);
         g_clear_weak_pointer (&self->stage);
         g_clear_weak_pointer (&self->display);
         g_clear_weak_pointer (&self->window_group);
@@ -308,9 +314,11 @@ kiosk_backgrounds_constructed (GObject *object)
         G_OBJECT_CLASS (kiosk_backgrounds_parent_class)->constructed (object);
 
         g_set_weak_pointer (&self->display, meta_plugin_get_display (META_PLUGIN (self->compositor)));
+        g_set_weak_pointer (&self->context, meta_display_get_context (self->display));
+        g_set_weak_pointer (&self->backend, meta_context_get_backend (self->context));
         g_set_weak_pointer (&self->stage, meta_get_stage_for_display (self->display));
         g_set_weak_pointer (&self->window_group, meta_get_window_group_for_display (self->display));
-        g_set_weak_pointer (&self->monitor_manager, meta_monitor_manager_get ());
+        g_set_weak_pointer (&self->monitor_manager, meta_backend_get_monitor_manager (self->backend));
         g_set_weak_pointer (&self->image_cache, meta_background_image_cache_get_default ());
 
         self->cancellable = g_cancellable_new ();

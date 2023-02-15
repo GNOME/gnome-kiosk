@@ -6,7 +6,10 @@
 
 #include <xkbcommon/xkbcommon.h>
 
+#include <meta/meta-context.h>
 #include <meta/meta-backend.h>
+
+#include <meta/display.h>
 
 #define GNOME_DESKTOP_USE_UNSTABLE_API
 #include <libgnome-desktop/gnome-languages.h>
@@ -14,6 +17,7 @@
 
 #include "kiosk-gobject-utils.h"
 #include "kiosk-input-sources-manager.h"
+#include "kiosk-compositor.h"
 
 #define KIOSK_INPUT_SOURCE_GROUP_MAX_LAYOUTS 3
 
@@ -22,9 +26,13 @@ struct _KioskInputSourceGroup
         GObject                   parent;
 
         /* weak references */
+        KioskCompositor          *compositor;
         KioskInputSourcesManager *input_sources_manager;
         KioskInputEngineManager  *input_engine_manager;
         KioskXKeyboardManager    *x_keyboard_manager;
+        MetaDisplay              *display;
+        MetaContext              *context;
+        MetaBackend              *backend;
 
         /* strong references */
         char                     *input_engine_name;
@@ -37,7 +45,8 @@ struct _KioskInputSourceGroup
 };
 enum
 {
-        PROP_INPUT_SOURCES_MANAGER = 1,
+        PROP_COMPOSITOR = 1,
+        PROP_INPUT_SOURCES_MANAGER,
         NUMBER_OF_PROPERTIES
 };
 
@@ -58,11 +67,13 @@ static void kiosk_input_source_group_constructed (GObject *object);
 static void kiosk_input_source_group_dispose (GObject *object);
 
 KioskInputSourceGroup *
-kiosk_input_source_group_new (KioskInputSourcesManager *input_sources_manager)
+kiosk_input_source_group_new (KioskCompositor          *compositor,
+                              KioskInputSourcesManager *input_sources_manager)
 {
         GObject *object;
 
         object = g_object_new (KIOSK_TYPE_INPUT_SOURCE_GROUP,
+                               "compositor", compositor,
                                "input-sources-manager", input_sources_manager,
                                NULL);
 
@@ -292,12 +303,12 @@ kiosk_input_source_group_activate (KioskInputSourceGroup *self)
                 g_debug ("KioskInputSourceGroup: Setting keyboard mapping to [%s] (%s) [%s]",
                          layouts, variants, self->options);
 
-                meta_backend_set_keymap (meta_get_backend (), layouts, variants, self->options);
+                meta_backend_set_keymap (self->backend, layouts, variants, self->options);
         }
 
         if (!layout_group_already_locked) {
                 g_debug ("KioskInputSourceGroup: Locking layout to index %d", self->layout_index);
-                meta_backend_lock_layout_group (meta_get_backend (), self->layout_index);
+                meta_backend_lock_layout_group (self->backend, self->layout_index);
         }
 
         if (keymap_already_set && layout_group_already_locked) {
@@ -357,7 +368,7 @@ kiosk_input_source_group_switch_to_layout (KioskInputSourceGroup *self,
         g_debug ("KioskInputSourceGroup: Switching from layout '%s' to next layout '%s'",
                  active_layout, layout_name);
 
-        meta_backend_lock_layout_group (meta_get_backend (), self->layout_index);
+        meta_backend_lock_layout_group (self->backend, self->layout_index);
 
         return TRUE;
 }
@@ -381,7 +392,7 @@ kiosk_input_source_group_switch_to_first_layout (KioskInputSourceGroup *self)
         layout_to_activate = kiosk_input_source_group_get_selected_layout (self);
 
         g_debug ("KioskInputSourceGroup: First layout is '%s'", layout_to_activate);
-        meta_backend_lock_layout_group (meta_get_backend (), self->layout_index);
+        meta_backend_lock_layout_group (self->backend, self->layout_index);
 }
 
 void
@@ -403,7 +414,7 @@ kiosk_input_source_group_switch_to_last_layout (KioskInputSourceGroup *self)
         layout_to_activate = kiosk_input_source_group_get_selected_layout (self);
 
         g_debug ("KioskInputSourceGroup: Last layout is '%s'", layout_to_activate);
-        meta_backend_lock_layout_group (meta_get_backend (), self->layout_index);
+        meta_backend_lock_layout_group (self->backend, self->layout_index);
 }
 
 gboolean
@@ -438,7 +449,7 @@ kiosk_input_source_group_switch_to_next_layout (KioskInputSourceGroup *self)
         g_debug ("KioskInputSourceGroup: Switching from layout '%s' to next layout '%s'",
                  active_layout, layout_to_activate);
 
-        meta_backend_lock_layout_group (meta_get_backend (), self->layout_index);
+        meta_backend_lock_layout_group (self->backend, self->layout_index);
 
         return TRUE;
 }
@@ -473,7 +484,7 @@ kiosk_input_source_group_switch_to_previous_layout (KioskInputSourceGroup *self)
         g_debug ("KioskInputSourceGroup: Switching from layout '%s' to previous layout '%s'",
                  active_layout, layout_to_activate);
 
-        meta_backend_lock_layout_group (meta_get_backend (), self->layout_index);
+        meta_backend_lock_layout_group (self->backend, self->layout_index);
 
         return TRUE;
 }
@@ -488,6 +499,15 @@ kiosk_input_source_group_class_init (KioskInputSourceGroupClass *input_sources_c
         object_class->get_property = kiosk_input_source_group_get_property;
         object_class->dispose = kiosk_input_source_group_dispose;
 
+        kiosk_input_source_group_properties[PROP_COMPOSITOR] = g_param_spec_object ("compositor",
+                                                                                    "compositor",
+                                                                                    "compositor",
+                                                                                    KIOSK_TYPE_COMPOSITOR,
+                                                                                    G_PARAM_CONSTRUCT_ONLY
+                                                                                    | G_PARAM_WRITABLE
+                                                                                    | G_PARAM_STATIC_NAME
+                                                                                    | G_PARAM_STATIC_NICK
+                                                                                    | G_PARAM_STATIC_BLURB);
         kiosk_input_source_group_properties[PROP_INPUT_SOURCES_MANAGER] = g_param_spec_object ("input-sources-manager",
                                                                                                "input-sources-manager",
                                                                                                "input-sources-manager",
@@ -510,6 +530,9 @@ kiosk_input_source_group_set_property (GObject      *object,
         KioskInputSourceGroup *self = KIOSK_INPUT_SOURCE_GROUP (object);
 
         switch (property_id) {
+        case PROP_COMPOSITOR:
+                g_set_weak_pointer (&self->compositor, g_value_get_object (value));
+                break;
         case PROP_INPUT_SOURCES_MANAGER:
                 g_set_weak_pointer (&self->input_sources_manager, g_value_get_object (value));
                 break;
@@ -554,6 +577,9 @@ kiosk_input_source_group_constructed (GObject *object)
 
         g_set_weak_pointer (&self->input_engine_manager, kiosk_input_sources_manager_get_input_engine_manager (self->input_sources_manager));
         g_set_weak_pointer (&self->x_keyboard_manager, kiosk_input_sources_manager_get_x_keyboard_manager (self->input_sources_manager));
+        g_set_weak_pointer (&self->display, meta_plugin_get_display (META_PLUGIN (self->compositor)));
+        g_set_weak_pointer (&self->context, meta_display_get_context (self->display));
+        g_set_weak_pointer (&self->backend, meta_context_get_backend (self->context));
 }
 
 static void
@@ -568,6 +594,9 @@ kiosk_input_source_group_dispose (GObject *object)
         g_clear_pointer (&self->variants, g_ptr_array_unref);
         g_clear_pointer (&self->layouts, g_ptr_array_unref);
 
+        g_clear_weak_pointer (&self->backend);
+        g_clear_weak_pointer (&self->context);
+        g_clear_weak_pointer (&self->display);
         g_clear_weak_pointer (&self->x_keyboard_manager);
         g_clear_weak_pointer (&self->input_engine_manager);
         g_clear_weak_pointer (&self->input_sources_manager);
