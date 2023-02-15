@@ -14,6 +14,7 @@ ConditionEnvironment=XDG_SESSION_TYPE=%I
 [Service]
 Slice=session.slice
 Type=notify
+Environment=DCONF_PROFILE=gnome-kiosk
 ExecStart=/usr/bin/gnome-kiosk
 Restart=always
 RestartSec=0ms
