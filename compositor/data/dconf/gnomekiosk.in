@@ -1,0 +1,2 @@
+user-db:user
+file-db:@DATADIR@/@PACKAGE@/gnomekiosk.dconf.compiled

@@ -187,20 +187,20 @@ dconf_config_data.set('DATADIR', datadir)
 
 dconf_profile_dir = join_paths(datadir, 'dconf/profile')
 dconf = configure_file(
-        input: 'compositor/data/dconf/gnome-kiosk.in',
+        input: 'compositor/data/dconf/gnomekiosk.in',
         output: '@BASENAME@.configured',
         configuration: dconf_config_data,
 )
 install_data(dconf,
         install_dir: dconf_profile_dir,
-        rename: 'gnome-kiosk'
+        rename: 'gnomekiosk'
 )
 
 dconf_dir = join_paths(datadir, meson.project_name())
 dconf_defaults_input_dir = join_paths (meson.current_source_dir(), 'compositor/data/dconf/defaults')
-dconf_defaults = custom_target('gnome-kiosk.dconf.compiled',
-        output: 'gnome-kiosk.dconf.compiled',
-        input:  'compositor/data/dconf/defaults/gnome-kiosk.dconf',
+dconf_defaults = custom_target('gnomekiosk.dconf.compiled',
+        output: 'gnomekiosk.dconf.compiled',
+        input:  'compositor/data/dconf/defaults/gnomekiosk.dconf',
         command: [
                 find_program('dconf'),
                 'compile',
