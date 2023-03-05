@@ -3,7 +3,7 @@ stages:
         - test
 
 build-fedora:
-        image: registry.gitlab.gnome.org/gnome/mutter/fedora/37:x86_64-2022-12-22.0
+        image: registry.gitlab.gnome.org/gnome/mutter/fedora/37:x86_64-2023-02-22.0
         stage: build
         before_script:
                 - .gitlab-ci/checkout-mutter.sh
@@ -26,7 +26,7 @@ build-fedora:
             - merge_requests
 
 test-fedora:
-        image: registry.gitlab.gnome.org/gnome/mutter/fedora/37:x86_64-2022-12-22.0
+        image: registry.gitlab.gnome.org/gnome/mutter/fedora/37:x86_64-2023-02-22.0
         stage: test
         before_script:
                 - dnf -y install patchutils
