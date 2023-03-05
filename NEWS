@@ -1,4 +1,9 @@
 # NEWS
+## 44.rc
+- Rename dconf profile to not have hyphen
+- Set dconf profile unconditionally
+- Use https instead of http in search-app
+
 ## 44.beta
 - deprecation fixes
 - require mutter 44
