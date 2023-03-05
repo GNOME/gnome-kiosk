@@ -52,6 +52,12 @@ set_working_directory (void)
         }
 }
 
+static void
+set_dconf_profile (void)
+{
+        setenv ("DCONF_PROFILE", "gnomekiosk", TRUE);
+}
+
 static gboolean
 on_termination_signal (MetaContext *context)
 {
@@ -74,6 +80,7 @@ main (int    argc,
         signal (SIGPIPE, SIG_IGN);
 
         set_working_directory ();
+        set_dconf_profile ();
 
         context = meta_create_context ("Kiosk");
         meta_context_add_option_entries (context, kiosk_options, GETTEXT_PACKAGE);

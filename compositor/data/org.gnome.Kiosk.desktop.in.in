@@ -2,7 +2,7 @@
 Type=Application
 Name=GNOME Kiosk
 Comment=Compositor for Kiosk and Single Application deployments
-Exec=env DCONF_PROFILE=gnome-kiosk @bindir@/gnome-kiosk
+Exec=@bindir@/gnome-kiosk
 Categories=GNOME;GTK;Core;System;
 OnlyShowIn=GNOME;
 NoDisplay=true
