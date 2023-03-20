@@ -1,4 +1,7 @@
 # NEWS
+## 44.0
+- No updates
+
 ## 44.rc
 - Rename dconf profile to not have hyphen
 - Set dconf profile unconditionally
