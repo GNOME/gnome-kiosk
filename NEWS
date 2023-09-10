@@ -1,4 +1,8 @@
 # NEWS
+## 45.rc
+- Switch to gnome-desktop4
+- Port to mutter 45
+
 ## 44.0
 - No updates
 
