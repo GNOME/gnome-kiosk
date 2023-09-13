@@ -194,7 +194,7 @@ create_background_for_monitor (KioskBackgrounds *self,
 {
         g_autoptr (MetaBackground) background = NULL;
         GDesktopBackgroundStyle background_style;
-        MetaRectangle geometry;
+        MtkRectangle geometry;
         ClutterActor *background_actor = NULL;
         MetaBackgroundContent *background_content;
 
