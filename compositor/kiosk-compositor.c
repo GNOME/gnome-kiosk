@@ -269,8 +269,8 @@ static void
 kiosk_compositor_size_change (MetaPlugin      *plugin,
                               MetaWindowActor *actor,
                               MetaSizeChange   which_change,
-                              MetaRectangle   *old_frame_rect,
-                              MetaRectangle   *old_buffer_rect)
+                              MtkRectangle    *old_frame_rect,
+                              MtkRectangle    *old_buffer_rect)
 {
         g_assert (META_PLUGIN_CLASS (kiosk_compositor_parent_class)->size_change == NULL);
 }
@@ -427,7 +427,7 @@ kiosk_compositor_kill_switch_workspace (MetaPlugin *plugin)
 static void
 kiosk_compositor_show_tile_preview (MetaPlugin    *plugin,
                                     MetaWindow    *window,
-                                    MetaRectangle *tile_rect,
+                                    MtkRectangle  *tile_rect,
                                     int            tile_monitor)
 {
         g_assert (META_PLUGIN_CLASS (kiosk_compositor_parent_class)->show_tile_preview == NULL);
@@ -453,7 +453,7 @@ static void
 kiosk_compositor_show_window_menu_for_rect (MetaPlugin         *plugin,
                                             MetaWindow         *window,
                                             MetaWindowMenuType  menu,
-                                            MetaRectangle      *rect)
+                                            MtkRectangle       *rect)
 {
         g_assert (META_PLUGIN_CLASS (kiosk_compositor_parent_class)->show_window_menu_for_rect == NULL);
 }
