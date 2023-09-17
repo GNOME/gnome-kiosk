@@ -425,10 +425,10 @@ kiosk_compositor_kill_switch_workspace (MetaPlugin *plugin)
 }
 
 static void
-kiosk_compositor_show_tile_preview (MetaPlugin    *plugin,
-                                    MetaWindow    *window,
-                                    MtkRectangle  *tile_rect,
-                                    int            tile_monitor)
+kiosk_compositor_show_tile_preview (MetaPlugin   *plugin,
+                                    MetaWindow   *window,
+                                    MtkRectangle *tile_rect,
+                                    int           tile_monitor)
 {
         g_assert (META_PLUGIN_CLASS (kiosk_compositor_parent_class)->show_tile_preview == NULL);
 }
