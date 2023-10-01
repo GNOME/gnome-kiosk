@@ -216,7 +216,7 @@ activate_input_source_group_if_it_has_layout (KioskInputSourcesManager *self,
                                               const char               *name)
 {
         const char *selected_layout = NULL;
-        gboolean layout_selected, input_source_group_active;
+        gboolean layout_selected, input_source_group_active = FALSE;
 
         selected_layout = kiosk_input_source_group_get_selected_layout (input_source_group);
 
