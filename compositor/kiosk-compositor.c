@@ -19,6 +19,7 @@
 #include "kiosk-backgrounds.h"
 #include "kiosk-gobject-utils.h"
 #include "kiosk-input-sources-manager.h"
+#include "kiosk-automount-manager.h"
 #include "kiosk-service.h"
 
 #include "org.gnome.DisplayManager.Manager.h"
@@ -37,6 +38,7 @@ struct _KioskCompositor
         GCancellable             *cancellable;
         KioskBackgrounds         *backgrounds;
         KioskInputSourcesManager *input_sources_manager;
+        KioskAutomountManager    *automount_manager;
         KioskService             *service;
 };
 
@@ -68,6 +70,7 @@ kiosk_compositor_dispose (GObject *object)
         g_clear_weak_pointer (&self->backend);
 
         g_clear_object (&self->backgrounds);
+        g_clear_object (&self->automount_manager);
 
         G_OBJECT_CLASS (kiosk_compositor_parent_class)->dispose (object);
 }
@@ -235,6 +238,7 @@ kiosk_compositor_start (MetaPlugin *plugin)
         neuter_builtin_keybindings (self);
 
         self->backgrounds = kiosk_backgrounds_new (self);
+        self->automount_manager = kiosk_automount_manager_new (self);
         self->input_sources_manager = kiosk_input_sources_manager_new (self);
 
         kiosk_gobject_utils_queue_immediate_callback (G_OBJECT (self),
