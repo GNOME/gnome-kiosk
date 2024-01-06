@@ -77,3 +77,5 @@ GNOME Kiosk is distributed under the terms of the GNU General Public License,
 version 2 or later. See the [COPYING][license] file for details.
 
 [license]: COPYING
+
+NOTE: Much of the original code is copyright Red Hat, Inc., but there is no copyright assignment and individual contributions are subject to the copyright of their contributors.
