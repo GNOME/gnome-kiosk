@@ -1,4 +1,10 @@
 # NEWS
+## 46.alpha
+- Add automount manager
+- Support headless sessions
+- Port to mutter 46
+- Docs update
+
 ## 45.0
 - Complete port to mutter 45
 
