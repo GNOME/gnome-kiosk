@@ -10,7 +10,7 @@ if [ ! -e ~/.local/bin/gnome-kiosk-script ]; then
 	# just starts a text editor open to itself, but it
 	# should get customized to instead start a full screen
 	# application designed for the kiosk deployment.
-	gedit ~/.local/bin/gnome-kiosk-script
+	gnome-text-editor ~/.local/bin/gnome-kiosk-script
 
 	sleep 1.0
 	exec "$0" "$@"
