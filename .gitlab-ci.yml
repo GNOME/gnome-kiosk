@@ -6,6 +6,7 @@ build-fedora:
         image: registry.gitlab.gnome.org/gnome/mutter/fedora/39:x86_64-2023-08-31.0
         stage: build
         before_script:
+                - dnf upgrade -y
                 - .gitlab-ci/checkout-mutter.sh
                 - meson mutter mutter/build --prefix=/usr
                 - meson install -C mutter/build
