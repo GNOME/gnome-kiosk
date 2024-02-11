@@ -20,6 +20,7 @@
 #include "kiosk-compositor.h"
 
 #define KIOSK_INPUT_SOURCE_GROUP_MAX_LAYOUTS 3
+#define KIOSK_INPUT_SOURCE_KEYBOARD_MODEL "pc105+inet"
 
 struct _KioskInputSourceGroup
 {
@@ -303,7 +304,7 @@ kiosk_input_source_group_activate (KioskInputSourceGroup *self)
                 g_debug ("KioskInputSourceGroup: Setting keyboard mapping to [%s] (%s) [%s]",
                          layouts, variants, self->options);
 
-                meta_backend_set_keymap (self->backend, layouts, variants, self->options);
+                meta_backend_set_keymap (self->backend, layouts, variants, self->options, KIOSK_INPUT_SOURCE_KEYBOARD_MODEL);
         }
 
         if (!layout_group_already_locked) {
