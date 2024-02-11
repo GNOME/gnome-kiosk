@@ -10,7 +10,6 @@
 #include <meta/meta-backend.h>
 #include <meta/meta-context.h>
 #include <meta/meta-x11-display.h>
-#include <meta/meta-x11-errors.h>
 
 #include <X11/Xatom.h>
 #include <X11/XKBlib.h>
