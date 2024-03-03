@@ -1,4 +1,8 @@
 # NEWS
+## 46.rc
+- Use gnome-text-editor instead of gedit for example script
+- Keymap fix
+
 ## 46.alpha
 - Add automount manager
 - Support headless sessions
