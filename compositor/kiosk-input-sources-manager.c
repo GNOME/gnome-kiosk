@@ -38,6 +38,12 @@
 
 #define KIOSK_DBUS_INPUT_SOURCES_MANGER_INPUT_SOURCE_INTERFACE "org.gnome.Kiosk.InputSources.InputSource"
 
+typedef enum {
+        KIOSK_INPUT_SOURCE_CONFIGURATION_SYSTEM,
+        KIOSK_INPUT_SOURCE_CONFIGURATION_SESSION,
+        KIOSK_INPUT_SOURCE_CONFIGURATION_OVERRIDE
+} KioskInputSourceConfiguration;
+
 struct _KioskInputSourcesManager
 {
         GObject                       parent;
@@ -61,9 +67,7 @@ struct _KioskInputSourcesManager
 
         /* state */
         ssize_t                       input_source_groups_index;
-
-        /* flags */
-        guint32                       overriding_configuration : 1;
+        KioskInputSourceConfiguration configuration_source;
 };
 
 enum
@@ -832,9 +836,6 @@ kiosk_input_sources_manager_add_input_engine (KioskInputSourcesManager *self,
 gboolean
 kiosk_input_sources_manager_set_input_sources_from_system_configuration (KioskInputSourcesManager *self)
 {
-        KioskInputSourceGroup *old_input_source_group;
-        g_autofree char *old_input_engine = NULL;
-        g_autofree char *old_selected_layout = NULL;
         g_autofree char *localed_name_owner = NULL;
 
         const char *layouts_string = NULL;
@@ -885,13 +886,6 @@ kiosk_input_sources_manager_set_input_sources_from_system_configuration (KioskIn
                 return FALSE;
         }
 
-        old_input_source_group = kiosk_input_sources_manager_get_selected_input_source_group (self);
-
-        if (old_input_source_group != NULL) {
-                old_input_engine = g_strdup (kiosk_input_source_group_get_input_engine (old_input_source_group));
-                old_selected_layout = kiosk_input_source_group_get_selected_layout (old_input_source_group);
-        }
-
         kiosk_input_sources_manager_clear_input_sources (self);
 
         for (i = 0, j = 0; layouts[i] != NULL; i++) {
@@ -912,7 +906,7 @@ kiosk_input_sources_manager_set_input_sources_from_system_configuration (KioskIn
                 kiosk_input_sources_manager_add_layout (self, id, options);
         }
 
-        input_source_group_active = activate_best_available_input_source_group (self, old_input_engine, old_selected_layout);
+        input_source_group_active = activate_first_available_input_source_group (self);
 
         if (!input_source_group_active) {
                 const char * const *locales;
@@ -922,7 +916,7 @@ kiosk_input_sources_manager_set_input_sources_from_system_configuration (KioskIn
         }
 
         sync_dbus_service (self);
-        self->overriding_configuration = FALSE;
+        self->configuration_source = KIOSK_INPUT_SOURCE_CONFIGURATION_SYSTEM;
 
         if (!input_source_group_active) {
                 g_debug ("KioskInputSourcesManager: System has no valid configured input sources");
@@ -937,7 +931,7 @@ on_session_input_configuration_changed (KioskInputSourcesManager *self)
 {
         g_debug ("KioskInputSourcesManager: Session input sources configuration changed");
 
-        if (self->overriding_configuration) {
+        if (self->configuration_source == KIOSK_INPUT_SOURCE_CONFIGURATION_OVERRIDE) {
                 g_debug ("KioskInputSourcesManager: Ignoring change, because keymap is overriden");
                 return;
         }
@@ -966,7 +960,7 @@ kiosk_input_sources_manager_set_input_sources_from_session_configuration (KioskI
 
         g_debug ("KioskInputSourcesManager: Setting input sources from session configuration");
 
-        self->overriding_configuration = FALSE;
+        self->configuration_source = KIOSK_INPUT_SOURCE_CONFIGURATION_SESSION;
 
         if (self->input_sources_settings == NULL) {
                 self->input_sources_settings = g_settings_new (KIOSK_INPUT_SOURCES_SCHEMA);
@@ -993,6 +987,7 @@ kiosk_input_sources_manager_set_input_sources_from_session_configuration (KioskI
 
         if (!input_sources_active) {
                 g_debug ("KioskInputSourcesManager: Session has no valid configured input sources");
+                self->configuration_source = KIOSK_INPUT_SOURCE_CONFIGURATION_SYSTEM;
                 return kiosk_input_sources_manager_set_input_sources_from_system_configuration (self);
         }
 
@@ -1018,7 +1013,7 @@ kiosk_input_sources_manager_set_input_sources_from_locales (KioskInputSourcesMan
         g_debug ("KioskInputSourcesManager: Setting keymap from locales '%s'",
                  locales_string);
 
-        self->overriding_configuration = TRUE;
+        self->configuration_source = KIOSK_INPUT_SOURCE_CONFIGURATION_OVERRIDE;
 
         old_input_source_group = kiosk_input_sources_manager_get_selected_input_source_group (self);
 
@@ -1085,8 +1080,13 @@ on_system_configuration_changed (KioskInputSourcesManager *self)
 
         g_debug ("KioskInputSourcesManager: System locale configuration changed");
 
-        if (self->overriding_configuration) {
+        if (self->configuration_source == KIOSK_INPUT_SOURCE_CONFIGURATION_OVERRIDE) {
                 g_debug ("KioskInputSourcesManager: Ignoring change, because keymap is overriden");
+                return;
+        }
+
+        if (self->configuration_source != KIOSK_INPUT_SOURCE_CONFIGURATION_SYSTEM) {
+                g_debug ("KioskInputSourcesManager: Ignoring change, because configuration source is not system");
                 return;
         }
 
@@ -1473,7 +1473,7 @@ on_x_keyboard_manager_layouts_changed (KioskInputSourcesManager *self)
 
         g_debug ("KioskInputSorcesManager: X server keyboard layouts changed");
 
-        self->overriding_configuration = TRUE;
+        self->configuration_source = KIOSK_INPUT_SOURCE_CONFIGURATION_OVERRIDE;
         kiosk_input_sources_manager_clear_input_sources (self);
 
         for (i = 0; new_layouts[i] != NULL; i++) {
