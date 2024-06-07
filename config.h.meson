@@ -1,3 +1,4 @@
 #mesondefine GETTEXT_PACKAGE
 #mesondefine VERSION
 #mesondefine LOCALEDIR
+#mesondefine HAVE_X11
