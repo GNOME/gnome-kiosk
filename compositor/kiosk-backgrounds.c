@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include <clutter/clutter.h>
+#include <cogl/cogl-color.h>
 
 #include <meta/display.h>
 #include <meta/util.h>
@@ -100,12 +101,12 @@ set_background_color_from_settings (KioskBackgrounds *self,
         GDesktopBackgroundShading color_shading_type;
         g_autofree char *primary_color_as_string = NULL;
         g_autofree char *secondary_color_as_string = NULL;
-        ClutterColor primary_color = { 0 };
-        ClutterColor secondary_color = { 0 };
+        CoglColor primary_color = { 0 };
+        CoglColor secondary_color = { 0 };
 
         color_shading_type = g_settings_get_enum (self->settings, KIOSK_BACKGROUNDS_COLOR_SHADING_TYPE_SETTING);
         primary_color_as_string = g_settings_get_string (self->settings, KIOSK_BACKGROUNDS_PRIMARY_COLOR_SETTING);
-        clutter_color_from_string (&primary_color, primary_color_as_string);
+        cogl_color_from_string (&primary_color, primary_color_as_string);
 
         switch (color_shading_type) {
         case G_DESKTOP_BACKGROUND_SHADING_SOLID:
@@ -115,7 +116,7 @@ set_background_color_from_settings (KioskBackgrounds *self,
         case G_DESKTOP_BACKGROUND_SHADING_VERTICAL:
         case G_DESKTOP_BACKGROUND_SHADING_HORIZONTAL:
                 secondary_color_as_string = g_settings_get_string (self->settings, KIOSK_BACKGROUNDS_SECONDARY_COLOR_SETTING);
-                clutter_color_from_string (&secondary_color, secondary_color_as_string);
+                cogl_color_from_string (&secondary_color, secondary_color_as_string);
                 meta_background_set_gradient (background, color_shading_type, &primary_color, &secondary_color);
                 break;
         }

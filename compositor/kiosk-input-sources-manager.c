@@ -1385,6 +1385,7 @@ kiosk_input_sources_manager_start_input_engine_manager (KioskInputSourcesManager
                                  G_CONNECT_SWAPPED);
 }
 
+#ifdef HAVE_X11
 static void
 process_x_keyboard_manager_selected_layout_change (KioskInputSourcesManager *self)
 {
@@ -1504,6 +1505,7 @@ kiosk_input_source_manager_start_x_keyboard_manager (KioskInputSourcesManager *s
                                  self,
                                  G_CONNECT_SWAPPED);
 }
+#endif /* HAVE_X11 */
 
 static void
 kiosk_input_sources_manager_handle_dbus_service (KioskInputSourcesManager *self)
@@ -1576,6 +1578,7 @@ kiosk_input_sources_manager_constructed (GObject *object)
         /* We start the X keyboard manager after we've already loaded and locked in
          * GSettings etc, so the session settings take precedence over xorg.conf
          */
+#ifdef HAVE_X11
         if (!meta_is_wayland_compositor ()) {
                 g_debug ("KioskInputSourcesManager: Will start X keyboard manager shortly");
                 kiosk_gobject_utils_queue_defer_callback (G_OBJECT (self),
@@ -1586,6 +1589,8 @@ kiosk_input_sources_manager_constructed (GObject *object)
         } else {
                 g_debug ("KioskInputSourcesManager: Won't start X keyboard manager on wayland");
         }
+#endif
+
 }
 
 static void
