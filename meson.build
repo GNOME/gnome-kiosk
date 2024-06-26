@@ -21,7 +21,7 @@ wayland_sessions_dir = join_paths(datadir, 'wayland-sessions')
 
 po_dir = join_paths(meson.current_source_dir(), 'po')
 
-mutter_api_version = 14
+mutter_api_version = 15
 libmutter_name = 'libmutter-@0@'.format(mutter_api_version)
 libmutter_cogl_name = 'mutter-cogl-@0@'.format(mutter_api_version)
 libmutter_cogl_pango_name = 'mutter-cogl-pango-@0@'.format(mutter_api_version)
