@@ -29,7 +29,7 @@ libmutter_clutter_name = 'mutter-clutter-@0@'.format(mutter_api_version)
 
 mutter_dependency = dependency(libmutter_name)
 mutter_libdir = mutter_dependency.get_pkgconfig_variable('typelibdir')
-mutter_have_x11 = mutter_dependency.get_variable('backends').contains('x11')
+mutter_have_x11 = mutter_dependency.get_variable('have_x11') == 'true'
 
 config_data = configuration_data()
 config_data.set_quoted('GETTEXT_PACKAGE', meson.project_name())
