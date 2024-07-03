@@ -1,4 +1,9 @@
 # NEWS
+## 47.alpha
+- Port to mutter 47
+- Build with mutter that lacks X11 support
+- Typo fixes
+
 ## 46.0
 - Fixes with localed integration
 
