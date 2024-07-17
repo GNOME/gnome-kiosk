@@ -118,9 +118,17 @@ compositor_dependencies += dependency(libmutter_clutter_name)
 compositor_dependencies += mutter_dependency
 compositor_dependencies += systemd_dependency
 
+compositor_headers = []
+compositor_headers += 'compositor/kiosk-app.h'
+kiosk_enums = gnome.mkenums_simple('kiosk-enum-types',
+  sources: compositor_headers
+)
+
 compositor_sources = []
+compositor_sources += kiosk_enums
 compositor_sources += 'compositor/kiosk-backgrounds.c'
 compositor_sources += 'compositor/kiosk-compositor.c'
+compositor_sources += 'compositor/kiosk-app.c'
 compositor_sources += 'compositor/kiosk-dbus-utils.c'
 compositor_sources += 'compositor/kiosk-gobject-utils.c'
 compositor_sources += 'compositor/kiosk-automount-manager.c'
