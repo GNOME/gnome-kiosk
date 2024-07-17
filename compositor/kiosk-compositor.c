@@ -23,27 +23,29 @@
 #include "kiosk-service.h"
 #include "kiosk-app-system.h"
 #include "kiosk-window-tracker.h"
+#include "kiosk-shell-introspect-service.h"
 
 #include "org.gnome.DisplayManager.Manager.h"
 
 struct _KioskCompositor
 {
-        MetaPlugin                parent;
+        MetaPlugin                   parent;
 
         /* weak references */
-        MetaDisplay              *display;
-        MetaContext              *context;
-        ClutterBackend           *backend;
-        ClutterActor             *stage;
+        MetaDisplay                 *display;
+        MetaContext                 *context;
+        ClutterBackend              *backend;
+        ClutterActor                *stage;
 
         /* strong references */
-        GCancellable             *cancellable;
-        KioskBackgrounds         *backgrounds;
-        KioskInputSourcesManager *input_sources_manager;
-        KioskAutomountManager    *automount_manager;
-        KioskService             *service;
-        KioskAppSystem           *app_system;
-        KioskWindowTracker       *tracker;
+        GCancellable                *cancellable;
+        KioskBackgrounds            *backgrounds;
+        KioskInputSourcesManager    *input_sources_manager;
+        KioskAutomountManager       *automount_manager;
+        KioskService                *service;
+        KioskAppSystem              *app_system;
+        KioskWindowTracker          *tracker;
+        KioskShellIntrospectService *introspect_service;
 };
 
 enum
@@ -246,6 +248,13 @@ kiosk_compositor_start (MetaPlugin *plugin)
         self->input_sources_manager = kiosk_input_sources_manager_new (self);
         self->app_system = kiosk_app_system_new (self);
         self->tracker = kiosk_window_tracker_new (self, self->app_system);
+        self->introspect_service = kiosk_shell_introspect_service_new (self);
+        kiosk_shell_introspect_service_start (self->introspect_service, &error);
+
+        if (error != NULL) {
+                g_debug ("KioskCompositor: Could not start D-Bus service: %s", error->message);
+                g_clear_error (&error);
+        }
 
         kiosk_gobject_utils_queue_immediate_callback (G_OBJECT (self),
                                                       "[kiosk-compositor] register_session",
