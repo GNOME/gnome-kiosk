@@ -120,6 +120,7 @@ compositor_dependencies += systemd_dependency
 
 compositor_headers = []
 compositor_headers += 'compositor/kiosk-app.h'
+compositor_headers += 'compositor/kiosk-app-system.h'
 kiosk_enums = gnome.mkenums_simple('kiosk-enum-types',
   sources: compositor_headers
 )
@@ -129,6 +130,7 @@ compositor_sources += kiosk_enums
 compositor_sources += 'compositor/kiosk-backgrounds.c'
 compositor_sources += 'compositor/kiosk-compositor.c'
 compositor_sources += 'compositor/kiosk-app.c'
+compositor_sources += 'compositor/kiosk-app-system.c'
 compositor_sources += 'compositor/kiosk-dbus-utils.c'
 compositor_sources += 'compositor/kiosk-gobject-utils.c'
 compositor_sources += 'compositor/kiosk-automount-manager.c'
