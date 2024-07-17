@@ -22,6 +22,7 @@
 #include "kiosk-automount-manager.h"
 #include "kiosk-service.h"
 #include "kiosk-app-system.h"
+#include "kiosk-window-tracker.h"
 
 #include "org.gnome.DisplayManager.Manager.h"
 
@@ -42,6 +43,7 @@ struct _KioskCompositor
         KioskAutomountManager    *automount_manager;
         KioskService             *service;
         KioskAppSystem           *app_system;
+        KioskWindowTracker       *tracker;
 };
 
 enum
@@ -243,6 +245,7 @@ kiosk_compositor_start (MetaPlugin *plugin)
         self->automount_manager = kiosk_automount_manager_new (self);
         self->input_sources_manager = kiosk_input_sources_manager_new (self);
         self->app_system = kiosk_app_system_new (self);
+        self->tracker = kiosk_window_tracker_new (self, self->app_system);
 
         kiosk_gobject_utils_queue_immediate_callback (G_OBJECT (self),
                                                       "[kiosk-compositor] register_session",
@@ -609,4 +612,12 @@ kiosk_compositor_get_app_system (KioskCompositor *self)
         g_return_val_if_fail (KIOSK_IS_COMPOSITOR (self), NULL);
 
         return KIOSK_APP_SYSTEM (self->app_system);
+}
+
+KioskWindowTracker *
+kiosk_compositor_get_window_tracker (KioskCompositor *self)
+{
+        g_return_val_if_fail (KIOSK_IS_COMPOSITOR (self), NULL);
+
+        return KIOSK_WINDOW_TRACKER (self->tracker);
 }
