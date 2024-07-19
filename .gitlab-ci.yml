@@ -7,6 +7,7 @@ build-fedora:
         stage: build
         before_script:
                 - dnf upgrade -y
+                - .gitlab-ci/install-common-dependencies.sh
                 - .gitlab-ci/checkout-mutter.sh
                 - meson mutter mutter/build --prefix=/usr
                 - meson install -C mutter/build
