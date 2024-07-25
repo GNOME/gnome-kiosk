@@ -179,7 +179,7 @@ set_background_file_from_settings (KioskBackgrounds *self,
                                                               "[kiosk-backgrounds] on_background_image_loaded",
                                                               self->cancellable,
                                                               KIOSK_OBJECT_CALLBACK (on_background_image_loaded),
-                                                              background);
+                                                              background_image);
         } else {
                 g_signal_connect_object (G_OBJECT (background_image),
                                          "loaded",
