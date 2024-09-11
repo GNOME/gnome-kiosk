@@ -12,6 +12,53 @@
 
 #include "kiosk-compositor.h"
 
+static char **argv_ignored = NULL;
+
+static void
+command_exited_cb (GPid      command_pid,
+                   int       status,
+                   gpointer  user_data)
+{
+        MetaContext *context = user_data;
+        GError *error;
+
+        g_spawn_close_pid (command_pid);
+
+        if (status) {
+                error = g_error_new (G_IO_ERROR, G_IO_ERROR_FAILED,
+                                     "The command exited with a nonzero status: %d\n",
+                                     status);
+
+                meta_context_terminate_with_error (context, error);
+        } else {
+                meta_context_terminate (context);
+        }
+}
+
+static int
+start_command (MetaContext *context)
+{
+        GPid command_pid;
+        g_autoptr (GError) error = NULL;
+        g_auto (GStrv) command_argv = NULL;
+
+        if (argv_ignored) {
+                command_argv = g_steal_pointer (&argv_ignored);
+
+                if (!g_spawn_async (NULL, command_argv, NULL,
+                                    G_SPAWN_DO_NOT_REAP_CHILD | G_SPAWN_SEARCH_PATH,
+                                    NULL, NULL, &command_pid, &error)) {
+                        g_printerr ("Failed to run the command: %s\n", error->message);
+
+                        return EXIT_FAILURE;
+                }
+
+                g_child_watch_add (command_pid, command_exited_cb, context);
+        }
+
+        return EXIT_SUCCESS;
+}
+
 static gboolean
 print_version (const gchar *option_name,
                const gchar *value,
@@ -29,6 +76,12 @@ static GOptionEntry
                 print_version,
                 N_ ("Print version"),
                 NULL
+        },
+        {
+                G_OPTION_REMAINING,
+                .arg = G_OPTION_ARG_STRING_ARRAY,
+                &argv_ignored,
+                .arg_description = "[[--] COMMAND [ARGUMENT…]]"
         },
         { NULL }
 };
@@ -102,6 +155,11 @@ main (int    argc,
         }
 
         g_unix_signal_add (SIGTERM, (GSourceFunc) on_termination_signal, context);
+
+        if (argv_ignored) {
+                if (start_command (context) == EXIT_FAILURE)
+                        return EXIT_FAILURE;
+        }
 
         if (!meta_context_run_main_loop (context, &error)) {
                 g_printerr ("%s: Quit unexpectedly: %s\n", argv[0], error->message);
