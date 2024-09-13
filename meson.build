@@ -105,6 +105,17 @@ sources = gnome.gdbus_codegen(dbus_interface, dbus_interface_file,
 )
 dbus_interface_sources_map += { dbus_interface: sources }
 
+dbus_interface = 'org.gnome.Shell.Introspect'
+dbus_interface_file = join_paths('dbus-interfaces', dbus_interface + '.xml')
+sources = gnome.gdbus_codegen(dbus_interface, dbus_interface_file,
+        namespace: 'Kiosk',
+        interface_prefix: 'org.gnome',
+        annotations: [
+                [ dbus_interface, 'org.gtk.GDBus.C.Name', 'ShellIntrospectDBusService' ]
+        ]
+)
+dbus_interface_sources_map += { dbus_interface: sources }
+
 compositor_dependencies = []
 compositor_dependencies += c_compiler.find_library('m')
 compositor_dependencies += dependency('gio-2.0')
@@ -118,9 +129,21 @@ compositor_dependencies += dependency(libmutter_clutter_name)
 compositor_dependencies += mutter_dependency
 compositor_dependencies += systemd_dependency
 
+compositor_headers = []
+compositor_headers += 'compositor/kiosk-app.h'
+compositor_headers += 'compositor/kiosk-app-system.h'
+compositor_headers += 'compositor/kiosk-window-tracker.h'
+kiosk_enums = gnome.mkenums_simple('kiosk-enum-types',
+  sources: compositor_headers
+)
+
 compositor_sources = []
+compositor_sources += kiosk_enums
 compositor_sources += 'compositor/kiosk-backgrounds.c'
 compositor_sources += 'compositor/kiosk-compositor.c'
+compositor_sources += 'compositor/kiosk-app.c'
+compositor_sources += 'compositor/kiosk-app-system.c'
+compositor_sources += 'compositor/kiosk-window-tracker.c'
 compositor_sources += 'compositor/kiosk-dbus-utils.c'
 compositor_sources += 'compositor/kiosk-gobject-utils.c'
 compositor_sources += 'compositor/kiosk-automount-manager.c'
@@ -129,6 +152,7 @@ compositor_sources += 'compositor/kiosk-input-engine-manager.c'
 compositor_sources += 'compositor/kiosk-input-source-group.c'
 compositor_sources += 'compositor/kiosk-service.c'
 compositor_sources += 'compositor/kiosk-shell-service.c'
+compositor_sources += 'compositor/kiosk-shell-introspect-service.c'
 if mutter_have_x11
         compositor_sources += 'compositor/kiosk-x-keyboard-manager.c'
 endif

@@ -3,7 +3,7 @@ stages:
         - test
 
 build-fedora:
-        image: registry.gitlab.gnome.org/gnome/mutter/fedora/40:x86_64-2024-06-19.1
+        image: registry.gitlab.gnome.org/gnome/mutter/fedora/41:x86_64-2024-07-05.1
         stage: build
         before_script:
                 - dnf upgrade -y
@@ -28,7 +28,7 @@ build-fedora:
             - merge_requests
 
 test-fedora:
-        image: registry.gitlab.gnome.org/gnome/mutter/fedora/40:x86_64-2024-06-19.1
+        image: registry.gitlab.gnome.org/gnome/mutter/fedora/41:x86_64-2024-07-05.1
         stage: test
         before_script:
                 - dnf upgrade -y
