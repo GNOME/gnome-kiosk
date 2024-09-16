@@ -1,4 +1,9 @@
 # NEWS
+## 47.rc
+- Fix crash on VT change
+- Support gnome-shell introspection api when started with --unsafe-mode
+- CI updates
+
 ## 47.alpha
 - Port to mutter 47
 - Build with mutter that lacks X11 support
