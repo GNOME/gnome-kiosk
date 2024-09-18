@@ -1,4 +1,7 @@
 # NEWS
+## 47.0
+- (no changes)
+
 ## 47.rc
 - Fix crash on VT change
 - Support gnome-shell introspection api when started with --unsafe-mode
