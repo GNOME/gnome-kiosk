@@ -468,8 +468,6 @@ kiosk_app_new_for_window (KioskCompositor *compositor,
         app->window_id_string = g_strdup_printf ("window:%d",
                                                  meta_window_get_stable_sequence (window));
 
-        kiosk_app_add_window (app, window);
-
         return app;
 }
 
