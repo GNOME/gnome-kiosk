@@ -151,6 +151,7 @@ compositor_sources += 'compositor/kiosk-input-source-group.c'
 compositor_sources += 'compositor/kiosk-service.c'
 compositor_sources += 'compositor/kiosk-shell-service.c'
 compositor_sources += 'compositor/kiosk-shell-introspect-service.c'
+compositor_sources += 'compositor/kiosk-window-config.c'
 if mutter_have_x11
         compositor_sources += 'compositor/kiosk-x-keyboard-manager.c'
 endif
