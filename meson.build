@@ -21,10 +21,9 @@ wayland_sessions_dir = join_paths(datadir, 'wayland-sessions')
 
 po_dir = join_paths(meson.current_source_dir(), 'po')
 
-mutter_api_version = 15
+mutter_api_version = 16
 libmutter_name = 'libmutter-@0@'.format(mutter_api_version)
 libmutter_cogl_name = 'mutter-cogl-@0@'.format(mutter_api_version)
-libmutter_cogl_pango_name = 'mutter-cogl-pango-@0@'.format(mutter_api_version)
 libmutter_clutter_name = 'mutter-clutter-@0@'.format(mutter_api_version)
 
 mutter_dependency = dependency(libmutter_name)
@@ -124,7 +123,6 @@ compositor_dependencies += dependency('gnome-desktop-4')
 compositor_dependencies += dependency('gobject-2.0')
 compositor_dependencies += dependency('ibus-1.0')
 compositor_dependencies += dependency(libmutter_cogl_name)
-compositor_dependencies += dependency(libmutter_cogl_pango_name)
 compositor_dependencies += dependency(libmutter_clutter_name)
 compositor_dependencies += mutter_dependency
 compositor_dependencies += systemd_dependency
