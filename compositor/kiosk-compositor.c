@@ -502,20 +502,6 @@ kiosk_compositor_confirm_display_change (MetaPlugin *plugin)
         meta_plugin_complete_display_change (META_PLUGIN (self), TRUE);
 }
 
-static const MetaPluginInfo info = {
-        .name        = "GNOME Kiosk",
-        .version     = VERSION,
-        .author      = "Various",
-        .license     = "GPLv2+",
-        .description = "Provides Kiosk compositor plugin for mutter"
-};
-
-static const MetaPluginInfo *
-kiosk_compositor_plugin_info (MetaPlugin *plugin)
-{
-        return &info;
-}
-
 static MetaCloseDialog *
 kiosk_compositor_create_close_dialog (MetaPlugin *plugin,
                                       MetaWindow *window)
@@ -565,8 +551,6 @@ kiosk_compositor_class_init (KioskCompositorClass *compositor_class)
         plugin_class->keybinding_filter = kiosk_compositor_keybinding_filter;
 
         plugin_class->confirm_display_change = kiosk_compositor_confirm_display_change;
-
-        plugin_class->plugin_info = kiosk_compositor_plugin_info;
 
         plugin_class->create_close_dialog = kiosk_compositor_create_close_dialog;
         plugin_class->create_inhibit_shortcuts_dialog = kiosk_compositor_create_inhibit_shortcuts_dialog;
