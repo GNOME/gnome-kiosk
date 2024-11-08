@@ -42,6 +42,7 @@ The following "*set*" keys are supported:
  * `set-y` (integer) - the Y position
  * `set-width` (integer) - the width
  * `set-height` (integer) - the height
+ * `set-above` (boolean) - Whether the window should be placed on a layer above
 
 # Example
 
@@ -51,6 +52,8 @@ The following "*set*" keys are supported:
   set-x=0
   set-y=0
   set-fullscreen=false
+  # The following will place all windows on the same layer
+  set-above=false
 
   # Make all Mozilla windows fullscreen
   [mozilla]

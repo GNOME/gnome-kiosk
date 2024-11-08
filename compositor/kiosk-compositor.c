@@ -381,6 +381,15 @@ static gboolean
 kiosk_compositor_wants_window_above (KioskCompositor *self,
                                      MetaWindow      *window)
 {
+        gboolean set_above;
+
+        if (kiosk_window_config_get_boolean_for_window (self->kiosk_window_config,
+                                                        window,
+                                                        "set-above",
+                                                        &set_above))
+                return set_above;
+
+        /* If not specified in the config, use the heuristics */
         if (meta_window_is_screen_sized (window)) {
                 return FALSE;
         }
