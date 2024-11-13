@@ -34,6 +34,7 @@ The following "*match*" keys as supported:
  * `match-title` (string) - Matches the window title
  * `match-class` (string) - Matches the window class
  * `match-sandboxed-app-id` (string) - Matches the sandboxed application id
+ * `match-tag` (string)   - Matches the window tag
 
 The following "*set*" keys are supported:
 
