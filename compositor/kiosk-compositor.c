@@ -373,18 +373,10 @@ kiosk_compositor_map (MetaPlugin      *plugin,
                 meta_window_make_fullscreen (window);
                 easing_duration = 3000;
         } else {
-                ClutterActor *window_group;
-
                 g_debug ("KioskCompositor: Mapping window that does not need to be fullscreened");
-                window_group = meta_get_top_window_group_for_display (self->display);
 
-                if (kiosk_compositor_wants_window_above (self, window)) {
-                        g_object_ref (G_OBJECT (actor));
-                        clutter_actor_remove_child (clutter_actor_get_parent (CLUTTER_ACTOR (actor)), CLUTTER_ACTOR (actor));
-                        clutter_actor_add_child (window_group, CLUTTER_ACTOR (actor));
-                        clutter_actor_set_child_above_sibling (window_group, CLUTTER_ACTOR (actor), NULL);
-                        g_object_unref (G_OBJECT (actor));
-                }
+                if (kiosk_compositor_wants_window_above (self, window))
+                        meta_window_make_above (window);
 
                 easing_duration = 500;
         }
