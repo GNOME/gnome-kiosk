@@ -11,6 +11,22 @@
   </description>
   <programming-language>C</programming-language>
 
+  <maintainer>
+    <foaf:Person>
+      <foaf:name>Olivier Fourdan</foaf:name>
+      <foaf:mbox rdf:resource="mailto:ofourdan@redhat.com" />
+      <gnome:userid>ofourdan</gnome:userid>
+    </foaf:Person>
+  </maintainer>
+
+  <maintainer>
+    <foaf:Person>
+      <foaf:name>Bilal Elmoussaoui</foaf:name>
+      <foaf:mbox rdf:resource="mailto:bil.elmoussaoui@gmail.com" />
+      <gnome:userid>bilelmoussaoui</gnome:userid>
+    </foaf:Person>
+  </maintainer>
+
   <author>
     <foaf:Person>
       <foaf:name>Ray Strode </foaf:name>
