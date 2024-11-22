@@ -1,8 +1,10 @@
 #!/usr/bin/sh
 
-if [ ! -e ~/.local/bin/gnome-kiosk-script ]; then
-    mkdir -p ~/.local/bin ~/.config
-    cat > ~/.local/bin/gnome-kiosk-script <<- "EOF"
+EXECDIR=~/.local/bin
+
+if [ ! -e $EXECDIR/gnome-kiosk-script ]; then
+    mkdir -p $EXECDIR ~/.config
+    cat > $EXECDIR/gnome-kiosk-script <<- "EOF"
 	#!/bin/sh
 	# This script is located in ~/.local/bin.
 	# It's provided as an example script to show how
@@ -16,8 +18,14 @@ if [ ! -e ~/.local/bin/gnome-kiosk-script ]; then
 	exec "$0" "$@"
 EOF
 
-    chmod +x ~/.local/bin/gnome-kiosk-script
+    chmod +x $EXECDIR/gnome-kiosk-script
     touch ~/.config/gnome-initial-setup-done
 fi
 
-exec ~/.local/bin/gnome-kiosk-script "$@"
+# Copy and run the script from the XDG_RUNTIME_DIR directory if that exists
+if [ -d $XDG_RUNTIME_DIR ]; then
+    cp $EXECDIR/gnome-kiosk-script $XDG_RUNTIME_DIR/
+    EXECDIR=$XDG_RUNTIME_DIR
+fi
+
+exec $EXECDIR/gnome-kiosk-script "$@"
