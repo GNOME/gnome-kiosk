@@ -12,6 +12,7 @@
 #include <meta/keybindings.h>
 #include <meta/meta-context.h>
 #include <meta/util.h>
+#include <meta/meta-window-config.h>
 #include <meta/meta-window-group.h>
 
 #include <systemd/sd-daemon.h>
@@ -24,6 +25,7 @@
 #include "kiosk-app-system.h"
 #include "kiosk-window-tracker.h"
 #include "kiosk-shell-introspect-service.h"
+#include "kiosk-window-config.h"
 
 #include "org.gnome.DisplayManager.Manager.h"
 
@@ -46,6 +48,7 @@ struct _KioskCompositor
         KioskAppSystem              *app_system;
         KioskWindowTracker          *tracker;
         KioskShellIntrospectService *introspect_service;
+        KioskWindowConfig           *kiosk_window_config;
 };
 
 enum
@@ -59,6 +62,8 @@ static guint signals[NUMBER_OF_SIGNALS] = { 0, };
 G_DEFINE_TYPE (KioskCompositor, kiosk_compositor, META_TYPE_PLUGIN)
 
 static void kiosk_compositor_dispose (GObject *object);
+static gboolean kiosk_compositor_wants_window_fullscreen (KioskCompositor *self,
+                                                          MetaWindow      *window);
 
 static void
 kiosk_compositor_dispose (GObject *object)
@@ -219,6 +224,39 @@ neuter_builtin_keybindings (KioskCompositor *self)
 }
 
 static void
+kiosk_compositor_on_window_configure (MetaWindow       *window,
+                                      MetaWindowConfig *window_config,
+                                      gpointer          user_data)
+{
+        KioskCompositor *self = KIOSK_COMPOSITOR (user_data);
+        gboolean fullscreen;
+
+        if (!meta_window_config_get_is_initial (window_config)) {
+                g_debug ("KioskCompositor: Ignoring configure for window: %s",
+                         meta_window_get_description (window));
+                return;
+        }
+
+        g_debug ("KioskCompositor: configure window: %s", meta_window_get_description (window));
+
+        fullscreen = kiosk_compositor_wants_window_fullscreen (self, window);
+        meta_window_config_set_is_fullscreen (window_config, fullscreen);
+        kiosk_window_config_update_window (self->kiosk_window_config,
+                                           window,
+                                           window_config);
+}
+
+static void
+kiosk_compositor_on_window_created (MetaDisplay *display,
+                                    MetaWindow  *window,
+                                    gpointer     user_data)
+{
+        g_signal_connect (window, "configure",
+                          G_CALLBACK (kiosk_compositor_on_window_configure),
+                          user_data);
+}
+
+static void
 kiosk_compositor_start (MetaPlugin *plugin)
 {
         KioskCompositor *self = KIOSK_COMPOSITOR (plugin);
@@ -248,6 +286,7 @@ kiosk_compositor_start (MetaPlugin *plugin)
         self->input_sources_manager = kiosk_input_sources_manager_new (self);
         self->app_system = kiosk_app_system_new (self);
         self->tracker = kiosk_window_tracker_new (self, self->app_system);
+        self->kiosk_window_config = kiosk_window_config_new ();
         self->introspect_service = kiosk_shell_introspect_service_new (self);
         kiosk_shell_introspect_service_start (self->introspect_service, &error);
 
@@ -261,6 +300,11 @@ kiosk_compositor_start (MetaPlugin *plugin)
                                                       self->cancellable,
                                                       KIOSK_OBJECT_CALLBACK (register_session),
                                                       NULL);
+
+        g_signal_connect_object (self->display, "window-created",
+                                 G_CALLBACK (kiosk_compositor_on_window_created),
+                                 self,
+                                 G_CONNECT_DEFAULT);
 }
 
 static void
@@ -368,9 +412,8 @@ kiosk_compositor_map (MetaPlugin      *plugin,
 
         window = meta_window_actor_get_meta_window (actor);
 
-        if (kiosk_compositor_wants_window_fullscreen (self, window)) {
+        if (meta_window_is_fullscreen (window)) {
                 g_debug ("KioskCompositor: Mapping window that does need to be fullscreened");
-                meta_window_make_fullscreen (window);
                 easing_duration = 3000;
         } else {
                 g_debug ("KioskCompositor: Mapping window that does not need to be fullscreened");
