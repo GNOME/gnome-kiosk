@@ -260,7 +260,9 @@ if get_option('input-selector')
         subdir('input-selector')
 endif
 
-subdir ('search-app')
+if get_option ('search-app')
+        subdir ('search-app')
+endif
 
 test('check-format', find_program('scripts/check-format.sh'))
 
