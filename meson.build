@@ -251,7 +251,9 @@ dconf_defaults = custom_target('gnomekiosk.dconf.compiled',
         install_dir: dconf_dir
 )
 
-subdir ('kiosk-script')
+if get_option('kiosk-script')
+        subdir ('kiosk-script')
+endif
 
 session_config_data = configuration_data()
 session_config_data.set('required_components', 'org.gnome.Kiosk;org.gnome.Kiosk.SearchApp;')

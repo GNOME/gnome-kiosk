@@ -3,3 +3,9 @@ option('input-selector',
   value: false,
   description: 'Build input selector'
 )
+
+option('kiosk-script',
+  type: 'boolean',
+  value: true,
+  description: 'Build kiosk script example'
+)
