@@ -314,7 +314,9 @@ session_file = configure_file(
         configuration: session_config_data
 )
 
-subdir('input-selector')
+if get_option('input-selector')
+        subdir('input-selector')
+endif
 
 i18n.merge_file(
         input: session_file,

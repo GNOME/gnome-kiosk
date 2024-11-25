@@ -1,0 +1,5 @@
+option('input-selector',
+  type: 'boolean',
+  value: false,
+  description: 'Build input selector'
+)
