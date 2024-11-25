@@ -1,5 +1,6 @@
 project('gnome-kiosk', 'c',
-        version: '47.0'
+        version: '47.0',
+        meson_version : '>= 0.59',
 )
 add_project_arguments('-D_GNU_SOURCE',
         language: 'c'
@@ -266,3 +267,9 @@ endif
 
 test('check-format', find_program('scripts/check-format.sh'))
 
+
+gnome.post_install(
+  gtk_update_icon_cache: true,
+  glib_compile_schemas: true,
+  update_desktop_database: true,
+)
