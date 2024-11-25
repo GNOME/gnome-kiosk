@@ -9,3 +9,9 @@ option('kiosk-script',
   value: false,
   description: 'Build kiosk script example'
 )
+
+option('search-app',
+  type: 'boolean',
+  value: false,
+  description: 'Build kiosk search app example'
+)
