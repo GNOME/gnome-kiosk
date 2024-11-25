@@ -43,9 +43,6 @@ config_h = configure_file(
         configuration: config_data
 )
 
-meson.add_install_script ('meson/postinstall.py')
-
-
 systemd_user_unit_dir = dependency('systemd').get_pkgconfig_variable('systemduserunitdir',
                                                                      define_variable: ['prefix', prefix])
 systemd_dependency = dependency('libsystemd')
@@ -262,6 +259,7 @@ if get_option('input-selector')
 endif
 
 if get_option ('search-app')
+        meson.add_install_script ('meson/postinstall.py')
         subdir ('search-app')
 endif
 
