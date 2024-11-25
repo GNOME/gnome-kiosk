@@ -1,6 +1,8 @@
 stages:
         - build
         - test
+variables:
+  COMMON_FLAGS: --prefix=/usr --sysconfdir=/etc --localstatedir=/var --mandir=/usr/share/man --libdir=/usr/lib64 -Dinput-selector=true
 
 build-fedora:
         image: registry.gitlab.gnome.org/gnome/mutter/fedora/41:x86_64-2024-07-05.1
@@ -13,7 +15,7 @@ build-fedora:
                 - meson install -C mutter/build
         script:
                 - export BUILD_ROOT=_build
-                - meson . $BUILD_ROOT --prefix=/usr --sysconfdir=/etc --localstatedir=/var --mandir=/usr/share/man --libdir=/usr/lib64
+                - meson . $BUILD_ROOT $COMMON_FLAGS
                 - ninja -C $BUILD_ROOT
                 - ninja -C $BUILD_ROOT install
                 - ninja -C $BUILD_ROOT dist
@@ -36,7 +38,7 @@ test-fedora:
                 - meson install --no-rebuild -C mutter/build
         script:
                 - export BUILD_ROOT=_build
-                - meson . $BUILD_ROOT --prefix=/usr --sysconfdir=/etc --localstatedir=/var --mandir=/usr/share/man --libdir=/usr/lib64
+                - meson . $BUILD_ROOT $COMMON_FLAGS
                 - ninja -C $BUILD_ROOT
                 - ninja -C $BUILD_ROOT test
                 - find -depth -type d -name '*.p' -exec rm -rf "{}" \;
