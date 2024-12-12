@@ -1,5 +1,6 @@
 input_selector_dependencies = []
 input_selector_dependencies += dependency('gio-2.0')
+input_selector_dependencies += dependency('gio-unix-2.0')
 input_selector_dependencies += dependency('glib-2.0')
 input_selector_dependencies += dependency('gobject-2.0')
 input_selector_dependencies += dependency('gtk4')
