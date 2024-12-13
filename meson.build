@@ -1,5 +1,6 @@
 project('gnome-kiosk', 'c',
-        version: '47.0'
+        version: '47.0',
+        meson_version : '>= 0.59',
 )
 add_project_arguments('-D_GNU_SOURCE',
         language: 'c'
@@ -41,9 +42,6 @@ config_h = configure_file(
         output: 'config.h',
         configuration: config_data
 )
-
-meson.add_install_script ('meson/postinstall.py')
-
 
 systemd_user_unit_dir = dependency('systemd').get_pkgconfig_variable('systemduserunitdir',
                                                                      define_variable: ['prefix', prefix])
@@ -251,103 +249,25 @@ dconf_defaults = custom_target('gnomekiosk.dconf.compiled',
         install_dir: dconf_dir
 )
 
-install_data('kiosk-script/gnome-kiosk-script',
-        install_dir: bindir,
-	install_mode: 'rwxr-xr-x'
-)
+if get_option('kiosk-script')
+        subdir ('kiosk-script')
+endif
 
-desktop_file = configure_file(
-        input: 'kiosk-script/desktop/org.gnome.Kiosk.Script.desktop.in.in',
-        output: 'org.gnome.Kiosk.Script.desktop.in',
-        configuration: desktop_config_data
-)
 
-i18n.merge_file(
-        input: desktop_file,
-        output: 'org.gnome.Kiosk.Script.desktop',
-        po_dir: po_dir,
-        install: true,
-        install_dir: desktop_data_dir,
-        type: 'desktop'
-)
+if get_option('input-selector')
+        subdir('input-selector')
+endif
 
-configure_file(
-       input: 'kiosk-script/systemd/org.gnome.Kiosk.Script.service.in',
-       output: '@BASENAME@',
-       configuration: systemd_service_config_data,
-       install_dir: systemd_user_unit_dir
-)
-
-kiosk_script_systemd_target_dir = join_paths(systemd_user_unit_dir, 'gnome-session@gnome-kiosk-script.target.d')
-install_data('kiosk-script/systemd/session.conf',
-        install_dir: kiosk_script_systemd_target_dir
-)
-
-install_data('kiosk-script/gnome-session/gnome-kiosk-script.session',
-        install_dir: session_dir,
-)
-
-i18n.merge_file(
-        input: 'kiosk-script/xsessions/gnome-kiosk-script-xorg.desktop.in',
-        output: '@BASENAME@',
-        po_dir: po_dir,
-        install: true,
-        install_dir: xsessions_dir,
-        type: 'desktop'
-)
-
-i18n.merge_file(
-        input: 'kiosk-script/wayland-sessions/gnome-kiosk-script-wayland.desktop.in',
-        output: '@BASENAME@',
-        po_dir: po_dir,
-        install: true,
-        install_dir: wayland_sessions_dir,
-        type: 'desktop'
-)
-
-session_config_data = configuration_data()
-session_config_data.set('required_components', 'org.gnome.Kiosk;org.gnome.Kiosk.SearchApp;')
-
-session_file = configure_file(
-        input: 'search-app/org.gnome.Kiosk.SearchApp.session.desktop.in.in',
-        output: 'org.gnome.Kiosk.SearchApp.session.desktop.in',
-        configuration: session_config_data
-)
-
-subdir('input-selector')
-
-i18n.merge_file(
-        input: session_file,
-        output: 'org.gnome.Kiosk.SearchApp.session',
-        po_dir: po_dir,
-        install: true,
-        install_dir: session_dir,
-        type: 'desktop'
-)
-
-i18n.merge_file(
-        input: 'search-app/org.gnome.Kiosk.SearchApp.Session.desktop.in',
-        output: 'org.gnome.Kiosk.SearchApp.Session.desktop',
-        po_dir: po_dir,
-        install: true,
-        install_dir: xsessions_dir,
-        type: 'desktop'
-)
-
-search_app_desktop_file = configure_file(
-        input: 'search-app/org.gnome.Kiosk.SearchApp.desktop.in.in',
-        output: 'org.gnome.Kiosk.SearchApp.desktop.in',
-        configuration: desktop_config_data
-)
-
-i18n.merge_file(
-        input: search_app_desktop_file,
-        output: 'org.gnome.Kiosk.SearchApp.desktop',
-        po_dir: po_dir,
-        install: true,
-        install_dir: desktop_data_dir,
-        type: 'desktop'
-)
+if get_option ('search-app')
+        meson.add_install_script ('meson/postinstall.py')
+        subdir ('search-app')
+endif
 
 test('check-format', find_program('scripts/check-format.sh'))
 
+
+gnome.post_install(
+  gtk_update_icon_cache: true,
+  glib_compile_schemas: true,
+  update_desktop_database: true,
+)
