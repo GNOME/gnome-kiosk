@@ -261,11 +261,13 @@ kiosk_compositor_start (MetaPlugin *plugin)
 {
         KioskCompositor *self = KIOSK_COMPOSITOR (plugin);
         g_autoptr (GError) error = NULL;
+        MetaDisplay *display = meta_plugin_get_display (META_PLUGIN (self));
+        MetaCompositor *compositor = meta_display_get_compositor (display);
 
-        g_set_weak_pointer (&self->display, meta_plugin_get_display (META_PLUGIN (self)));
+        g_set_weak_pointer (&self->display, display);
         g_set_weak_pointer (&self->context, meta_display_get_context (self->display));
         g_set_weak_pointer (&self->backend, clutter_get_default_backend ());
-        g_set_weak_pointer (&self->stage, meta_get_stage_for_display (self->display));
+        g_set_weak_pointer (&self->stage, CLUTTER_ACTOR (meta_compositor_get_stage (compositor)));
 
         clutter_actor_show (self->stage);
 
