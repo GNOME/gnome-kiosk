@@ -311,14 +311,16 @@ static void
 kiosk_backgrounds_constructed (GObject *object)
 {
         KioskBackgrounds *self = KIOSK_BACKGROUNDS (object);
+        MetaDisplay *display = meta_plugin_get_display (META_PLUGIN (self->compositor));
+        MetaCompositor *compositor = meta_display_get_compositor (display);
 
         G_OBJECT_CLASS (kiosk_backgrounds_parent_class)->constructed (object);
 
-        g_set_weak_pointer (&self->display, meta_plugin_get_display (META_PLUGIN (self->compositor)));
+        g_set_weak_pointer (&self->display, display);
         g_set_weak_pointer (&self->context, meta_display_get_context (self->display));
         g_set_weak_pointer (&self->backend, meta_context_get_backend (self->context));
-        g_set_weak_pointer (&self->stage, meta_get_stage_for_display (self->display));
-        g_set_weak_pointer (&self->window_group, meta_get_window_group_for_display (self->display));
+        g_set_weak_pointer (&self->stage, CLUTTER_ACTOR (meta_compositor_get_stage (compositor)));
+        g_set_weak_pointer (&self->window_group, meta_compositor_get_window_group (compositor));
         g_set_weak_pointer (&self->monitor_manager, meta_backend_get_monitor_manager (self->backend));
         g_set_weak_pointer (&self->image_cache, meta_background_image_cache_get_default ());
 
