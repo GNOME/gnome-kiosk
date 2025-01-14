@@ -1,4 +1,8 @@
 # NEWS
+## 48.alpha
+- Port to mutter 48
+- Add basic window configurability from a static config file. See <https://gitlab.gnome.org/GNOME/gnome-kiosk/-/blob/main/CONFIG.md?ref_type=heads> for details
+
 ## 47.0
 - (no changes)
 
