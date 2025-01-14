@@ -1,8 +1,18 @@
+include:
+  - component: gitlab.gnome.org/GNOME/citemplates/release-service@master
+    inputs:
+      job-stage: deploy
+      dist-job-name: "dist-kiosk-tarball"
+      tarball-artifact-path: $TARBALL_ARTIFACT_PATH
+
 stages:
         - build
         - test
+        - deploy
+
 variables:
   COMMON_FLAGS: --prefix=/usr --sysconfdir=/etc --localstatedir=/var --mandir=/usr/share/man --libdir=/usr/lib64 -Dinput-selector=true
+  TARBALL_ARTIFACT_PATH: build/meson-dist/$CI_PROJECT_NAME-$CI_COMMIT_TAG.tar.xz
 
 build-fedora:
         image: registry.gitlab.gnome.org/gnome/mutter/fedora/41:x86_64-2024-07-05.1
@@ -49,3 +59,49 @@ test-fedora:
                         - _build
         only:
             - merge_requests
+
+dist-kiosk:
+  image: registry.gitlab.gnome.org/gnome/mutter/fedora/41:x86_64-2024-07-05.1
+  stage: deploy
+  before_script:
+    - dnf upgrade -y
+    - .gitlab-ci/install-common-dependencies.sh
+    - .gitlab-ci/checkout-mutter.sh
+    - meson mutter mutter/build --prefix=/usr
+    - meson install -C mutter/build
+  script:
+    - meson setup . build
+        --prefix /usr
+        --werror
+        --wrap-mode nofallback
+        -Dbuildtype=debugoptimized
+    - meson dist -C build --include-subprojects
+  artifacts:
+    expire_in: 7 day
+    name: "kiosk-${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}"
+    when: always
+    paths:
+      - build/meson-private/dist-build/meson-logs
+  rules:
+    - if: '$CI_PIPELINE_SOURCE != "merge_request_event"'
+      when: manual
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - "**/meson.build"
+        - meson/*
+      when: on_success
+    - if: '$GITLAB_USER_LOGIN == "marge-bot"'
+      when: on_success
+    - if: '$CI_MERGE_REQUEST_ASSIGNEES == "marge-bot"'
+      when: on_success
+
+dist-kiosk-tarball:
+  extends: dist-kiosk
+  artifacts:
+    expose_as: 'Get tarball here'
+    name: "${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}"
+    when: always
+    paths:
+      - $TARBALL_ARTIFACT_PATH
+  rules:
+    - if: '$CI_COMMIT_TAG'
