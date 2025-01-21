@@ -125,7 +125,7 @@ create_switch_input_source_action (KioskInputSelectorApplication *self)
         g_action_map_add_action (G_ACTION_MAP (self->window), G_ACTION (switch_action));
 }
 
-static void
+static gboolean
 connect_to_input_source_manager (KioskInputSelectorApplication *self)
 {
         g_autoptr (GDBusObject) manager_object = NULL;
@@ -138,6 +138,11 @@ connect_to_input_source_manager (KioskInputSelectorApplication *self)
                                                                              NULL);
 
         manager_object = g_dbus_object_manager_get_object (G_DBUS_OBJECT_MANAGER (self->object_manager), "/org/gnome/Kiosk/InputSources/Manager");
+        if (!manager_object) {
+                g_critical ("Failed to connect to the input sources manager! Are you running GNOME Kiosk?");
+                return FALSE;
+        }
+
         self->input_sources_manager = kiosk_object_get_input_sources_manager (KIOSK_OBJECT (manager_object));
 
         g_signal_connect_object (G_OBJECT (self->input_sources_manager),
@@ -150,6 +155,8 @@ connect_to_input_source_manager (KioskInputSelectorApplication *self)
                                  G_CALLBACK (populate_input_sources_menu_with_input_source_manager),
                                  self,
                                  G_CONNECT_SWAPPED);
+
+        return TRUE;
 }
 
 static void
@@ -161,8 +168,8 @@ activate (KioskInputSelectorApplication *self)
                                     GTK_WINDOW (self->window));
 
         create_switch_input_source_action (self);
-        connect_to_input_source_manager (self);
-
+        if (!connect_to_input_source_manager (self))
+                return;
         synchronize_input_sources_menu_with_input_source_manager (self);
 }
 
