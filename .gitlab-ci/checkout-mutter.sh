@@ -9,6 +9,8 @@ fetch() {
 
 mutter_target=
 
+rm -rf mutter
+
 echo -n Cloning into mutter ...
 if git clone --quiet --depth=1 https://gitlab.gnome.org/GNOME/mutter.git; then
   echo \ done
