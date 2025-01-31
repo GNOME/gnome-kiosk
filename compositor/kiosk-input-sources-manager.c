@@ -38,7 +38,8 @@
 
 #define KIOSK_DBUS_INPUT_SOURCES_MANGER_INPUT_SOURCE_INTERFACE "org.gnome.Kiosk.InputSources.InputSource"
 
-typedef enum {
+typedef enum
+{
         KIOSK_INPUT_SOURCE_CONFIGURATION_SYSTEM,
         KIOSK_INPUT_SOURCE_CONFIGURATION_SESSION,
         KIOSK_INPUT_SOURCE_CONFIGURATION_OVERRIDE
@@ -1590,7 +1591,6 @@ kiosk_input_sources_manager_constructed (GObject *object)
                 g_debug ("KioskInputSourcesManager: Won't start X keyboard manager on wayland");
         }
 #endif
-
 }
 
 static void
