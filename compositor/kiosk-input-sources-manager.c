@@ -1260,6 +1260,17 @@ on_switch_input_sources (MetaDisplay              *display,
         }
 }
 
+static gboolean
+on_modifiers_switch_input_sources_cb (MetaDisplay              *display,
+                                      KioskInputSourcesManager *self)
+{
+        g_debug ("KioskInputSourcesManager: ISO_Next_Group key combo pressed to change input source");
+
+        kiosk_input_sources_manager_switch_to_next_input_source (self);
+
+        return FALSE;
+}
+
 static void
 kiosk_input_sources_manager_add_key_bindings (KioskInputSourcesManager *self)
 {
@@ -1283,6 +1294,10 @@ kiosk_input_sources_manager_add_key_bindings (KioskInputSourcesManager *self)
                                      on_switch_input_sources,
                                      self,
                                      NULL);
+        g_signal_connect (self->display,
+                          "modifiers-accelerator-activated",
+                          G_CALLBACK (on_modifiers_switch_input_sources_cb),
+                          self);
 }
 
 static void
@@ -1291,6 +1306,9 @@ kiosk_input_sources_manager_remove_key_bindings (KioskInputSourcesManager *self)
         g_debug ("KioskInputSourcesManager: Removing key bindings for layout switching");
         meta_display_remove_keybinding (self->display, KIOSK_SWITCH_INPUT_SOURCES_BACKWARD_KEYBINDING);
         meta_display_remove_keybinding (self->display, KIOSK_SWITCH_INPUT_SOURCES_KEYBINDING);
+        g_signal_handlers_disconnect_by_func (self->display,
+                                              G_CALLBACK (on_modifiers_switch_input_sources_cb),
+                                              self);
 
         g_clear_object (&self->key_binding_settings);
 }
