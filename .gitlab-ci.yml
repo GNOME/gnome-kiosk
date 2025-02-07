@@ -11,7 +11,7 @@ stages:
         - deploy
 
 variables:
-  IMAGE_REGISTRY: registry.gitlab.gnome.org/gnome/mutter/fedora/41:x86_64-2024-07-05.1
+  IMAGE_REGISTRY: registry.gitlab.gnome.org/gnome/mutter/fedora/41:x86_64-2025-02-04.1
   COMMON_FLAGS: --prefix=/usr --sysconfdir=/etc --localstatedir=/var --mandir=/usr/share/man --libdir=/usr/lib64 -Dinput-selector=true
   TARBALL_ARTIFACT_PATH: build/meson-dist/$CI_PROJECT_NAME-$CI_COMMIT_TAG.tar.xz
 
