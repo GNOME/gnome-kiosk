@@ -11,11 +11,12 @@ stages:
         - deploy
 
 variables:
+  IMAGE_REGISTRY: registry.gitlab.gnome.org/gnome/mutter/fedora/41:x86_64-2025-02-04.1
   COMMON_FLAGS: --prefix=/usr --sysconfdir=/etc --localstatedir=/var --mandir=/usr/share/man --libdir=/usr/lib64 -Dinput-selector=true
   TARBALL_ARTIFACT_PATH: build/meson-dist/$CI_PROJECT_NAME-$CI_COMMIT_TAG.tar.xz
 
 build-fedora:
-        image: registry.gitlab.gnome.org/gnome/mutter/fedora/41:x86_64-2024-07-05.1
+        image: ${IMAGE_REGISTRY}
         stage: build
         before_script:
                 - dnf upgrade -y
@@ -40,7 +41,7 @@ build-fedora:
             - merge_requests
 
 test-fedora:
-        image: registry.gitlab.gnome.org/gnome/mutter/fedora/41:x86_64-2024-07-05.1
+        image: ${IMAGE_REGISTRY}
         stage: test
         before_script:
                 - dnf upgrade -y
@@ -61,7 +62,7 @@ test-fedora:
             - merge_requests
 
 dist-kiosk:
-  image: registry.gitlab.gnome.org/gnome/mutter/fedora/41:x86_64-2024-07-05.1
+  image: ${IMAGE_REGISTRY}
   stage: deploy
   before_script:
     - dnf upgrade -y
