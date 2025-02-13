@@ -25,6 +25,7 @@
 #include "kiosk-app-system.h"
 #include "kiosk-window-tracker.h"
 #include "kiosk-shell-introspect-service.h"
+#include "kiosk-shell-screenshot-service.h"
 #include "kiosk-window-config.h"
 
 #include "org.gnome.DisplayManager.Manager.h"
@@ -48,6 +49,7 @@ struct _KioskCompositor
         KioskAppSystem              *app_system;
         KioskWindowTracker          *tracker;
         KioskShellIntrospectService *introspect_service;
+        KioskShellScreenshotService *screenshot_service;
         KioskWindowConfig           *kiosk_window_config;
 };
 
@@ -291,6 +293,8 @@ kiosk_compositor_start (MetaPlugin *plugin)
         self->kiosk_window_config = kiosk_window_config_new ();
         self->introspect_service = kiosk_shell_introspect_service_new (self);
         kiosk_shell_introspect_service_start (self->introspect_service, &error);
+        self->screenshot_service = kiosk_shell_screenshot_service_new (self);
+        kiosk_shell_screenshot_service_start (self->screenshot_service, &error);
 
         if (error != NULL) {
                 g_debug ("KioskCompositor: Could not start D-Bus service: %s", error->message);

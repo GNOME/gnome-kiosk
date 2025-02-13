@@ -113,6 +113,17 @@ sources = gnome.gdbus_codegen(dbus_interface, dbus_interface_file,
 )
 dbus_interface_sources_map += { dbus_interface: sources }
 
+dbus_interface = 'org.gnome.Shell.Screenshot'
+dbus_interface_file = join_paths('dbus-interfaces', dbus_interface + '.xml')
+sources = gnome.gdbus_codegen(dbus_interface, dbus_interface_file,
+        namespace: 'Kiosk',
+        interface_prefix: 'org.gnome',
+        annotations: [
+                [ dbus_interface, 'org.gtk.GDBus.C.Name', 'ShellScreenshotDBusService' ]
+        ]
+)
+dbus_interface_sources_map += { dbus_interface: sources }
+
 compositor_dependencies = []
 compositor_dependencies += c_compiler.find_library('m')
 compositor_dependencies += dependency('gio-2.0')
@@ -120,6 +131,7 @@ compositor_dependencies += dependency('glib-2.0')
 compositor_dependencies += dependency('gnome-desktop-4')
 compositor_dependencies += dependency('gobject-2.0')
 compositor_dependencies += dependency('ibus-1.0')
+compositor_dependencies += dependency('gdk-pixbuf-2.0')
 compositor_dependencies += dependency(libmutter_cogl_name)
 compositor_dependencies += dependency(libmutter_clutter_name)
 compositor_dependencies += mutter_dependency
@@ -149,7 +161,10 @@ compositor_sources += 'compositor/kiosk-input-source-group.c'
 compositor_sources += 'compositor/kiosk-service.c'
 compositor_sources += 'compositor/kiosk-shell-service.c'
 compositor_sources += 'compositor/kiosk-shell-introspect-service.c'
+compositor_sources += 'compositor/kiosk-shell-screenshot-service.c'
 compositor_sources += 'compositor/kiosk-window-config.c'
+compositor_sources += 'compositor/kiosk-screenshot.c'
+
 if mutter_have_x11
         compositor_sources += 'compositor/kiosk-x-keyboard-manager.c'
 endif
