@@ -1,0 +1,8 @@
+[Unit]
+Description=Kiosk Search Appliance
+BindsTo=gnome-session.target
+After=gnome-session.target
+
+[Service]
+ExecStart=@bindir@/firefox --kiosk --private-window --new-instance  https://www.google.com
+Restart=always
