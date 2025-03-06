@@ -1,4 +1,10 @@
 # NEWS
+## 48.rc
+- Add Shell screenshot API support
+- Support ISO_Next_Group key combo for switching keyboard layouts
+- Fix search appliance session with systemd
+- Fix crash in input-selector if the DBus interface is not available
+
 ## 48.alpha
 - Port to mutter 48
 - Add basic window configurability from a static config file. See <https://gitlab.gnome.org/GNOME/gnome-kiosk/-/blob/main/CONFIG.md?ref_type=heads> for details
