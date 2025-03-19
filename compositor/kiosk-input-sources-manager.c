@@ -869,6 +869,10 @@ kiosk_input_sources_manager_set_input_sources_from_system_configuration (KioskIn
         g_debug ("KioskInputSourcesManager: Setting keymap from system configuration");
 
         layouts_string = sd_locale1_get_x11_layout (self->locale_proxy);
+        if (layouts_string == NULL) {
+                g_debug ("KioskInputSourcesManager: No layouts defined");
+                return FALSE;
+        }
         g_debug ("KioskInputSourcesManager: System layout is '%s'", layouts_string);
 
         layouts = g_strsplit (layouts_string, ",", -1);
