@@ -344,7 +344,7 @@ gboolean
 kiosk_input_source_group_only_has_layouts (KioskInputSourceGroup *self,
                                            const char * const    *layouts_to_check)
 {
-        g_auto (GStrv) layouts;
+        g_auto (GStrv) layouts = NULL;
 
         layouts = kiosk_input_source_group_get_layouts (self);
 
