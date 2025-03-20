@@ -83,7 +83,7 @@ populate_input_sources_menu_with_input_source_manager (KioskInputSelectorApplica
                 const char *object_path = object_paths[i];
                 g_autoptr (GDBusObject) object = NULL;
                 g_autoptr (KioskInputSource) input_source = NULL;
-                g_autofree char *action_id;
+                g_autofree char *action_id = NULL;
 
                 object = g_dbus_object_manager_get_object (G_DBUS_OBJECT_MANAGER (self->object_manager), object_path);
                 input_source = kiosk_object_get_input_source (KIOSK_OBJECT (object));
