@@ -327,7 +327,7 @@ static ssize_t
 get_index_of_layout (KioskInputSourceGroup *self,
                      const char            *layout_name)
 {
-        g_auto (GStrv) layouts;
+        g_auto (GStrv) layouts = NULL;
         size_t i;
 
         layouts = kiosk_input_source_group_get_layouts (self);
