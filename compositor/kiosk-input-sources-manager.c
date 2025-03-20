@@ -433,7 +433,7 @@ sync_all_input_sources_to_dbus_service (KioskInputSourcesManager *self)
         GList *stale_dbus_objects;
 
         g_autoptr (GPtrArray) sorted_input_sources = NULL;
-        g_autofree char *input_sources_string;
+        g_autofree char *input_sources_string = NULL;
         size_t i;
 
         stale_dbus_objects = g_dbus_object_manager_get_objects (G_DBUS_OBJECT_MANAGER (self->dbus_object_manager));
