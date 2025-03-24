@@ -433,7 +433,7 @@ sync_all_input_sources_to_dbus_service (KioskInputSourcesManager *self)
         GList *stale_dbus_objects;
 
         g_autoptr (GPtrArray) sorted_input_sources = NULL;
-        g_autofree char *input_sources_string;
+        g_autofree char *input_sources_string = NULL;
         size_t i;
 
         stale_dbus_objects = g_dbus_object_manager_get_objects (G_DBUS_OBJECT_MANAGER (self->dbus_object_manager));
@@ -869,6 +869,10 @@ kiosk_input_sources_manager_set_input_sources_from_system_configuration (KioskIn
         g_debug ("KioskInputSourcesManager: Setting keymap from system configuration");
 
         layouts_string = sd_locale1_get_x11_layout (self->locale_proxy);
+        if (layouts_string == NULL) {
+                g_debug ("KioskInputSourcesManager: No layouts defined");
+                return FALSE;
+        }
         g_debug ("KioskInputSourcesManager: System layout is '%s'", layouts_string);
 
         layouts = g_strsplit (layouts_string, ",", -1);
