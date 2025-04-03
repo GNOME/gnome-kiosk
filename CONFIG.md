@@ -2,11 +2,11 @@
 
 GNOME Kiosk takes a configuration file to specify the windows configuration at start-up.
 
-The configuration file called `gnome-kiosk.ini` is searched in multiple places on the
+The configuration file called `window-config.ini` is searched in multiple places on the
 system. The first instance of the file found is used.
 
  * The base directory in which user-specific application configuration is stored
-   `$XDG_CONFIG_HOME/gnome-kiosk/gnome-kiosk.ini` (usually `$HOME/.config/gnome-kiosk/gnome-kiosk.ini`)
+   `$XDG_CONFIG_HOME/gnome-kiosk/window-config.ini` (usually `$HOME/.config/gnome-kiosk/window-config.ini`)
  * The system-wide list of directories in which system-wide application data is stored `$XDG_DATA_DIRS`
    This list usually includes:
     - `/var/lib/flatpak/exports/share/gnome-kiosk/window-config.ini`
