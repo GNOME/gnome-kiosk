@@ -10,7 +10,9 @@
 #include <meta/common.h>
 #include <meta/display.h>
 #include <meta/keybindings.h>
+#include <meta/meta-backend.h>
 #include <meta/meta-context.h>
+#include <meta/meta-monitor-manager.h>
 #include <meta/util.h>
 #include <meta/meta-window-config.h>
 #include <meta/meta-window-group.h>
@@ -407,6 +409,36 @@ kiosk_compositor_wants_window_above (KioskCompositor *self,
         return TRUE;
 }
 
+static gboolean
+kiosk_compositor_wants_window_on_monitor (KioskCompositor *self,
+                                          MetaWindow      *window,
+                                          int             *monitor)
+{
+        g_autofree gchar *output_name = NULL;
+        MetaBackend *backend;
+        MetaMonitorManager *monitor_manager;
+        int m;
+
+        if (!kiosk_window_config_get_string_for_window (self->kiosk_window_config,
+                                                        window,
+                                                        "set-on-monitor",
+                                                        &output_name))
+                return FALSE;
+
+        backend = meta_context_get_backend (self->context);
+        monitor_manager = meta_backend_get_monitor_manager (backend);
+        m = meta_monitor_manager_get_monitor_for_connector (monitor_manager,
+                                                            output_name);
+        if (m < 0) {
+                g_warning ("Could not find monitor named \"%s\"", output_name);
+                return FALSE;
+        }
+
+        *monitor = m;
+
+        return TRUE;
+}
+
 static void
 on_faded_in (KioskCompositor   *self,
              ClutterTransition *transition)
@@ -424,6 +456,7 @@ kiosk_compositor_map (MetaPlugin      *plugin,
         MetaWindow *window;
         ClutterTransition *fade_in_transition;
         int easing_duration;
+        int monitor;
 
         window = meta_window_actor_get_meta_window (actor);
 
@@ -437,6 +470,11 @@ kiosk_compositor_map (MetaPlugin      *plugin,
                         meta_window_make_above (window);
 
                 easing_duration = 500;
+        }
+
+        if (kiosk_compositor_wants_window_on_monitor (self, window, &monitor)) {
+                g_debug ("KioskCompositor: Moving window to monitor %i", monitor);
+                meta_window_move_to_monitor (window, monitor);
         }
 
         clutter_actor_show (self->stage);

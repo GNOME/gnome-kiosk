@@ -43,6 +43,15 @@ The following "*set*" keys are supported:
  * `set-width` (integer) - the width
  * `set-height` (integer) - the height
  * `set-above` (boolean) - Whether the window should be placed on a layer above
+ * `set-on-monitor` (string) - Place the window on the given monitor
+
+Notes:
+
+The name of the monitor to use for `set-on-monitor` is from the output
+name as reported by `xrandr` on X11 or `wayland-info` on Wayland.
+
+When `set-x`/`set-y` are used in with `set-on-monitor`, the actual location
+is relative to the monitor.
 
 # Example
 
@@ -55,10 +64,11 @@ The following "*set*" keys are supported:
   # The following will place all windows on the same layer
   set-above=false
 
-  # Make all Mozilla windows fullscreen
+  # Make all Mozilla windows fullscreen on the laptop panel named "eDP-1"
   [mozilla]
   match-class=org.mozilla.*
   set-fullscreen=true
+  set-on-monitor=eDP-1
 
   # All other windows will be set fullscreen automatically using the
   # existing GNOME Kiosk heuristic, as before.

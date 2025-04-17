@@ -313,6 +313,38 @@ kiosk_window_config_get_boolean_for_window (KioskWindowConfig *kiosk_window_conf
         return key_found;
 }
 
+gboolean
+kiosk_window_config_get_string_for_window (KioskWindowConfig *kiosk_window_config,
+                                           MetaWindow        *window,
+                                           const char        *key_name,
+                                           char             **value)
+{
+        g_auto (GStrv) sections;
+        gsize length;
+        gboolean key_found = FALSE;
+        int i;
+
+        sections = g_key_file_get_groups (kiosk_window_config->config_key_file, &length);
+        for (i = 0; i < length; i++) {
+                if (!kiosk_window_config_match_window (kiosk_window_config,
+                                                       window,
+                                                       sections[i]))
+                        continue;
+
+                if (kiosk_window_config_check_for_string_value (kiosk_window_config,
+                                                                sections[i],
+                                                                key_name,
+                                                                value)) {
+                        g_debug ("KioskWindowConfig: Using '%s=%s' from section [%s]",
+                                 key_name, *value, sections[i]);
+
+                        key_found = TRUE;
+                }
+        }
+
+        return key_found;
+}
+
 void
 kiosk_window_config_update_window (KioskWindowConfig *kiosk_window_config,
                                    MetaWindow        *window,

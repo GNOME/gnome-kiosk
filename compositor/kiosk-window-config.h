@@ -19,6 +19,11 @@ gboolean kiosk_window_config_get_boolean_for_window (KioskWindowConfig *kiosk_wi
                                                      const char        *key_name,
                                                      gboolean          *value);
 
+gboolean kiosk_window_config_get_string_for_window (KioskWindowConfig *kiosk_window_config,
+                                                    MetaWindow        *window,
+                                                    const char        *key_name,
+                                                    char             **value);
+
 void kiosk_window_config_update_window (KioskWindowConfig *kiosk_window_config,
                                         MetaWindow        *window,
                                         MetaWindowConfig  *window_config);
