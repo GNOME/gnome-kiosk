@@ -2,3 +2,4 @@
 #mesondefine VERSION
 #mesondefine LOCALEDIR
 #mesondefine HAVE_X11
+#mesondefine HAVE_X11_CLIENT
