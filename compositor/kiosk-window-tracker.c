@@ -9,6 +9,9 @@
 #include <string.h>
 
 #include <meta/display.h>
+#ifdef HAVE_X11_CLIENT
+#include <meta/meta-x11-group.h>
+#endif /* HAVE_X11_CLIENT */
 
 #include <glib-object.h>
 

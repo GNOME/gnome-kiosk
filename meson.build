@@ -30,12 +30,14 @@ libmutter_clutter_name = 'mutter-clutter-@0@'.format(mutter_api_version)
 mutter_dependency = dependency(libmutter_name)
 mutter_libdir = mutter_dependency.get_pkgconfig_variable('typelibdir')
 mutter_have_x11 = mutter_dependency.get_variable('have_x11') == 'true'
+mutter_have_x11_client = mutter_dependency.get_variable('have_x11_client') == 'true'
 
 config_data = configuration_data()
 config_data.set_quoted('GETTEXT_PACKAGE', meson.project_name())
 config_data.set_quoted('VERSION', meson.project_version())
 config_data.set_quoted('LOCALEDIR', localedir)
 config_data.set('HAVE_X11', mutter_have_x11)
+config_data.set('HAVE_X11_CLIENT', mutter_have_x11_client)
 
 config_h = configure_file(
         input: 'config.h.meson',
