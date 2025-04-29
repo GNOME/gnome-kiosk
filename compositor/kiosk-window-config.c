@@ -278,6 +278,14 @@ kiosk_window_config_match_window (KioskWindowConfig *kiosk_window_config,
                                                    match_value))
                 return FALSE;
 
+        match_value = meta_window_get_tag (window);
+        if (match_value &&
+            !kiosk_window_config_match_string_key (kiosk_window_config,
+                                                   section_name,
+                                                   "match-tag",
+                                                   match_value))
+                return FALSE;
+
         return TRUE;
 }
 
