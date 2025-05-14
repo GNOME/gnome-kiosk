@@ -276,7 +276,6 @@ if get_option('input-selector')
 endif
 
 if get_option ('search-app')
-        meson.add_install_script ('meson/postinstall.py')
         subdir ('search-app')
 endif
 
