@@ -1,5 +1,5 @@
 [Desktop Entry]
-Name=Search Appliance Session
+Name=Search Appliance Session (Wayland Display Server)
 Comment=This session logs you into a search appliance
 Exec=gnome-session --session org.gnome.Kiosk.SearchApp
 TryExec=gnome-session
