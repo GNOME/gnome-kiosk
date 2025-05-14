@@ -260,6 +260,32 @@ kiosk_input_source_group_get_options (KioskInputSourceGroup *self)
         return self->options;
 }
 
+static void
+set_keymap_cb (GObject      *source_object,
+               GAsyncResult *result,
+               gpointer      user_data)
+{
+        MetaBackend *backend = META_BACKEND (source_object);
+        g_autoptr (GError) error = NULL;
+
+        meta_backend_set_keymap_finish (backend, result, &error);
+        if (error)
+                g_warning ("Failed to set keymap: %s", error->message);
+}
+
+static void
+set_keymap_layout_group_cb (GObject      *source_object,
+                            GAsyncResult *result,
+                            gpointer      user_data)
+{
+        MetaBackend *backend = META_BACKEND (source_object);
+        g_autoptr (GError) error = NULL;
+
+        meta_backend_set_keymap_layout_group_finish (backend, result, &error);
+        if (error)
+                g_warning ("Failed to set keymap layout group: %s", error->message);
+}
+
 gboolean
 kiosk_input_source_group_activate (KioskInputSourceGroup *self)
 {
@@ -308,12 +334,23 @@ kiosk_input_source_group_activate (KioskInputSourceGroup *self)
                 g_debug ("KioskInputSourceGroup: Setting keyboard mapping to [%s] (%s) [%s]",
                          layouts, variants, self->options);
 
-                meta_backend_set_keymap (self->backend, layouts, variants, self->options, KIOSK_INPUT_SOURCE_KEYBOARD_MODEL);
+                meta_backend_set_keymap_async (self->backend,
+                                               layouts,
+                                               variants,
+                                               self->options,
+                                               KIOSK_INPUT_SOURCE_KEYBOARD_MODEL,
+                                               NULL,
+                                               set_keymap_cb,
+                                               NULL);
         }
 
         if (!layout_group_already_locked) {
                 g_debug ("KioskInputSourceGroup: Locking layout to index %d", self->layout_index);
-                meta_backend_lock_layout_group (self->backend, self->layout_index);
+                meta_backend_set_keymap_layout_group_async (self->backend,
+                                                            self->layout_index,
+                                                            NULL,
+                                                            set_keymap_layout_group_cb,
+                                                            NULL);
         }
 
         if (keymap_already_set && layout_group_already_locked) {
@@ -373,7 +410,11 @@ kiosk_input_source_group_switch_to_layout (KioskInputSourceGroup *self,
         g_debug ("KioskInputSourceGroup: Switching from layout '%s' to next layout '%s'",
                  active_layout, layout_name);
 
-        meta_backend_lock_layout_group (self->backend, self->layout_index);
+        meta_backend_set_keymap_layout_group_async (self->backend,
+                                                    self->layout_index,
+                                                    NULL,
+                                                    set_keymap_layout_group_cb,
+                                                    NULL);
 
         return TRUE;
 }
@@ -397,7 +438,11 @@ kiosk_input_source_group_switch_to_first_layout (KioskInputSourceGroup *self)
         layout_to_activate = kiosk_input_source_group_get_selected_layout (self);
 
         g_debug ("KioskInputSourceGroup: First layout is '%s'", layout_to_activate);
-        meta_backend_lock_layout_group (self->backend, self->layout_index);
+        meta_backend_set_keymap_layout_group_async (self->backend,
+                                                    self->layout_index,
+                                                    NULL,
+                                                    set_keymap_layout_group_cb,
+                                                    NULL);
 }
 
 void
@@ -419,7 +464,11 @@ kiosk_input_source_group_switch_to_last_layout (KioskInputSourceGroup *self)
         layout_to_activate = kiosk_input_source_group_get_selected_layout (self);
 
         g_debug ("KioskInputSourceGroup: Last layout is '%s'", layout_to_activate);
-        meta_backend_lock_layout_group (self->backend, self->layout_index);
+        meta_backend_set_keymap_layout_group_async (self->backend,
+                                                    self->layout_index,
+                                                    NULL,
+                                                    set_keymap_layout_group_cb,
+                                                    NULL);
 }
 
 gboolean
@@ -454,7 +503,11 @@ kiosk_input_source_group_switch_to_next_layout (KioskInputSourceGroup *self)
         g_debug ("KioskInputSourceGroup: Switching from layout '%s' to next layout '%s'",
                  active_layout, layout_to_activate);
 
-        meta_backend_lock_layout_group (self->backend, self->layout_index);
+        meta_backend_set_keymap_layout_group_async (self->backend,
+                                                    self->layout_index,
+                                                    NULL,
+                                                    set_keymap_layout_group_cb,
+                                                    NULL);
 
         return TRUE;
 }
@@ -489,7 +542,11 @@ kiosk_input_source_group_switch_to_previous_layout (KioskInputSourceGroup *self)
         g_debug ("KioskInputSourceGroup: Switching from layout '%s' to previous layout '%s'",
                  active_layout, layout_to_activate);
 
-        meta_backend_lock_layout_group (self->backend, self->layout_index);
+        meta_backend_set_keymap_layout_group_async (self->backend,
+                                                    self->layout_index,
+                                                    NULL,
+                                                    set_keymap_layout_group_cb,
+                                                    NULL);
 
         return TRUE;
 }
