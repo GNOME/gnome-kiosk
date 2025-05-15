@@ -31,24 +31,10 @@ i18n.merge_file(
 )
 
 if mutter_have_x11
-        i18n.merge_file(
-                input: 'xsessions/org.gnome.Kiosk.SearchApp.Session.X11.desktop.in',
-                output: '@BASENAME@',
-                po_dir: po_dir,
-                install: true,
-                install_dir: xsessions_dir,
-                type: 'desktop'
-        )
+        subdir ('xsessions')
 endif
 
-i18n.merge_file(
-        input: 'wayland-sessions/org.gnome.Kiosk.SearchApp.Session.Wayland.desktop.in',
-        output: '@BASENAME@',
-        po_dir: po_dir,
-        install: true,
-        install_dir: wayland_sessions_dir,
-        type: 'desktop'
-)
+subdir ('wayland-sessions')
 
 configure_file(
        input: 'systemd/org.gnome.Kiosk.SearchApp.service.in',
