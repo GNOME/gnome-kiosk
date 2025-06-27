@@ -227,27 +227,161 @@ neuter_builtin_keybindings (KioskCompositor *self)
         }
 }
 
-static void
-kiosk_compositor_on_window_configure (MetaWindow       *window,
-                                      MetaWindowConfig *window_config,
-                                      gpointer          user_data)
+static gboolean
+kiosk_compositor_wants_window_on_monitor (KioskCompositor *self,
+                                          MetaWindow      *window,
+                                          int             *monitor)
 {
-        KioskCompositor *self = KIOSK_COMPOSITOR (user_data);
-        gboolean fullscreen;
+        g_autofree gchar *output_name = NULL;
+        MetaBackend *backend;
+        MetaMonitorManager *monitor_manager;
+        int m;
 
-        if (!meta_window_config_get_is_initial (window_config)) {
-                g_debug ("KioskCompositor: Ignoring configure for window: %s",
-                         meta_window_get_description (window));
-                return;
+        if (!kiosk_window_config_get_string_for_window (self->kiosk_window_config,
+                                                        window,
+                                                        "set-on-monitor",
+                                                        &output_name))
+                return FALSE;
+
+        backend = meta_context_get_backend (self->context);
+        monitor_manager = meta_backend_get_monitor_manager (backend);
+        m = meta_monitor_manager_get_monitor_for_connector (monitor_manager,
+                                                            output_name);
+        if (m < 0) {
+                g_warning ("Could not find monitor named \"%s\"", output_name);
+                return FALSE;
         }
 
-        g_debug ("KioskCompositor: configure window: %s", meta_window_get_description (window));
+        *monitor = m;
+
+        return TRUE;
+}
+
+static void
+kiosk_compositor_on_window_configure_initial (KioskCompositor  *self,
+                                              MetaWindow       *window,
+                                              MetaWindowConfig *window_config)
+{
+        gboolean fullscreen;
+
+        g_debug ("KioskCompositor: Initial configuration for window: %s",
+                 meta_window_get_description (window));
 
         fullscreen = kiosk_compositor_wants_window_fullscreen (self, window);
         meta_window_config_set_is_fullscreen (window_config, fullscreen);
         kiosk_window_config_update_window (self->kiosk_window_config,
                                            window,
                                            window_config);
+}
+
+static gboolean
+kiosk_compositor_window_is_moved (MetaWindow       *window,
+                                  MetaWindowConfig *window_config)
+{
+        MtkRectangle window_geometry;
+        MtkRectangle config_geometry;
+
+        meta_window_get_frame_rect (window, &window_geometry);
+        config_geometry = meta_window_config_get_rect (window_config);
+
+        return window_geometry.x != config_geometry.x ||
+               window_geometry.y != config_geometry.y;
+}
+
+static gboolean
+kiosk_compositor_window_is_resized (MetaWindow       *window,
+                                    MetaWindowConfig *window_config)
+{
+        MtkRectangle window_geometry;
+        MtkRectangle config_geometry;
+
+        meta_window_get_frame_rect (window, &window_geometry);
+        config_geometry = meta_window_config_get_rect (window_config);
+
+        return window_geometry.width != config_geometry.width ||
+               window_geometry.height != config_geometry.height;
+}
+
+static void
+kiosk_compositor_on_window_configure_floating (KioskCompositor  *self,
+                                               MetaWindow       *window,
+                                               MetaWindowConfig *window_config)
+{
+        gboolean lock_on_monitor;
+        int current_monitor_index;
+        int lock_monitor_index;
+        MtkRectangle monitor_geometry;
+        MtkRectangle window_geometry;
+        MtkRectangle config_geometry;
+
+        g_debug ("KioskCompositor: Floating configuration for window: %s",
+                 meta_window_get_description (window));
+
+        if (!kiosk_window_config_get_boolean_for_window (self->kiosk_window_config,
+                                                         window,
+                                                         "lock-on-monitor",
+                                                         &lock_on_monitor)) {
+                g_debug ("KioskCompositor: Lock on a monitor is not specified");
+                return;
+        }
+
+        if (!lock_on_monitor) {
+                g_debug ("KioskCompositor: Lock on a monitor is not enabled");
+                return;
+        }
+
+        current_monitor_index = meta_window_get_monitor (window);
+        if (current_monitor_index < 0) {
+                g_debug ("KioskCompositor: Window is currently not on a monitor");
+                return;
+        }
+        g_debug ("KioskCompositor: Window %s is on monitor #%i", meta_window_get_description (window), current_monitor_index);
+
+        if (kiosk_compositor_wants_window_on_monitor (self, window, &lock_monitor_index)) {
+                if (lock_monitor_index != current_monitor_index) {
+                        g_debug ("KioskCompositor: Window %s is not on locked monitor #%i", meta_window_get_description (window), lock_monitor_index);
+                        return;
+                }
+        }
+
+        meta_display_get_monitor_geometry (self->display, current_monitor_index, &monitor_geometry);
+        g_debug ("KioskCompositor: Monitor geometry: (%i,%i) [%ix%i]", monitor_geometry.x, monitor_geometry.y, monitor_geometry.width, monitor_geometry.height);
+
+        config_geometry = meta_window_config_get_rect (window_config);
+        g_debug ("KioskCompositor: Window geometry: (%i,%i) [%ix%i]", config_geometry.x, config_geometry.y, config_geometry.width, config_geometry.height);
+        if (!mtk_rectangle_contains_rect (&monitor_geometry, &window_geometry)) {
+                g_debug ("KioskCompositor: window: %s is outside", meta_window_get_description (window));
+                meta_window_get_frame_rect (window, &window_geometry);
+                if (kiosk_compositor_window_is_moved (window, window_config)) {
+                        window_geometry.x = CLAMP (config_geometry.x,
+                                                   monitor_geometry.x,
+                                                   monitor_geometry.x + monitor_geometry.width - window_geometry.width);
+                        window_geometry.y = CLAMP (config_geometry.y,
+                                                   monitor_geometry.y,
+                                                   monitor_geometry.y + monitor_geometry.height - window_geometry.height);
+                        g_debug ("KioskCompositor: window: %s restricted to (%i,%i)",
+                                 meta_window_get_description (window), window_geometry.x, window_geometry.y);
+                }
+
+                if (kiosk_compositor_window_is_resized (window, window_config)) {
+                        mtk_rectangle_intersect (&monitor_geometry, &config_geometry, &window_geometry);
+                }
+
+                meta_window_config_set_rect (window_config, window_geometry);
+        }
+}
+
+static void
+kiosk_compositor_on_window_configure (MetaWindow       *window,
+                                      MetaWindowConfig *window_config,
+                                      gpointer          user_data)
+{
+        KioskCompositor *self = KIOSK_COMPOSITOR (user_data);
+
+        if (meta_window_config_get_is_initial (window_config))
+                kiosk_compositor_on_window_configure_initial (self, window, window_config);
+        else
+                kiosk_compositor_on_window_configure_floating (self, window, window_config);
 }
 
 static void
@@ -405,36 +539,6 @@ kiosk_compositor_wants_window_above (KioskCompositor *self,
         if (meta_window_is_monitor_sized (window)) {
                 return FALSE;
         }
-
-        return TRUE;
-}
-
-static gboolean
-kiosk_compositor_wants_window_on_monitor (KioskCompositor *self,
-                                          MetaWindow      *window,
-                                          int             *monitor)
-{
-        g_autofree gchar *output_name = NULL;
-        MetaBackend *backend;
-        MetaMonitorManager *monitor_manager;
-        int m;
-
-        if (!kiosk_window_config_get_string_for_window (self->kiosk_window_config,
-                                                        window,
-                                                        "set-on-monitor",
-                                                        &output_name))
-                return FALSE;
-
-        backend = meta_context_get_backend (self->context);
-        monitor_manager = meta_backend_get_monitor_manager (backend);
-        m = meta_monitor_manager_get_monitor_for_connector (monitor_manager,
-                                                            output_name);
-        if (m < 0) {
-                g_warning ("Could not find monitor named \"%s\"", output_name);
-                return FALSE;
-        }
-
-        *monitor = m;
 
         return TRUE;
 }
