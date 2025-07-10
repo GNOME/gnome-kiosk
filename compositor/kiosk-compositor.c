@@ -6,6 +6,10 @@
 
 #include <glib-object.h>
 
+#ifdef HAVE_X11
+#include <X11/Xlib.h>
+#endif
+
 #include <clutter/clutter.h>
 #include <meta/common.h>
 #include <meta/display.h>
@@ -565,6 +569,7 @@ kiosk_compositor_show_window_menu_for_rect (MetaPlugin         *plugin,
         g_assert (META_PLUGIN_CLASS (kiosk_compositor_parent_class)->show_window_menu_for_rect == NULL);
 }
 
+#ifdef HAVE_X11
 static gboolean
 kiosk_compositor_xevent_filter (MetaPlugin *plugin,
                                 XEvent     *x_server_event)
@@ -574,6 +579,7 @@ kiosk_compositor_xevent_filter (MetaPlugin *plugin,
         g_signal_emit (G_OBJECT (self), signals[X_SERVER_EVENT], 0, x_server_event);
         return FALSE;
 }
+#endif /* HAVE_X11 */
 
 static gboolean
 kiosk_compositor_keybinding_filter (MetaPlugin     *plugin,
@@ -635,7 +641,9 @@ kiosk_compositor_class_init (KioskCompositorClass *compositor_class)
         plugin_class->show_window_menu = kiosk_compositor_show_window_menu;
         plugin_class->show_window_menu_for_rect = kiosk_compositor_show_window_menu_for_rect;
 
+#ifdef HAVE_X11
         plugin_class->xevent_filter = kiosk_compositor_xevent_filter;
+#endif /* HAVE_X11 */
         plugin_class->keybinding_filter = kiosk_compositor_keybinding_filter;
 
         plugin_class->confirm_display_change = kiosk_compositor_confirm_display_change;
