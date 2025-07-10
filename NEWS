@@ -1,4 +1,13 @@
 # NEWS
+
+## 49.alpha.1
+- Fix compiler warnings
+- Fix a crash if there is no X11Layouts
+- Add a new "set-on-monitor" configuration option
+- Add support for window tags in configuration
+- Updates for libmutter 17 (GNOME 49)
+- Update the documentation for the configuration file
+
 ## 48.0
 - No updates
 
