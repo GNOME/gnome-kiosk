@@ -20,6 +20,7 @@ build-fedora:
         stage: build
         before_script:
                 - dnf upgrade -y
+                - dnf -y install ibus-devel
                 - .gitlab-ci/install-common-dependencies.sh
                 - .gitlab-ci/checkout-mutter.sh
                 - meson mutter mutter/build --prefix=/usr
@@ -45,7 +46,7 @@ test-fedora:
         stage: test
         before_script:
                 - dnf upgrade -y
-                - dnf -y install patchutils
+                - dnf -y install patchutils ibus-devel
                 - meson install --no-rebuild -C mutter/build
         script:
                 - export BUILD_ROOT=_build
@@ -66,6 +67,7 @@ dist-kiosk:
   stage: deploy
   before_script:
     - dnf upgrade -y
+    - dnf -y install ibus-devel
     - .gitlab-ci/install-common-dependencies.sh
     - .gitlab-ci/checkout-mutter.sh
     - meson mutter mutter/build --prefix=/usr
