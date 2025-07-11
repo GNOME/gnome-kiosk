@@ -1,5 +1,5 @@
 project('gnome-kiosk', 'c',
-        version: '49.alpha.1.1',
+        version: '49.alpha.1.2',
         meson_version : '>= 0.59',
 )
 add_project_arguments('-D_GNU_SOURCE',
@@ -22,7 +22,7 @@ wayland_sessions_dir = join_paths(datadir, 'wayland-sessions')
 
 po_dir = join_paths(meson.current_source_dir(), 'po')
 
-mutter_api_version = 16
+mutter_api_version = 17
 libmutter_name = 'libmutter-@0@'.format(mutter_api_version)
 libmutter_cogl_name = 'mutter-cogl-@0@'.format(mutter_api_version)
 libmutter_clutter_name = 'mutter-clutter-@0@'.format(mutter_api_version)
