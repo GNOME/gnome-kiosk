@@ -1,5 +1,9 @@
 # NEWS
 
+## 49.alpha.1.1
+
+- No change, fix CI for release.
+
 ## 49.alpha.1
 - Fix compiler warnings
 - Fix a crash if there is no X11Layouts
