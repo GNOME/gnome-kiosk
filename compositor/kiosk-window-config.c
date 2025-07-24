@@ -245,6 +245,7 @@ kiosk_window_config_match_string_key (KioskWindowConfig *kiosk_window_config,
         return is_a_match;
 }
 
+#define VALUE_OR_EMPTY(v) (v ? v : "")
 static gboolean
 kiosk_window_config_match_window (KioskWindowConfig *kiosk_window_config,
                                   MetaWindow        *window,
@@ -254,33 +255,29 @@ kiosk_window_config_match_window (KioskWindowConfig *kiosk_window_config,
 
         g_debug ("KioskWindowConfig: Checking section [%s]", section_name);
 
-        match_value = meta_window_get_title (window);
-        if (match_value &&
-            !kiosk_window_config_match_string_key (kiosk_window_config,
+        match_value = VALUE_OR_EMPTY (meta_window_get_title (window));
+        if (!kiosk_window_config_match_string_key (kiosk_window_config,
                                                    section_name,
                                                    "match-title",
                                                    match_value))
                 return FALSE;
 
-        match_value = meta_window_get_wm_class (window);
-        if (match_value &&
-            !kiosk_window_config_match_string_key (kiosk_window_config,
+        match_value = VALUE_OR_EMPTY (meta_window_get_wm_class (window));
+        if (!kiosk_window_config_match_string_key (kiosk_window_config,
                                                    section_name,
                                                    "match-class",
                                                    match_value))
                 return FALSE;
 
-        match_value = meta_window_get_sandboxed_app_id (window);
-        if (match_value &&
-            !kiosk_window_config_match_string_key (kiosk_window_config,
+        match_value = VALUE_OR_EMPTY (meta_window_get_sandboxed_app_id (window));
+        if (!kiosk_window_config_match_string_key (kiosk_window_config,
                                                    section_name,
                                                    "match-sandboxed-app-id",
                                                    match_value))
                 return FALSE;
 
-        match_value = meta_window_get_tag (window);
-        if (match_value &&
-            !kiosk_window_config_match_string_key (kiosk_window_config,
+        match_value = VALUE_OR_EMPTY (meta_window_get_tag (window));
+        if (!kiosk_window_config_match_string_key (kiosk_window_config,
                                                    section_name,
                                                    "match-tag",
                                                    match_value))
@@ -288,6 +285,7 @@ kiosk_window_config_match_window (KioskWindowConfig *kiosk_window_config,
 
         return TRUE;
 }
+#undef VALUE_OR_EMPTY
 
 gboolean
 kiosk_window_config_get_boolean_for_window (KioskWindowConfig *kiosk_window_config,
