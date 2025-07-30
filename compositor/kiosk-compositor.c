@@ -83,13 +83,20 @@ kiosk_compositor_dispose (GObject *object)
                 g_clear_object (&self->cancellable);
         }
 
-        g_clear_weak_pointer (&self->stage);
-        g_clear_weak_pointer (&self->context);
-        g_clear_weak_pointer (&self->display);
-        g_clear_weak_pointer (&self->backend);
-
         g_clear_object (&self->backgrounds);
         g_clear_object (&self->automount_manager);
+        g_clear_object (&self->input_sources_manager);
+        g_clear_object (&self->app_system);
+        g_clear_object (&self->tracker);
+        g_clear_object (&self->kiosk_window_config);
+        g_clear_object (&self->introspect_service);
+        g_clear_object (&self->screenshot_service);
+        g_clear_object (&self->service);
+
+        g_clear_weak_pointer (&self->display);
+        g_clear_weak_pointer (&self->context);
+        g_clear_weak_pointer (&self->backend);
+        g_clear_weak_pointer (&self->stage);
 
         G_OBJECT_CLASS (kiosk_compositor_parent_class)->dispose (object);
 }
