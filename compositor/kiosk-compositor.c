@@ -30,6 +30,7 @@
 #include "kiosk-service.h"
 #include "kiosk-app-system.h"
 #include "kiosk-window-tracker.h"
+#include "kiosk-shell-service.h"
 #include "kiosk-shell-introspect-service.h"
 #include "kiosk-shell-screenshot-service.h"
 #include "kiosk-window-config.h"
@@ -57,6 +58,7 @@ struct _KioskCompositor
         KioskShellIntrospectService *introspect_service;
         KioskShellScreenshotService *screenshot_service;
         KioskWindowConfig           *kiosk_window_config;
+        KioskShellService           *shell_service;
 };
 
 enum
@@ -91,6 +93,7 @@ kiosk_compositor_dispose (GObject *object)
         g_clear_object (&self->kiosk_window_config);
         g_clear_object (&self->introspect_service);
         g_clear_object (&self->screenshot_service);
+        g_clear_object (&self->shell_service);
         g_clear_object (&self->service);
 
         g_clear_weak_pointer (&self->display);
@@ -308,6 +311,8 @@ kiosk_compositor_start (MetaPlugin *plugin)
         kiosk_shell_introspect_service_start (self->introspect_service, &error);
         self->screenshot_service = kiosk_shell_screenshot_service_new (self);
         kiosk_shell_screenshot_service_start (self->screenshot_service, &error);
+        self->shell_service = kiosk_shell_service_new (self);
+        kiosk_shell_service_start (self->shell_service, &error);
 
         if (error != NULL) {
                 g_debug ("KioskCompositor: Could not start D-Bus service: %s", error->message);
