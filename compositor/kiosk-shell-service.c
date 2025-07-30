@@ -332,8 +332,7 @@ kiosk_shell_service_handle_grab_accelerators (KioskShellDBusService *object,
                 guint action_id;
 
                 action_id = grab_accelerator_for_client (self, accelerator, mode_flags, grab_flags, client_unique_name);
-
-                g_variant_builder_add (&builder, "u", g_variant_new_uint32 (action_id));
+                g_variant_builder_add (&builder, "u", action_id);
         }
 
         kiosk_shell_dbus_service_complete_grab_accelerators (KIOSK_SHELL_DBUS_SERVICE (self),
