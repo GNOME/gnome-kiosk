@@ -1,0 +1,363 @@
+#!/usr/bin/env python3
+"""
+GNOME Kiosk Accessibility Panel
+A utility application to control accessibility settings through toggle buttons.
+"""
+
+import gi
+gi.require_version('Gtk', '4.0')
+gi.require_version('Gio', '2.0')
+
+from gi.repository import Gtk, Gio, GLib
+import sys
+import gettext
+import locale
+
+# Set up internationalization
+GETTEXT_PACKAGE = '@GETTEXT_PACKAGE@'
+LOCALEDIR = '@LOCALEDIR@'
+
+try:
+    locale.bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR)
+    locale.textdomain(GETTEXT_PACKAGE)
+    gettext.bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR)
+    gettext.textdomain(GETTEXT_PACKAGE)
+except AttributeError:
+    # Python built without locale support
+    pass
+
+# Translation function
+_ = gettext.gettext
+
+
+class AccessibilitySettings:
+    """Manages GSettings for accessibility features."""
+
+    def __init__(self):
+        # Initialize GSettings objects for different schemas
+        self.a11y_apps = Gio.Settings.new("org.gnome.desktop.a11y.applications")
+        self.a11y_interface = Gio.Settings.new("org.gnome.desktop.a11y.interface")
+        self.interface = Gio.Settings.new("org.gnome.desktop.interface")
+        self.wm_preferences = Gio.Settings.new("org.gnome.desktop.wm.preferences")
+        self.a11y_keyboard = Gio.Settings.new("org.gnome.desktop.a11y.keyboard")
+
+    def bind_to_switch(self, switch, schema_name, key):
+        """Bind a GSettings key to a Gtk.Switch active property."""
+        settings = getattr(self, schema_name)
+        settings.bind(key, switch, "active", Gio.SettingsBindFlags.DEFAULT)
+
+    def get_large_text_enabled(self):
+        """Get large text enabled state (based on text-scaling-factor)."""
+        scale_factor = self.interface.get_double("text-scaling-factor")
+        return scale_factor >= 1.25
+
+    def set_large_text_enabled(self, enabled):
+        """Set large text enabled state."""
+        scale_factor = 1.25 if enabled else 1.0
+        self.interface.set_double("text-scaling-factor", scale_factor)
+
+
+class AccessibilityPanel(Gtk.ApplicationWindow):
+    """Main window for the accessibility panel."""
+
+    def __init__(self, app):
+        super().__init__(
+            application=app,
+            title=_("Accessibility Panel"),
+            default_width=400,
+            default_height=500,
+            resizable=True
+        )
+
+        # Initialize settings manager
+        self.settings = AccessibilitySettings()
+
+        # Create the main UI
+        self.create_ui()
+
+    def create_ui(self):
+        """Create the user interface."""
+        # Create main container
+        main_box = Gtk.Box(
+            orientation=Gtk.Orientation.VERTICAL,
+            spacing=10,
+            margin_top=20,
+            margin_bottom=20,
+            margin_start=20,
+            margin_end=20
+        )
+
+        # Create scrolled window for the toggle buttons
+        scrolled = Gtk.ScrolledWindow(
+            hscrollbar_policy=Gtk.PolicyType.NEVER,
+            vscrollbar_policy=Gtk.PolicyType.AUTOMATIC,
+            vexpand=True
+        )
+
+        # Create list box for toggle buttons
+        self.list_box = Gtk.ListBox(
+            selection_mode=Gtk.SelectionMode.NONE,
+            css_classes=["boxed-list"]
+        )
+
+        # Add toggle buttons
+        self.create_toggle_buttons()
+
+        scrolled.set_child(self.list_box)
+        main_box.append(scrolled)
+
+        self.set_child(main_box)
+
+    def create_toggle_buttons(self):
+        """Create all toggle buttons for accessibility features."""
+
+        # Define accessibility features with their properties
+        features = [
+            {
+                'label': _('Enable Screen Reader'),
+                'description': _('Announces screen content and controls'),
+                'schema': 'a11y_apps',
+                'key': 'screen-reader-enabled',
+                'name': 'screen_reader'
+            },
+            {
+                'label': _('Enable High Contrast'),
+                'description': _('Increases contrast for better visibility'),
+                'schema': 'a11y_interface',
+                'key': 'high-contrast',
+                'name': 'high_contrast'
+            },
+            {
+                'label': _('Enable Large Text'),
+                'description': _('Increases text size to 125%'),
+                'schema': None,  # Special case - needs custom handling
+                'key': None,
+                'name': 'large_text'
+            },
+            {
+                'label': _('Enable Visual Alert'),
+                'description': _('Flash screen instead of playing alert sounds'),
+                'schema': 'wm_preferences',
+                'key': 'visual-bell',
+                'name': 'visual_alert'
+            },
+            {
+                'label': _('Enable Sticky Keys'),
+                'description': _('Treat modifier keys as toggle switches'),
+                'schema': 'a11y_keyboard',
+                'key': 'stickykeys-enable',
+                'name': 'sticky_keys'
+            },
+            {
+                'label': _('Enable Slow Keys'),
+                'description': _('Add delay between key press and acceptance'),
+                'schema': 'a11y_keyboard',
+                'key': 'slowkeys-enable',
+                'name': 'slow_keys'
+            },
+            {
+                'label': _('Enable Bounce Keys'),
+                'description': _('Ignore rapid key presses'),
+                'schema': 'a11y_keyboard',
+                'key': 'bouncekeys-enable',
+                'name': 'bounce_keys'
+            },
+            {
+                'label': _('Enable Mouse Keys'),
+                'description': _('Control mouse cursor with numeric keypad'),
+                'schema': 'a11y_keyboard',
+                'key': 'mousekeys-enable',
+                'name': 'mouse_keys'
+            }
+        ]
+
+        # Create toggle buttons for each feature
+        self.toggle_buttons = {}
+
+        for feature in features:
+            if feature['schema'] and feature['key']:
+                # Standard case: use direct binding
+                row, toggle_button = self.create_bound_toggle_row_and_switch(
+                    feature['label'],
+                    feature['description'],
+                    feature['schema'],
+                    feature['key']
+                )
+            else:
+                # Special case: large text needs custom handling
+                row, toggle_button = self.create_large_text_toggle_row_and_switch(
+                    feature['label'],
+                    feature['description'],
+                    self.settings.get_large_text_enabled,
+                    self.settings.set_large_text_enabled
+                )
+
+            self.list_box.append(row)
+
+            # Store reference to toggle button (now directly returned from create functions)
+            self.toggle_buttons[feature['name']] = toggle_button
+
+    def create_bound_toggle_row_and_switch(self, label_text, description_text, schema_name, key):
+        """Create a toggle row with direct GSettings binding.
+
+        Returns:
+            tuple: (row, toggle_switch) - The ListBoxRow and its toggle switch
+        """
+
+        # Create main row container
+        row = Gtk.ListBoxRow(activatable=False)
+
+        # Create horizontal box for row content
+        row_box = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            spacing=12,
+            margin_top=12,
+            margin_bottom=12,
+            margin_start=12,
+            margin_end=12
+        )
+
+        # Create vertical box for labels
+        label_box = Gtk.Box(
+            orientation=Gtk.Orientation.VERTICAL,
+            spacing=4,
+            hexpand=True
+        )
+
+        # Create main label
+        main_label = Gtk.Label(
+            label=label_text,
+            halign=Gtk.Align.START,
+            css_classes=["heading"]
+        )
+
+        # Create description label
+        desc_label = Gtk.Label(
+            label=description_text,
+            halign=Gtk.Align.START,
+            css_classes=["dim-label", "caption"],
+            wrap=True
+        )
+
+        label_box.append(main_label)
+        label_box.append(desc_label)
+
+        # Create toggle switch
+        toggle_switch = Gtk.Switch(valign=Gtk.Align.CENTER)
+
+        # Bind the switch directly to the GSettings key
+        self.settings.bind_to_switch(toggle_switch, schema_name, key)
+
+        # Add components to row
+        row_box.append(label_box)
+        row_box.append(toggle_switch)
+        row.set_child(row_box)
+
+        return row, toggle_switch
+
+    def create_large_text_toggle_row_and_switch(self, label_text, description_text, getter, setter):
+        """Create a toggle row with custom getter/setter for large text.
+
+        Returns:
+            tuple: (row, toggle_switch) - The ListBoxRow and its toggle switch
+        """
+
+        # Create main row container
+        row = Gtk.ListBoxRow(activatable=False)
+
+        # Create horizontal box for row content
+        row_box = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            spacing=12,
+            margin_top=12,
+            margin_bottom=12,
+            margin_start=12,
+            margin_end=12
+        )
+
+        # Create vertical box for labels
+        label_box = Gtk.Box(
+            orientation=Gtk.Orientation.VERTICAL,
+            spacing=4,
+            hexpand=True
+        )
+
+        # Create main label
+        main_label = Gtk.Label(
+            label=label_text,
+            halign=Gtk.Align.START,
+            css_classes=["heading"]
+        )
+
+        # Create description label
+        desc_label = Gtk.Label(
+            label=description_text,
+            halign=Gtk.Align.START,
+            css_classes=["dim-label", "caption"],
+            wrap=True
+        )
+
+        label_box.append(main_label)
+        label_box.append(desc_label)
+
+        # Create toggle switch
+        toggle_switch = Gtk.Switch(valign=Gtk.Align.CENTER)
+
+        # Set initial state
+        toggle_switch.set_active(getter())
+
+        # Connect toggle switch signal for custom handling
+        toggle_switch.connect('notify::active', self.on_large_text_toggle_changed, setter)
+
+        # Set up monitoring of the underlying setting for large text
+        if setter == self.settings.set_large_text_enabled:
+            self.settings.interface.connect('changed::text-scaling-factor',
+                                           self.on_text_scaling_changed, toggle_switch)
+
+        # Add components to row
+        row_box.append(label_box)
+        row_box.append(toggle_switch)
+        row.set_child(row_box)
+
+        return row, toggle_switch
+
+    def on_large_text_toggle_changed(self, switch, param, setter):
+        """Handle custom toggle switch state changes (for special cases like large text)."""
+        active = switch.get_active()
+        try:
+            setter(active)
+        except Exception as e:
+            print(_("Error setting accessibility option: {}").format(e))
+            # Revert switch state on error
+            switch.set_active(not active)
+
+    def on_text_scaling_changed(self, settings, key, toggle_switch):
+        """Handle text scaling factor changes to update large text toggle."""
+        # Block the signal temporarily to avoid loops
+        toggle_switch.handler_block_by_func(self.on_large_text_toggle_changed)
+        toggle_switch.set_active(self.settings.get_large_text_enabled())
+        toggle_switch.handler_unblock_by_func(self.on_large_text_toggle_changed)
+
+
+class AccessibilityApp(Gtk.Application):
+    """Main application class."""
+
+    def __init__(self):
+        super().__init__(application_id="@A11Y_PANEL_APP_ID@")
+
+    def do_activate(self):
+        """Activate the application."""
+        win = self.get_active_window()
+        if not win:
+            win = AccessibilityPanel(self)
+        win.present()
+
+
+def main():
+    """Main entry point."""
+    app = AccessibilityApp()
+    return app.run(sys.argv)
+
+
+if __name__ == "__main__":
+    main()

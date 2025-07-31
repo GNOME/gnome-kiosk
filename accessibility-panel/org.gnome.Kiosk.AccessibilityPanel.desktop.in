@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Accessibility Panel
+Comment=Control accessibility settings
+Exec=@bindir@/gnome-kiosk-accessibility-panel
+Icon=preferences-desktop-accessibility
+Terminal=false
+Type=Application
+StartupNotify=true
+Categories=Settings;Accessibility;
+Keywords=accessibility;a11y;screen reader;high contrast;large text;visual alert;sticky keys;slow keys;bounce keys;mouse keys;
