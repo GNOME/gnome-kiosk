@@ -603,13 +603,6 @@ kiosk_compositor_create_close_dialog (MetaPlugin *plugin,
         return NULL;
 }
 
-static MetaInhibitShortcutsDialog *
-kiosk_compositor_create_inhibit_shortcuts_dialog (MetaPlugin *plugin,
-                                                  MetaWindow *window)
-{
-        return NULL;
-}
-
 static void
 kiosk_compositor_locate_pointer (MetaPlugin *plugin)
 {
@@ -649,7 +642,6 @@ kiosk_compositor_class_init (KioskCompositorClass *compositor_class)
         plugin_class->confirm_display_change = kiosk_compositor_confirm_display_change;
 
         plugin_class->create_close_dialog = kiosk_compositor_create_close_dialog;
-        plugin_class->create_inhibit_shortcuts_dialog = kiosk_compositor_create_inhibit_shortcuts_dialog;
 
         plugin_class->locate_pointer = kiosk_compositor_locate_pointer;
 
