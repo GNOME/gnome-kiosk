@@ -618,6 +618,41 @@ kiosk_window_config_wants_window_on_monitor (KioskWindowConfig *self,
         return TRUE;
 }
 
+static gboolean
+kiosk_window_config_wants_window_type (KioskWindowConfig *self,
+                                       MetaWindow        *window,
+                                       MetaWindowType    *window_type)
+{
+        g_autofree gchar *type_name = NULL;
+        struct window_types_name
+        {
+                const char    *name;
+                MetaWindowType type;
+        } window_types_name[] = {
+                { "desktop", META_WINDOW_DESKTOP      },
+                { "dock",    META_WINDOW_DOCK         },
+                { "splash",  META_WINDOW_SPLASHSCREEN },
+        };
+        int i;
+
+        if (!kiosk_window_config_get_string_for_window (self,
+                                                        window,
+                                                        "set-window-type",
+                                                        &type_name))
+                return FALSE;
+
+        for (i = 0; i < G_N_ELEMENTS (window_types_name); i++) {
+                if (g_ascii_strcasecmp (type_name, window_types_name[i].name) == 0) {
+                        g_debug ("KioskWindowConfig: Using window type: %s", window_types_name[i].name);
+                        *window_type = window_types_name[i].type;
+                        return TRUE;
+                }
+        }
+
+        g_warning ("KioskWindowConfig: Unsupported window type: %s", type_name);
+        return FALSE;
+}
+
 static void
 kiosk_window_config_update_window (KioskWindowConfig *kiosk_window_config,
                                    MetaWindow        *window,
@@ -645,6 +680,7 @@ kiosk_window_config_apply_initial_config (KioskWindowConfig *kiosk_window_config
                                           MetaWindow        *window)
 {
         int monitor;
+        MetaWindowType window_type;
 
         if (!meta_window_is_fullscreen (window)) {
                 if (kiosk_window_config_wants_window_above (kiosk_window_config, window)) {
@@ -656,6 +692,11 @@ kiosk_window_config_apply_initial_config (KioskWindowConfig *kiosk_window_config
         if (kiosk_window_config_wants_window_on_monitor (kiosk_window_config, window, &monitor)) {
                 g_debug ("KioskWindowConfig: Moving window to monitor %i", monitor);
                 meta_window_move_to_monitor (window, monitor);
+        }
+
+        if (kiosk_window_config_wants_window_type (kiosk_window_config, window, &window_type)) {
+                g_debug ("KioskWindowConfig: Setting window type 0x%x", window_type);
+                meta_window_set_type (window, window_type);
         }
 }
 
