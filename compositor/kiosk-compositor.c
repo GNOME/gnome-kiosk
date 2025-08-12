@@ -72,8 +72,6 @@ static guint signals[NUMBER_OF_SIGNALS] = { 0, };
 G_DEFINE_TYPE (KioskCompositor, kiosk_compositor, META_TYPE_PLUGIN)
 
 static void kiosk_compositor_dispose (GObject *object);
-static gboolean kiosk_compositor_wants_window_fullscreen (KioskCompositor *self,
-                                                          MetaWindow      *window);
 
 static void
 kiosk_compositor_dispose (GObject *object)
@@ -242,39 +240,6 @@ neuter_builtin_keybindings (KioskCompositor *self)
 }
 
 static void
-kiosk_compositor_on_window_configure (MetaWindow       *window,
-                                      MetaWindowConfig *window_config,
-                                      gpointer          user_data)
-{
-        KioskCompositor *self = KIOSK_COMPOSITOR (user_data);
-        gboolean fullscreen;
-
-        if (!meta_window_config_get_is_initial (window_config)) {
-                g_debug ("KioskCompositor: Ignoring configure for window: %s",
-                         meta_window_get_description (window));
-                return;
-        }
-
-        g_debug ("KioskCompositor: configure window: %s", meta_window_get_description (window));
-
-        fullscreen = kiosk_compositor_wants_window_fullscreen (self, window);
-        meta_window_config_set_is_fullscreen (window_config, fullscreen);
-        kiosk_window_config_update_window (self->kiosk_window_config,
-                                           window,
-                                           window_config);
-}
-
-static void
-kiosk_compositor_on_window_created (MetaDisplay *display,
-                                    MetaWindow  *window,
-                                    gpointer     user_data)
-{
-        g_signal_connect (window, "configure",
-                          G_CALLBACK (kiosk_compositor_on_window_configure),
-                          user_data);
-}
-
-static void
 kiosk_compositor_start (MetaPlugin *plugin)
 {
         KioskCompositor *self = KIOSK_COMPOSITOR (plugin);
@@ -324,11 +289,6 @@ kiosk_compositor_start (MetaPlugin *plugin)
                                                       self->cancellable,
                                                       KIOSK_OBJECT_CALLBACK (register_session),
                                                       NULL);
-
-        g_signal_connect_object (self->display, "window-created",
-                                 G_CALLBACK (kiosk_compositor_on_window_created),
-                                 self,
-                                 G_CONNECT_DEFAULT);
 }
 
 static void
@@ -360,45 +320,6 @@ kiosk_compositor_size_change (MetaPlugin      *plugin,
                               MtkRectangle    *old_buffer_rect)
 {
         g_assert (META_PLUGIN_CLASS (kiosk_compositor_parent_class)->size_change == NULL);
-}
-
-static gboolean
-kiosk_compositor_wants_window_fullscreen (KioskCompositor *self,
-                                          MetaWindow      *window)
-{
-        MetaWindowType window_type;
-
-        g_autoptr (GList) windows = NULL;
-        GList *node;
-
-        if (!meta_window_allows_resize (window)) {
-                g_debug ("KioskCompositor: Window does not allow resizes");
-                return FALSE;
-        }
-
-        if (meta_window_is_override_redirect (window)) {
-                g_debug ("KioskCompositor: Window is override redirect");
-                return FALSE;
-        }
-
-        window_type = meta_window_get_window_type (window);
-
-        if (window_type != META_WINDOW_NORMAL) {
-                g_debug ("KioskCompositor: Window is not normal");
-                return FALSE;
-        }
-
-        windows = meta_display_get_tab_list (self->display, META_TAB_LIST_NORMAL_ALL, NULL);
-
-        for (node = windows; node != NULL; node = node->next) {
-                MetaWindow *existing_window = node->data;
-
-                if (meta_window_is_monitor_sized (existing_window)) {
-                        return FALSE;
-                }
-        }
-
-        return TRUE;
 }
 
 static gboolean
