@@ -306,7 +306,7 @@ kiosk_compositor_start (MetaPlugin *plugin)
         self->input_sources_manager = kiosk_input_sources_manager_new (self);
         self->app_system = kiosk_app_system_new (self);
         self->tracker = kiosk_window_tracker_new (self, self->app_system);
-        self->kiosk_window_config = kiosk_window_config_new ();
+        self->kiosk_window_config = kiosk_window_config_new (self);
         self->introspect_service = kiosk_shell_introspect_service_new (self);
         kiosk_shell_introspect_service_start (self->introspect_service, &error);
         self->screenshot_service = kiosk_shell_screenshot_service_new (self);

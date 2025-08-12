@@ -8,11 +8,13 @@
 
 G_BEGIN_DECLS
 
+typedef struct _KioskCompositor KioskCompositor;
+
 #define KIOSK_TYPE_WINDOW_CONFIG (kiosk_window_config_get_type ())
 G_DECLARE_FINAL_TYPE (KioskWindowConfig, kiosk_window_config,
                       KIOSK, WINDOW_CONFIG, GObject)
 
-KioskWindowConfig *kiosk_window_config_new (void);
+KioskWindowConfig *kiosk_window_config_new (KioskCompositor * compositor);
 
 gboolean kiosk_window_config_get_boolean_for_window (KioskWindowConfig *kiosk_window_config,
                                                      MetaWindow        *window,

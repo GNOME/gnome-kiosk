@@ -3,7 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "kiosk-compositor.h"
 #include "kiosk-window-config.h"
+
+#include <meta/display.h>
 
 #define KIOSK_WINDOW_CONFIG_DIR      "gnome-kiosk"
 #define KIOSK_WINDOW_CONFIG_FILENAME "window-config.ini"
@@ -16,10 +19,24 @@ typedef gpointer (*KioskWindowConfigGetKeyValue) (GKeyFile   *key_file,
 
 struct _KioskWindowConfig
 {
-        GObject   parent;
+        GObject          parent;
 
-        GKeyFile *config_key_file;
+        /* Weak references */
+        KioskCompositor *compositor;
+        MetaDisplay     *display;
+        MetaContext     *context;
+
+        /* Strong references */
+        GKeyFile        *config_key_file;
 };
+
+enum
+{
+        PROP_0,
+        PROP_COMPOSITOR,
+        N_PROPS
+};
+static GParamSpec *props[N_PROPS] = { NULL, };
 
 G_DEFINE_TYPE (KioskWindowConfig, kiosk_window_config, G_TYPE_OBJECT)
 
@@ -78,6 +95,17 @@ out:
 }
 
 static void
+kiosk_window_config_constructed (GObject *object)
+{
+        KioskWindowConfig *self = KIOSK_WINDOW_CONFIG (object);
+
+        g_set_weak_pointer (&self->display, meta_plugin_get_display (META_PLUGIN (self->compositor)));
+        g_set_weak_pointer (&self->context, meta_display_get_context (self->display));
+
+        G_OBJECT_CLASS (kiosk_window_config_parent_class)->constructed (object);
+}
+
+static void
 kiosk_window_config_init (KioskWindowConfig *self)
 {
         self->config_key_file = g_key_file_new ();
@@ -89,9 +117,59 @@ kiosk_window_config_dispose (GObject *object)
 {
         KioskWindowConfig *self = KIOSK_WINDOW_CONFIG (object);
 
-        g_clear_pointer (&self->config_key_file, g_key_file_free);
+        g_clear_weak_pointer (&self->compositor);
+        g_clear_weak_pointer (&self->display);
+        g_clear_weak_pointer (&self->context);
 
         G_OBJECT_CLASS (kiosk_window_config_parent_class)->dispose (object);
+}
+
+static void
+kiosk_window_config_finalize (GObject *object)
+{
+        KioskWindowConfig *self = KIOSK_WINDOW_CONFIG (object);
+
+        g_clear_pointer (&self->config_key_file, g_key_file_free);
+
+        G_OBJECT_CLASS (kiosk_window_config_parent_class)->finalize (object);
+}
+
+static void
+kiosk_window_config_set_property (GObject      *object,
+                                  guint         property_id,
+                                  const GValue *value,
+                                  GParamSpec   *param_spec)
+{
+        KioskWindowConfig *self = KIOSK_WINDOW_CONFIG (object);
+
+        switch (property_id) {
+        case PROP_COMPOSITOR:
+                self->compositor = g_value_get_object (value);
+                break;
+        default:
+                G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id,
+                                                   param_spec);
+                break;
+        }
+}
+
+static void
+kiosk_window_config_get_property (GObject    *object,
+                                  guint       property_id,
+                                  GValue     *value,
+                                  GParamSpec *param_spec)
+{
+        KioskWindowConfig *self = KIOSK_WINDOW_CONFIG (object);
+
+        switch (property_id) {
+        case PROP_COMPOSITOR:
+                g_value_set_object (value, self->compositor);
+                break;
+        default:
+                G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id,
+                                                   param_spec);
+                break;
+        }
 }
 
 static void
@@ -99,7 +177,23 @@ kiosk_window_config_class_init (KioskWindowConfigClass *klass)
 {
         GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
 
+        gobject_class->constructed = kiosk_window_config_constructed;
+        gobject_class->set_property = kiosk_window_config_set_property;
+        gobject_class->get_property = kiosk_window_config_get_property;
         gobject_class->dispose = kiosk_window_config_dispose;
+        gobject_class->finalize = kiosk_window_config_finalize;
+
+        props[PROP_COMPOSITOR] = g_param_spec_object ("compositor",
+                                                      NULL,
+                                                      NULL,
+                                                      KIOSK_TYPE_COMPOSITOR,
+                                                      G_PARAM_CONSTRUCT_ONLY
+                                                      | G_PARAM_WRITABLE
+                                                      | G_PARAM_STATIC_NAME
+                                                      | G_PARAM_STATIC_NICK
+                                                      | G_PARAM_STATIC_BLURB);
+
+        g_object_class_install_properties (gobject_class, N_PROPS, props);
 }
 
 #define KIOSK_WINDOW_CONFIG_CHECK_FUNC_VALUE(self, section, key, func, value) \
@@ -374,11 +468,12 @@ kiosk_window_config_update_window (KioskWindowConfig *kiosk_window_config,
 }
 
 KioskWindowConfig *
-kiosk_window_config_new (void)
+kiosk_window_config_new (KioskCompositor *compositor)
 {
         KioskWindowConfig *kiosk_window_config;
 
         kiosk_window_config = g_object_new (KIOSK_TYPE_WINDOW_CONFIG,
+                                            "compositor", compositor,
                                             NULL);
 
         return kiosk_window_config;
