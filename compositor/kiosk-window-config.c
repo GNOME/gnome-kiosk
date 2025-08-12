@@ -7,6 +7,9 @@
 #include "kiosk-window-config.h"
 
 #include <meta/display.h>
+#include <meta/meta-backend.h>
+#include <meta/meta-context.h>
+#include <meta/meta-monitor-manager.h>
 
 #include <glib-object.h>
 #include <glib.h>
@@ -46,6 +49,11 @@ G_DEFINE_TYPE (KioskWindowConfig, kiosk_window_config, G_TYPE_OBJECT)
 static gboolean
 kiosk_window_config_wants_window_fullscreen (KioskWindowConfig *self,
                                              MetaWindow        *window);
+
+static void
+kiosk_window_config_update_window (KioskWindowConfig *kiosk_window_config,
+                                   MetaWindow        *window,
+                                   MetaWindowConfig  *window_config);
 
 static gboolean
 kiosk_window_config_try_load_file (KioskWindowConfig *kiosk_window_config,
@@ -492,7 +500,7 @@ kiosk_window_config_wants_window_fullscreen (KioskWindowConfig *self,
         return TRUE;
 }
 
-gboolean
+static gboolean
 kiosk_window_config_get_boolean_for_window (KioskWindowConfig *kiosk_window_config,
                                             MetaWindow        *window,
                                             const char        *key_name,
@@ -524,7 +532,7 @@ kiosk_window_config_get_boolean_for_window (KioskWindowConfig *kiosk_window_conf
         return key_found;
 }
 
-gboolean
+static gboolean
 kiosk_window_config_get_string_for_window (KioskWindowConfig *kiosk_window_config,
                                            MetaWindow        *window,
                                            const char        *key_name,
@@ -556,7 +564,61 @@ kiosk_window_config_get_string_for_window (KioskWindowConfig *kiosk_window_confi
         return key_found;
 }
 
-void
+static gboolean
+kiosk_window_config_wants_window_above (KioskWindowConfig *self,
+                                        MetaWindow        *window)
+{
+        gboolean set_above;
+
+        if (kiosk_window_config_get_boolean_for_window (self,
+                                                        window,
+                                                        "set-above",
+                                                        &set_above))
+                return set_above;
+
+        /* If not specified in the config, use the heuristics */
+        if (meta_window_is_screen_sized (window)) {
+                return FALSE;
+        }
+
+        if (meta_window_is_monitor_sized (window)) {
+                return FALSE;
+        }
+
+        return TRUE;
+}
+
+static gboolean
+kiosk_window_config_wants_window_on_monitor (KioskWindowConfig *self,
+                                             MetaWindow        *window,
+                                             int               *monitor)
+{
+        g_autofree gchar *output_name = NULL;
+        MetaBackend *backend;
+        MetaMonitorManager *monitor_manager;
+        int m;
+
+        if (!kiosk_window_config_get_string_for_window (self,
+                                                        window,
+                                                        "set-on-monitor",
+                                                        &output_name))
+                return FALSE;
+
+        backend = meta_context_get_backend (self->context);
+        monitor_manager = meta_backend_get_monitor_manager (backend);
+        m = meta_monitor_manager_get_monitor_for_connector (monitor_manager,
+                                                            output_name);
+        if (m < 0) {
+                g_warning ("Could not find monitor named \"%s\"", output_name);
+                return FALSE;
+        }
+
+        *monitor = m;
+
+        return TRUE;
+}
+
+static void
 kiosk_window_config_update_window (KioskWindowConfig *kiosk_window_config,
                                    MetaWindow        *window,
                                    MetaWindowConfig  *window_config)
@@ -575,6 +637,25 @@ kiosk_window_config_update_window (KioskWindowConfig *kiosk_window_config,
                 kiosk_window_config_apply_config (kiosk_window_config,
                                                   window_config,
                                                   sections[i]);
+        }
+}
+
+void
+kiosk_window_config_apply_initial_config (KioskWindowConfig *kiosk_window_config,
+                                          MetaWindow        *window)
+{
+        int monitor;
+
+        if (!meta_window_is_fullscreen (window)) {
+                if (kiosk_window_config_wants_window_above (kiosk_window_config, window)) {
+                        g_debug ("KioskWindowConfig: Setting window above");
+                        meta_window_make_above (window);
+                }
+        }
+
+        if (kiosk_window_config_wants_window_on_monitor (kiosk_window_config, window, &monitor)) {
+                g_debug ("KioskWindowConfig: Moving window to monitor %i", monitor);
+                meta_window_move_to_monitor (window, monitor);
         }
 }
 

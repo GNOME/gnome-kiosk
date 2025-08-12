@@ -16,18 +16,7 @@ G_DECLARE_FINAL_TYPE (KioskWindowConfig, kiosk_window_config,
 
 KioskWindowConfig *kiosk_window_config_new (KioskCompositor * compositor);
 
-gboolean kiosk_window_config_get_boolean_for_window (KioskWindowConfig *kiosk_window_config,
-                                                     MetaWindow        *window,
-                                                     const char        *key_name,
-                                                     gboolean          *value);
-
-gboolean kiosk_window_config_get_string_for_window (KioskWindowConfig *kiosk_window_config,
-                                                    MetaWindow        *window,
-                                                    const char        *key_name,
-                                                    char             **value);
-
-void kiosk_window_config_update_window (KioskWindowConfig *kiosk_window_config,
-                                        MetaWindow        *window,
-                                        MetaWindowConfig  *window_config);
+void kiosk_window_config_apply_initial_config (KioskWindowConfig *kiosk_window_config,
+                                               MetaWindow        *window);
 
 G_END_DECLS
