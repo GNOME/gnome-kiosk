@@ -1,5 +1,15 @@
 # NEWS
 
+## 49.rc
+
+- Add `set-window-type` configuration option for window management
+- Refactor the window configuration code
+- Fix GrabAccelerators support
+- Add media keys support in systemd sessions
+- Allow inhibiting shortcuts in compositor
+- Fix memory leaks by properly freeing objects on disposal
+- Enable remote session support in systemd sessions
+
 ## 49.alpha.1.2
 
 - No change since 49.alpha.1, fix the CI for release.
