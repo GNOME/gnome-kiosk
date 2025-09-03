@@ -331,17 +331,12 @@ on_faded_in (KioskCompositor   *self,
 }
 
 static void
-kiosk_compositor_map (MetaPlugin      *plugin,
-                      MetaWindowActor *actor)
+kiosk_compositor_map_with_fade_in (KioskCompositor *self,
+                                   MetaWindowActor *actor,
+                                   MetaWindow      *window)
 {
-        KioskCompositor *self = KIOSK_COMPOSITOR (plugin);
-        MetaWindow *window;
         ClutterTransition *fade_in_transition;
         int easing_duration;
-
-        window = meta_window_actor_get_meta_window (actor);
-
-        kiosk_window_config_apply_initial_config (self->kiosk_window_config, window);
 
         if (meta_window_is_fullscreen (window)) {
                 g_debug ("KioskCompositor: Mapping window that does need to be fullscreened");
@@ -350,9 +345,6 @@ kiosk_compositor_map (MetaPlugin      *plugin,
                 g_debug ("KioskCompositor: Mapping window that does not need to be fullscreened");
                 easing_duration = 500;
         }
-
-        clutter_actor_show (self->stage);
-        clutter_actor_show (CLUTTER_ACTOR (actor));
 
         clutter_actor_set_opacity (CLUTTER_ACTOR (actor), 0);
 
@@ -370,6 +362,23 @@ kiosk_compositor_map (MetaPlugin      *plugin,
                                  G_CALLBACK (on_faded_in),
                                  self,
                                  G_CONNECT_SWAPPED);
+}
+
+static void
+kiosk_compositor_map (MetaPlugin      *plugin,
+                      MetaWindowActor *actor)
+{
+        KioskCompositor *self = KIOSK_COMPOSITOR (plugin);
+        MetaWindow *window;
+
+        window = meta_window_actor_get_meta_window (actor);
+
+        kiosk_window_config_apply_initial_config (self->kiosk_window_config, window);
+
+        clutter_actor_show (self->stage);
+        clutter_actor_show (CLUTTER_ACTOR (actor));
+
+        kiosk_compositor_map_with_fade_in (self, actor, window);
 }
 
 static void
