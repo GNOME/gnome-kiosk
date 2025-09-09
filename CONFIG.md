@@ -9,6 +9,50 @@ which apply to mutter will also apply to GNOME Kiosk.
 gsettings set org.gnome.desktop.interface enable-animations false
 ```
 
+# Accessibility settings
+
+## Enabling High Contrast
+
+```sh
+gsettings set org.gnome.desktop.a11y.interface high-contrast true
+gsettings set org.gnome.desktop.a11y.interface show-status-shapes true
+```
+
+## Large text
+
+```sh
+gsettings set org.gnome.desktop.interface text-scaling-factor 1.25
+```
+
+## Visual alerts
+
+```sh
+gsettings set org.gnome.desktop.wm.preferences visual-bell true
+```
+
+## Sticky Keys
+
+```sh
+gsettings set org.gnome.desktop.a11y.keyboard stickykeys-enable true
+```
+
+## Slow Keys
+
+```sh
+gsettings set org.gnome.desktop.a11y.keyboard slowkeys-enable true
+```
+
+## Bounce Keys
+
+```sh
+gsettings set org.gnome.desktop.a11y.keyboard bouncekeys-enable true
+```
+
+## Mouse keys
+
+```sh
+gsettings set org.gnome.desktop.a11y.keyboard mousekeys-enable true
+```
 # Configuration file
 
 GNOME Kiosk takes a configuration file to specify the windows configuration at start-up.
