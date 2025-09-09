@@ -1,3 +1,14 @@
+# GNOME desktop configuration
+
+GNOME Kiosk is built on mutter, therefore the same GNOME Desktop settings
+which apply to mutter will also apply to GNOME Kiosk.
+
+## Disabling animations
+
+```sh
+gsettings set org.gnome.desktop.interface enable-animations false
+```
+
 # Configuration file
 
 GNOME Kiosk takes a configuration file to specify the windows configuration at start-up.
