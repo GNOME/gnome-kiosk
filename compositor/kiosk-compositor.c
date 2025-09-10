@@ -36,6 +36,9 @@
 
 #include "org.gnome.DisplayManager.Manager.h"
 
+#define GNOME_DESKTOP_INTERFACE_SCHEMA "org.gnome.desktop.interface"
+#define GNOME_DESKTOP_ENABLE_ANIMATIONS "enable-animations"
+
 struct _KioskCompositor
 {
         MetaPlugin                   parent;
@@ -58,6 +61,7 @@ struct _KioskCompositor
         KioskShellScreenshotService *screenshot_service;
         KioskWindowConfig           *kiosk_window_config;
         KioskShellService           *shell_service;
+        GSettings                   *interface_settings;
 };
 
 enum
@@ -91,6 +95,7 @@ kiosk_compositor_dispose (GObject *object)
         g_clear_object (&self->introspect_service);
         g_clear_object (&self->screenshot_service);
         g_clear_object (&self->shell_service);
+        g_clear_object (&self->interface_settings);
         g_clear_object (&self->service);
 
         g_clear_weak_pointer (&self->display);
@@ -283,6 +288,8 @@ kiosk_compositor_start (MetaPlugin *plugin)
                 g_clear_error (&error);
         }
 
+        self->interface_settings = g_settings_new (GNOME_DESKTOP_INTERFACE_SCHEMA);
+
         kiosk_gobject_utils_queue_immediate_callback (G_OBJECT (self),
                                                       "[kiosk-compositor] register_session",
                                                       self->cancellable,
@@ -331,17 +338,21 @@ on_faded_in (KioskCompositor   *self,
 }
 
 static void
-kiosk_compositor_map (MetaPlugin      *plugin,
-                      MetaWindowActor *actor)
+kiosk_compositor_map_immediately (KioskCompositor *self,
+                                  MetaWindowActor *actor)
 {
-        KioskCompositor *self = KIOSK_COMPOSITOR (plugin);
-        MetaWindow *window;
+        g_debug ("KioskCompositor: Animations disabled, mapping window immediately");
+        clutter_actor_set_opacity (CLUTTER_ACTOR (actor), 255);
+        meta_plugin_map_completed (META_PLUGIN (self), actor);
+}
+
+static void
+kiosk_compositor_map_with_fade_in (KioskCompositor *self,
+                                   MetaWindowActor *actor,
+                                   MetaWindow      *window)
+{
         ClutterTransition *fade_in_transition;
         int easing_duration;
-
-        window = meta_window_actor_get_meta_window (actor);
-
-        kiosk_window_config_apply_initial_config (self->kiosk_window_config, window);
 
         if (meta_window_is_fullscreen (window)) {
                 g_debug ("KioskCompositor: Mapping window that does need to be fullscreened");
@@ -350,9 +361,6 @@ kiosk_compositor_map (MetaPlugin      *plugin,
                 g_debug ("KioskCompositor: Mapping window that does not need to be fullscreened");
                 easing_duration = 500;
         }
-
-        clutter_actor_show (self->stage);
-        clutter_actor_show (CLUTTER_ACTOR (actor));
 
         clutter_actor_set_opacity (CLUTTER_ACTOR (actor), 0);
 
@@ -370,6 +378,31 @@ kiosk_compositor_map (MetaPlugin      *plugin,
                                  G_CALLBACK (on_faded_in),
                                  self,
                                  G_CONNECT_SWAPPED);
+}
+
+static void
+kiosk_compositor_map (MetaPlugin      *plugin,
+                      MetaWindowActor *actor)
+{
+        KioskCompositor *self = KIOSK_COMPOSITOR (plugin);
+        MetaWindow *window;
+        gboolean animations_enabled;
+
+        window = meta_window_actor_get_meta_window (actor);
+
+        kiosk_window_config_apply_initial_config (self->kiosk_window_config, window);
+
+        clutter_actor_show (self->stage);
+        clutter_actor_show (CLUTTER_ACTOR (actor));
+
+        animations_enabled = g_settings_get_boolean (self->interface_settings,
+                                                     GNOME_DESKTOP_ENABLE_ANIMATIONS);
+
+        if (animations_enabled) {
+                kiosk_compositor_map_with_fade_in (self, actor, window);
+        } else {
+                kiosk_compositor_map_immediately (self, actor);
+        }
 }
 
 static void

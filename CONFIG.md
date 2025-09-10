@@ -1,3 +1,14 @@
+# GNOME desktop configuration
+
+GNOME Kiosk is built on mutter, therefore the same GNOME Desktop settings
+which apply to mutter will also apply to GNOME Kiosk.
+
+## Disabling animations
+
+```sh
+gsettings set org.gnome.desktop.interface enable-animations false
+```
+
 # Configuration file
 
 GNOME Kiosk takes a configuration file to specify the windows configuration at start-up.
@@ -13,7 +24,7 @@ system. The first instance of the file found is used.
     - `/usr/local/share/gnome-kiosk/window-config.ini`
     - `/usr/share/gnome-kiosk/window-config.ini`
 
-# Syntax
+## Syntax
 
 The configuration file is an "ini" style file with sections and keys/values.
 
@@ -60,7 +71,7 @@ Only a subset of window types are supported with `set-window-type`, namely:
 When `set-x`/`set-y` are used in with `set-on-monitor`, the actual location
 is relative to the monitor.
 
-# Example
+## Example
 
 ```
   # Place all windows at (0,0) by default, not fullscreen
