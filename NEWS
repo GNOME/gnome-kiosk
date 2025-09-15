@@ -1,5 +1,9 @@
 # NEWS
 
+## 49.0
+
+- Disable fade-in animations based on GNOME desktop setting
+
 ## 49.rc
 
 - Add `set-window-type` configuration option for window management
