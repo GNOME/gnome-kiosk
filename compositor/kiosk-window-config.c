@@ -153,18 +153,11 @@ kiosk_window_config_on_file_changed (GFileMonitor      *monitor,
 }
 
 static void
-kiosk_window_config_on_window_configure (MetaWindow       *window,
-                                         MetaWindowConfig *window_config,
-                                         gpointer          user_data)
+kiosk_window_config_on_window_configure_initial (KioskWindowConfig *self,
+                                                 MetaWindow        *window,
+                                                 MetaWindowConfig  *window_config)
 {
-        KioskWindowConfig *self = KIOSK_WINDOW_CONFIG (user_data);
         gboolean fullscreen;
-
-        if (!meta_window_config_get_is_initial (window_config)) {
-                g_debug ("KioskWindowConfig: Ignoring configure for window: %s",
-                         meta_window_get_description (window));
-                return;
-        }
 
         g_debug ("KioskWindowConfig: configure window: %s", meta_window_get_description (window));
 
@@ -173,6 +166,20 @@ kiosk_window_config_on_window_configure (MetaWindow       *window,
         kiosk_window_config_update_window (self,
                                            window,
                                            window_config);
+}
+
+static void
+kiosk_window_config_on_window_configure (MetaWindow       *window,
+                                         MetaWindowConfig *window_config,
+                                         gpointer          user_data)
+{
+        KioskWindowConfig *self = KIOSK_WINDOW_CONFIG (user_data);
+
+        if (meta_window_config_get_is_initial (window_config))
+                kiosk_window_config_on_window_configure_initial (self, window, window_config);
+        else
+                g_debug ("KioskWindowConfig: Ignoring configure for window: %s",
+                         meta_window_get_description (window));
 }
 
 static void
