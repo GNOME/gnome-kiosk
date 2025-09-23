@@ -58,6 +58,11 @@ kiosk_window_config_update_window (KioskWindowConfig *kiosk_window_config,
                                    MetaWindow        *window,
                                    MetaWindowConfig  *window_config);
 
+static void
+kiosk_window_config_on_window_created (MetaDisplay *display,
+                                       MetaWindow  *window,
+                                       gpointer     user_data);
+
 static gboolean
 kiosk_window_config_try_load_file (KioskWindowConfig *kiosk_window_config,
                                    char              *filename)
@@ -150,69 +155,6 @@ kiosk_window_config_on_file_changed (GFileMonitor      *monitor,
 
         g_debug ("KioskWindowConfig: Configuration file changed, reloading");
         kiosk_window_config_reload (self);
-}
-
-static void
-kiosk_window_config_on_window_configure_initial (KioskWindowConfig *self,
-                                                 MetaWindow        *window,
-                                                 MetaWindowConfig  *window_config)
-{
-        gboolean fullscreen;
-
-        g_debug ("KioskWindowConfig: configure window: %s", meta_window_get_description (window));
-
-        fullscreen = kiosk_window_config_wants_window_fullscreen (self, window);
-        meta_window_config_set_is_fullscreen (window_config, fullscreen);
-        kiosk_window_config_update_window (self,
-                                           window,
-                                           window_config);
-}
-
-static void
-kiosk_window_config_on_window_configure (MetaWindow       *window,
-                                         MetaWindowConfig *window_config,
-                                         gpointer          user_data)
-{
-        KioskWindowConfig *self = KIOSK_WINDOW_CONFIG (user_data);
-
-        if (meta_window_config_get_is_initial (window_config))
-                kiosk_window_config_on_window_configure_initial (self, window, window_config);
-        else
-                g_debug ("KioskWindowConfig: Ignoring configure for window: %s",
-                         meta_window_get_description (window));
-}
-
-static void
-kiosk_window_config_on_window_unmanaged (MetaWindow *window,
-                                         gpointer    user_data)
-{
-        KioskWindowConfig *self = KIOSK_WINDOW_CONFIG (user_data);
-
-        g_signal_handlers_disconnect_by_func (window,
-                                              G_CALLBACK (kiosk_window_config_on_window_configure),
-                                              self);
-
-        g_signal_handlers_disconnect_by_func (window,
-                                              G_CALLBACK (kiosk_window_config_on_window_unmanaged),
-                                              self);
-}
-
-static void
-kiosk_window_config_on_window_created (MetaDisplay *display,
-                                       MetaWindow  *window,
-                                       gpointer     user_data)
-{
-        KioskWindowConfig *self = KIOSK_WINDOW_CONFIG (user_data);
-
-        g_signal_connect (window,
-                          "configure",
-                          G_CALLBACK (kiosk_window_config_on_window_configure),
-                          self);
-
-        g_signal_connect (window,
-                          "unmanaged",
-                          G_CALLBACK (kiosk_window_config_on_window_unmanaged),
-                          self);
 }
 
 static void
@@ -763,6 +705,69 @@ kiosk_window_config_update_window (KioskWindowConfig *kiosk_window_config,
                                                   window_config,
                                                   sections[i]);
         }
+}
+
+static void
+kiosk_window_config_on_window_configure_initial (KioskWindowConfig *self,
+                                                 MetaWindow        *window,
+                                                 MetaWindowConfig  *window_config)
+{
+        gboolean fullscreen;
+
+        g_debug ("KioskWindowConfig: configure window: %s", meta_window_get_description (window));
+
+        fullscreen = kiosk_window_config_wants_window_fullscreen (self, window);
+        meta_window_config_set_is_fullscreen (window_config, fullscreen);
+        kiosk_window_config_update_window (self,
+                                           window,
+                                           window_config);
+}
+
+static void
+kiosk_window_config_on_window_configure (MetaWindow       *window,
+                                         MetaWindowConfig *window_config,
+                                         gpointer          user_data)
+{
+        KioskWindowConfig *self = KIOSK_WINDOW_CONFIG (user_data);
+
+        if (meta_window_config_get_is_initial (window_config))
+                kiosk_window_config_on_window_configure_initial (self, window, window_config);
+        else
+                g_debug ("KioskWindowConfig: Ignoring configure for window: %s",
+                         meta_window_get_description (window));
+}
+
+static void
+kiosk_window_config_on_window_unmanaged (MetaWindow *window,
+                                         gpointer    user_data)
+{
+        KioskWindowConfig *self = KIOSK_WINDOW_CONFIG (user_data);
+
+        g_signal_handlers_disconnect_by_func (window,
+                                              G_CALLBACK (kiosk_window_config_on_window_configure),
+                                              self);
+
+        g_signal_handlers_disconnect_by_func (window,
+                                              G_CALLBACK (kiosk_window_config_on_window_unmanaged),
+                                              self);
+}
+
+static void
+kiosk_window_config_on_window_created (MetaDisplay *display,
+                                       MetaWindow  *window,
+                                       gpointer     user_data)
+{
+        KioskWindowConfig *self = KIOSK_WINDOW_CONFIG (user_data);
+
+        g_signal_connect (window,
+                          "configure",
+                          G_CALLBACK (kiosk_window_config_on_window_configure),
+                          self);
+
+        g_signal_connect (window,
+                          "unmanaged",
+                          G_CALLBACK (kiosk_window_config_on_window_unmanaged),
+                          self);
 }
 
 void
