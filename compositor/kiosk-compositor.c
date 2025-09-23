@@ -393,6 +393,11 @@ kiosk_compositor_map (MetaPlugin      *plugin,
         window = meta_window_actor_get_meta_window (actor);
 
         kiosk_window_config_apply_initial_config (self->kiosk_window_config, window);
+        if (meta_window_is_mapped_inhibited (window)) {
+                g_debug ("KioskCompositor: Window %s is hidden, not showing",
+                         meta_window_get_description (window));
+                return;
+        }
 
         clutter_actor_show (self->stage);
         clutter_actor_show (CLUTTER_ACTOR (actor));

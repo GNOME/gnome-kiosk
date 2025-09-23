@@ -115,6 +115,7 @@ The following "*set*" keys are supported:
  * `set-height` (integer) - the height
  * `set-above` (boolean) - Whether the window should be placed on a layer above
  * `set-on-monitor` (string) - Place the window on the given monitor
+ * `lock-on-monitor` (boolean) - Lock the window on the monitor
  * `set-window-type` (string) - Change the window type
 
 Notes:
@@ -129,6 +130,11 @@ Only a subset of window types are supported with `set-window-type`, namely:
 
 When `set-x`/`set-y` are used in with `set-on-monitor`, the actual location
 is relative to the monitor.
+
+The `lock-on-monitor` option, when set to `true`, locks the window to the monitor
+specified by `set-on-monitor`.<br>
+The window will be hidden if the monitor is removed and shown again when the monitor
+is reconnected.
 
 ## Example
 

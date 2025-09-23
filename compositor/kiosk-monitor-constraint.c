@@ -4,15 +4,23 @@
 #include "kiosk-compositor.h"
 #include "kiosk-window-config.h"
 
+#include <meta/display.h>
+#include <meta/meta-backend.h>
+#include <meta/meta-context.h>
+#include <meta/meta-monitor-manager.h>
 #include <meta/meta-external-constraint.h>
 
 struct _KioskMonitorConstraint
 {
-        GObject            parent;
+        GObject             parent;
 
         /* Weak references */
-        KioskCompositor   *compositor;
-        KioskWindowConfig *config;
+        KioskCompositor    *compositor;
+        KioskWindowConfig  *config;
+        MetaDisplay        *display;
+        MetaContext        *context;
+        MetaBackend        *backend;
+        MetaMonitorManager *monitor_manager;
 };
 
 enum
@@ -41,6 +49,10 @@ kiosk_monitor_constraint_dispose (GObject *object)
 
         g_clear_weak_pointer (&self->compositor);
         g_clear_weak_pointer (&self->config);
+        g_clear_weak_pointer (&self->display);
+        g_clear_weak_pointer (&self->context);
+        g_clear_weak_pointer (&self->backend);
+        g_clear_weak_pointer (&self->monitor_manager);
 
         G_OBJECT_CLASS (kiosk_monitor_constraint_parent_class)->dispose (object);
 }
@@ -97,6 +109,10 @@ kiosk_monitor_constraint_constructed (GObject *object)
         G_OBJECT_CLASS (kiosk_monitor_constraint_parent_class)->constructed (object);
 
         g_set_weak_pointer (&self->config, kiosk_compositor_get_window_config (self->compositor));
+        g_set_weak_pointer (&self->display, meta_plugin_get_display (META_PLUGIN (self->compositor)));
+        g_set_weak_pointer (&self->context, meta_display_get_context (self->display));
+        g_set_weak_pointer (&self->backend, meta_context_get_backend (self->context));
+        g_set_weak_pointer (&self->monitor_manager, meta_backend_get_monitor_manager (self->backend));
 }
 
 static void
@@ -127,11 +143,75 @@ kiosk_monitor_constraint_init (KioskMonitorConstraint *self)
 {
 }
 
+static void
+kiosk_monitor_constraint_constrain_to_rectangle (MtkRectangle                *rect,
+                                                 MtkRectangle                *area,
+                                                 MetaExternalConstraintFlags  flags)
+{
+        if (!mtk_rectangle_contains_rect (area, rect)) {
+                g_debug ("KioskMonitorConstraint: rectangle (%i,%i) [%ix%i] is outside the constraint area (%i,%i) [%ix%i]",
+                         rect->x, rect->y, rect->width, rect->height,
+                         area->x, area->y, area->width, area->height);
+
+                /* Constrain position to stay within area */
+                if (flags & META_EXTERNAL_CONSTRAINT_FLAGS_MOVE) {
+                        rect->x = CLAMP (rect->x,
+                                         area->x,
+                                         area->x + MAX (0, area->width - rect->width));
+                        rect->y = CLAMP (rect->y,
+                                         area->y,
+                                         area->y + MAX (0, area->height - rect->height));
+                        g_debug ("KioskMonitorConstraint: Constraining position to (%i,%i)",
+                                 rect->x, rect->y);
+                }
+
+                /* Constrain size to fit within area (unless it's a pure move) */
+                if (flags != META_EXTERNAL_CONSTRAINT_FLAGS_MOVE) {
+                        mtk_rectangle_intersect (area, rect, rect);
+                        g_debug ("KioskMonitorConstraint: Constraining size to (%i,%i) [%ix%i]",
+                                 rect->x, rect->y, rect->width, rect->height);
+                }
+        }
+}
+
 static gboolean
 kiosk_monitor_constraint_constrain (MetaExternalConstraint     *constraint,
                                     MetaWindow                 *window,
                                     MetaExternalConstraintInfo *info)
 {
+        KioskMonitorConstraint *self = KIOSK_MONITOR_CONSTRAINT (constraint);
+        const char *output_name;
+        int monitor_index;
+        MtkRectangle constraint_area = { 0, };
+
+        g_debug ("KioskMonitorConstraint: Constraining window on monitor: %s",
+                 meta_window_get_description (window));
+
+        output_name = kiosk_window_config_lookup_window_output_name (self->config, window);
+        if (!output_name) {
+                g_debug ("KioskMonitorConstraint: Window %s has no monitor set",
+                         meta_window_get_description (window));
+                return TRUE;
+        }
+
+        monitor_index = meta_monitor_manager_get_monitor_for_connector (self->monitor_manager,
+                                                                        output_name);
+        if (monitor_index < 0) {
+                g_debug ("KioskMonitorConstraint: Could not find monitor named \"%s\"", output_name);
+                return TRUE;
+        }
+
+        meta_display_get_monitor_geometry (self->display, monitor_index, &constraint_area);
+        g_debug ("KioskMonitorConstraint: Monitor geometry: (%i,%i) [%ix%i]",
+                 constraint_area.x, constraint_area.y, constraint_area.width, constraint_area.height);
+
+        g_debug ("KioskMonitorConstraint: Window %s is constrained on monitor area (%i,%i) [%ix%i]",
+                 meta_window_get_description (window),
+                 constraint_area.x, constraint_area.y,
+                 constraint_area.width, constraint_area.height);
+
+        kiosk_monitor_constraint_constrain_to_rectangle (info->new_rect, &constraint_area, info->flags);
+
         return TRUE;
 }
 
