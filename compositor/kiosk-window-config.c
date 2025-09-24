@@ -52,6 +52,13 @@ enum
 };
 static GParamSpec *props[N_PROPS] = { NULL, };
 
+typedef enum
+{
+        MONITOR_NOT_SET = 0,
+        MONITOR_NOT_FOUND,
+        MONITOR_FOUND,
+} KioskWindowConfigMonitor;
+
 G_DEFINE_TYPE (KioskWindowConfig, kiosk_window_config, G_TYPE_OBJECT)
 
 static gboolean
@@ -647,7 +654,7 @@ kiosk_window_config_get_connector_for_window (KioskWindowConfig *self,
         return output_name;
 }
 
-static gboolean
+static KioskWindowConfigMonitor
 kiosk_window_config_wants_window_on_monitor (KioskWindowConfig *self,
                                              MetaWindow        *window,
                                              int               *monitor)
@@ -657,18 +664,18 @@ kiosk_window_config_wants_window_on_monitor (KioskWindowConfig *self,
 
         output_name = g_hash_table_lookup (self->windows_on_monitors, window);
         if (!output_name)
-                return FALSE;
+                return MONITOR_NOT_SET;
 
         m = meta_monitor_manager_get_monitor_for_connector (self->monitor_manager,
                                                             output_name);
         if (m < 0) {
                 g_warning ("Could not find monitor named \"%s\"", output_name);
-                return FALSE;
+                return MONITOR_NOT_FOUND;
         }
 
         *monitor = m;
 
-        return TRUE;
+        return MONITOR_FOUND;
 }
 
 static gboolean
@@ -815,7 +822,7 @@ kiosk_window_config_apply_initial_config (KioskWindowConfig *kiosk_window_config
                 }
         }
 
-        if (kiosk_window_config_wants_window_on_monitor (kiosk_window_config, window, &monitor)) {
+        if (kiosk_window_config_wants_window_on_monitor (kiosk_window_config, window, &monitor) == MONITOR_FOUND) {
                 g_debug ("KioskWindowConfig: Moving window to monitor %i", monitor);
                 meta_window_move_to_monitor (window, monitor);
         }
