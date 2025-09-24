@@ -39,6 +39,9 @@ struct _KioskWindowConfig
         GKeyFile           *config_key_file;
         GFileMonitor       *config_file_monitor;
         gchar              *user_config_file_path;
+
+        /* <MetaWindow * window, const char *output_name> */
+        GHashTable         *windows_on_monitors;
 };
 
 enum
@@ -198,6 +201,8 @@ kiosk_window_config_constructed (GObject *object)
         g_set_weak_pointer (&self->backend, meta_context_get_backend (self->context));
         g_set_weak_pointer (&self->monitor_manager, meta_backend_get_monitor_manager (self->backend));
 
+        self->windows_on_monitors = g_hash_table_new_full (NULL, NULL, NULL, g_free);
+
         g_signal_connect (self->display,
                           "window-created",
                           G_CALLBACK (kiosk_window_config_on_window_created),
@@ -248,6 +253,7 @@ kiosk_window_config_finalize (GObject *object)
 
         g_clear_pointer (&self->config_key_file, g_key_file_free);
         g_clear_pointer (&self->user_config_file_path, g_free);
+        g_clear_pointer (&self->windows_on_monitors, g_hash_table_unref);
 
         G_OBJECT_CLASS (kiosk_window_config_parent_class)->finalize (object);
 }
@@ -626,18 +632,31 @@ kiosk_window_config_wants_window_above (KioskWindowConfig *self,
         return TRUE;
 }
 
-static gboolean
-kiosk_window_config_wants_window_on_monitor (KioskWindowConfig *self,
-                                             MetaWindow        *window,
-                                             int               *monitor)
+static const char *
+kiosk_window_config_get_connector_for_window (KioskWindowConfig *self,
+                                              MetaWindow        *window)
 {
-        g_autofree gchar *output_name = NULL;
-        int m;
+        char *output_name = NULL;
 
         if (!kiosk_window_config_get_string_for_window (self,
                                                         window,
                                                         "set-on-monitor",
                                                         &output_name))
+                return NULL;
+
+        return output_name;
+}
+
+static gboolean
+kiosk_window_config_wants_window_on_monitor (KioskWindowConfig *self,
+                                             MetaWindow        *window,
+                                             int               *monitor)
+{
+        const char *output_name;
+        int m;
+
+        output_name = g_hash_table_lookup (self->windows_on_monitors, window);
+        if (!output_name)
                 return FALSE;
 
         m = meta_monitor_manager_get_monitor_for_connector (self->monitor_manager,
@@ -752,6 +771,8 @@ kiosk_window_config_on_window_unmanaged (MetaWindow *window,
         g_signal_handlers_disconnect_by_func (window,
                                               G_CALLBACK (kiosk_window_config_on_window_unmanaged),
                                               self);
+
+        g_hash_table_remove (self->windows_on_monitors, window);
 }
 
 static void
@@ -760,6 +781,7 @@ kiosk_window_config_on_window_created (MetaDisplay *display,
                                        gpointer     user_data)
 {
         KioskWindowConfig *self = KIOSK_WINDOW_CONFIG (user_data);
+        const char *output_name;
 
         g_signal_connect (window,
                           "configure",
@@ -770,6 +792,13 @@ kiosk_window_config_on_window_created (MetaDisplay *display,
                           "unmanaged",
                           G_CALLBACK (kiosk_window_config_on_window_unmanaged),
                           self);
+
+        output_name = kiosk_window_config_get_connector_for_window (self, window);
+        if (output_name) {
+                g_debug ("KioskWindowConfig: Window %s is set on monitor %s",
+                         meta_window_get_description (window), output_name);
+                g_hash_table_insert (self->windows_on_monitors, window, g_strdup (output_name));
+        }
 }
 
 void
