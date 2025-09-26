@@ -26,17 +26,19 @@ typedef gpointer (*KioskWindowConfigGetKeyValue) (GKeyFile   *key_file,
 
 struct _KioskWindowConfig
 {
-        GObject          parent;
+        GObject             parent;
 
         /* Weak references */
-        KioskCompositor *compositor;
-        MetaDisplay     *display;
-        MetaContext     *context;
+        KioskCompositor    *compositor;
+        MetaDisplay        *display;
+        MetaContext        *context;
+        MetaBackend        *backend;
+        MetaMonitorManager *monitor_manager;
 
         /* Strong references */
-        GKeyFile        *config_key_file;
-        GFileMonitor    *config_file_monitor;
-        gchar           *user_config_file_path;
+        GKeyFile           *config_key_file;
+        GFileMonitor       *config_file_monitor;
+        gchar              *user_config_file_path;
 };
 
 enum
@@ -193,6 +195,8 @@ kiosk_window_config_constructed (GObject *object)
 
         g_set_weak_pointer (&self->display, meta_plugin_get_display (META_PLUGIN (self->compositor)));
         g_set_weak_pointer (&self->context, meta_display_get_context (self->display));
+        g_set_weak_pointer (&self->backend, meta_context_get_backend (self->context));
+        g_set_weak_pointer (&self->monitor_manager, meta_backend_get_monitor_manager (self->backend));
 
         g_signal_connect (self->display,
                           "window-created",
@@ -231,6 +235,8 @@ kiosk_window_config_dispose (GObject *object)
         g_clear_weak_pointer (&self->compositor);
         g_clear_weak_pointer (&self->display);
         g_clear_weak_pointer (&self->context);
+        g_clear_weak_pointer (&self->backend);
+        g_clear_weak_pointer (&self->monitor_manager);
 
         G_OBJECT_CLASS (kiosk_window_config_parent_class)->dispose (object);
 }
@@ -626,8 +632,6 @@ kiosk_window_config_wants_window_on_monitor (KioskWindowConfig *self,
                                              int               *monitor)
 {
         g_autofree gchar *output_name = NULL;
-        MetaBackend *backend;
-        MetaMonitorManager *monitor_manager;
         int m;
 
         if (!kiosk_window_config_get_string_for_window (self,
@@ -636,9 +640,7 @@ kiosk_window_config_wants_window_on_monitor (KioskWindowConfig *self,
                                                         &output_name))
                 return FALSE;
 
-        backend = meta_context_get_backend (self->context);
-        monitor_manager = meta_backend_get_monitor_manager (backend);
-        m = meta_monitor_manager_get_monitor_for_connector (monitor_manager,
+        m = meta_monitor_manager_get_monitor_for_connector (self->monitor_manager,
                                                             output_name);
         if (m < 0) {
                 g_warning ("Could not find monitor named \"%s\"", output_name);
