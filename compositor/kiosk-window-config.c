@@ -13,6 +13,7 @@
 
 #include <glib-object.h>
 #include <glib.h>
+#include <gio/gio.h>
 
 #define KIOSK_WINDOW_CONFIG_DIR      "gnome-kiosk"
 #define KIOSK_WINDOW_CONFIG_FILENAME "window-config.ini"
@@ -34,6 +35,8 @@ struct _KioskWindowConfig
 
         /* Strong references */
         GKeyFile        *config_key_file;
+        GFileMonitor    *config_file_monitor;
+        gchar           *user_config_file_path;
 };
 
 enum
@@ -86,8 +89,11 @@ kiosk_window_config_load (KioskWindowConfig *kiosk_window_config)
                                      KIOSK_WINDOW_CONFIG_DIR,
                                      KIOSK_WINDOW_CONFIG_FILENAME, NULL);
 
-        if (kiosk_window_config_try_load_file (kiosk_window_config, filename))
+        if (kiosk_window_config_try_load_file (kiosk_window_config, filename)) {
+                /* Store the user config file path for monitoring */
+                g_set_str (&kiosk_window_config->user_config_file_path, filename);
                 goto out;
+        }
 
         /* Then system config */
         xdg_data_dirs = g_get_system_data_dirs ();
@@ -107,6 +113,43 @@ out:
         g_debug ("KioskWindowConfig: Loading key file %s", filename);
 
         return TRUE;
+}
+
+static void
+kiosk_window_config_reload (KioskWindowConfig *kiosk_window_config)
+{
+        g_debug ("KioskWindowConfig: Reloading configuration");
+
+        /* Save the old key file */
+        g_key_file_free (kiosk_window_config->config_key_file);
+        kiosk_window_config->config_key_file = g_key_file_new ();
+
+        /* Reload the configuration */
+        if (!kiosk_window_config_load (kiosk_window_config)) {
+                g_warning ("KioskWindowConfig: Failed to load the new configuration");
+                return;
+        }
+
+        g_debug ("KioskWindowConfig: New configuration loaded successfully");
+}
+
+static void
+kiosk_window_config_on_file_changed (GFileMonitor      *monitor,
+                                     GFile             *file,
+                                     GFile             *other_file,
+                                     GFileMonitorEvent  event_type,
+                                     gpointer           user_data)
+{
+        KioskWindowConfig *self = KIOSK_WINDOW_CONFIG (user_data);
+
+        /* Only handle changes, not deletions or other events */
+        if (event_type != G_FILE_MONITOR_EVENT_CHANGED &&
+            event_type != G_FILE_MONITOR_EVENT_CHANGES_DONE_HINT) {
+                return;
+        }
+
+        g_debug ("KioskWindowConfig: Configuration file changed, reloading");
+        kiosk_window_config_reload (self);
 }
 
 static void
@@ -166,6 +209,35 @@ kiosk_window_config_on_window_created (MetaDisplay *display,
 }
 
 static void
+kiosk_window_config_setup_file_monitoring (KioskWindowConfig *self)
+{
+        g_autoptr (GFile) config_file = NULL;
+        g_autoptr (GError) error = NULL;
+
+        /* Only monitor the user config file if it exists */
+        if (!self->user_config_file_path)
+                return;
+
+        config_file = g_file_new_for_path (self->user_config_file_path);
+        self->config_file_monitor = g_file_monitor_file (config_file,
+                                                         G_FILE_MONITOR_NONE,
+                                                         NULL,
+                                                         &error);
+
+        if (!self->config_file_monitor) {
+                g_warning ("KioskWindowConfig: Failed to monitor config file %s: %s",
+                           self->user_config_file_path,
+                           error ? error->message : "Unknown error");
+                return;
+        }
+
+        g_signal_connect (self->config_file_monitor,
+                          "changed",
+                          G_CALLBACK (kiosk_window_config_on_file_changed),
+                          self);
+}
+
+static void
 kiosk_window_config_constructed (GObject *object)
 {
         KioskWindowConfig *self = KIOSK_WINDOW_CONFIG (object);
@@ -177,6 +249,9 @@ kiosk_window_config_constructed (GObject *object)
                           "window-created",
                           G_CALLBACK (kiosk_window_config_on_window_created),
                           self);
+
+        /* Setup file monitoring after configuration is loaded */
+        kiosk_window_config_setup_file_monitoring (self);
 
         G_OBJECT_CLASS (kiosk_window_config_parent_class)->constructed (object);
 }
@@ -197,6 +272,13 @@ kiosk_window_config_dispose (GObject *object)
                                               G_CALLBACK (kiosk_window_config_on_window_created),
                                               self);
 
+        if (self->config_file_monitor) {
+                g_signal_handlers_disconnect_by_func (self->config_file_monitor,
+                                                      G_CALLBACK (kiosk_window_config_on_file_changed),
+                                                      self);
+                g_clear_object (&self->config_file_monitor);
+        }
+
         g_clear_weak_pointer (&self->compositor);
         g_clear_weak_pointer (&self->display);
         g_clear_weak_pointer (&self->context);
@@ -210,6 +292,7 @@ kiosk_window_config_finalize (GObject *object)
         KioskWindowConfig *self = KIOSK_WINDOW_CONFIG (object);
 
         g_clear_pointer (&self->config_key_file, g_key_file_free);
+        g_clear_pointer (&self->user_config_file_path, g_free);
 
         G_OBJECT_CLASS (kiosk_window_config_parent_class)->finalize (object);
 }
