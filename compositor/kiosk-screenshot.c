@@ -607,38 +607,6 @@ finish_screenshot (KioskScreenshot *screenshot,
         return TRUE;
 }
 
-static void
-on_after_paint (ClutterStage     *stage,
-                ClutterStageView *view,
-                ClutterFrame     *frame,
-                GTask            *result)
-{
-        KioskScreenshot *screenshot = g_task_get_task_data (result);
-        MetaCompositor *compositor = meta_display_get_compositor (screenshot->display);
-        GTask *task;
-
-        g_signal_handlers_disconnect_by_func (stage, on_after_paint, result);
-
-        if (screenshot->mode == KIOSK_SCREENSHOT_AREA) {
-                do_grab_screenshot (screenshot,
-                                    screenshot->screenshot_area.x,
-                                    screenshot->screenshot_area.y,
-                                    screenshot->screenshot_area.width,
-                                    screenshot->screenshot_area.height,
-                                    screenshot->flags);
-
-                task = g_task_new (screenshot, NULL, on_screenshot_written, result);
-                g_task_run_in_thread (task, write_screenshot_thread);
-        } else {
-                grab_screenshot (screenshot, screenshot->flags, result);
-        }
-
-        g_signal_emit (screenshot, signals[SCREENSHOT_TAKEN], 0,
-                       (MtkRectangle *) &screenshot->screenshot_area);
-
-        meta_compositor_enable_unredirect (compositor);
-}
-
 /**
  * kiosk_screenshot_screenshot:
  * @screenshot: the #KioskScreenshot
@@ -689,21 +657,10 @@ kiosk_screenshot_screenshot (KioskScreenshot     *screenshot,
         if (include_cursor)
                 flags |= KIOSK_SCREENSHOT_FLAG_INCLUDE_CURSOR;
 
-        if (meta_is_wayland_compositor ()) {
-                grab_screenshot (screenshot, flags, result);
+        grab_screenshot (screenshot, flags, result);
 
-                g_signal_emit (screenshot, signals[SCREENSHOT_TAKEN], 0,
-                               (MtkRectangle *) &screenshot->screenshot_area);
-        } else {
-                MetaCompositor *compositor = meta_display_get_compositor (screenshot->display);
-
-                meta_compositor_disable_unredirect (compositor);
-                clutter_actor_queue_redraw (CLUTTER_ACTOR (screenshot->stage));
-                screenshot->flags = flags;
-                screenshot->mode = KIOSK_SCREENSHOT_SCREEN;
-                g_signal_connect (screenshot->stage, "after-paint",
-                                  G_CALLBACK (on_after_paint), result);
-        }
+        g_signal_emit (screenshot, signals[SCREENSHOT_TAKEN], 0,
+                       (MtkRectangle *) &screenshot->screenshot_area);
 }
 
 /**
@@ -790,29 +747,18 @@ kiosk_screenshot_screenshot_area (KioskScreenshot     *screenshot,
         screenshot->screenshot_area.height = height;
 
 
-        if (meta_is_wayland_compositor ()) {
-                do_grab_screenshot (screenshot,
-                                    screenshot->screenshot_area.x,
-                                    screenshot->screenshot_area.y,
-                                    screenshot->screenshot_area.width,
-                                    screenshot->screenshot_area.height,
-                                    KIOSK_SCREENSHOT_FLAG_NONE);
+        do_grab_screenshot (screenshot,
+                            screenshot->screenshot_area.x,
+                            screenshot->screenshot_area.y,
+                            screenshot->screenshot_area.width,
+                            screenshot->screenshot_area.height,
+                            KIOSK_SCREENSHOT_FLAG_NONE);
 
-                g_signal_emit (screenshot, signals[SCREENSHOT_TAKEN], 0,
-                               (MtkRectangle *) &screenshot->screenshot_area);
+        g_signal_emit (screenshot, signals[SCREENSHOT_TAKEN], 0,
+                       (MtkRectangle *) &screenshot->screenshot_area);
 
-                task = g_task_new (screenshot, NULL, on_screenshot_written, result);
-                g_task_run_in_thread (task, write_screenshot_thread);
-        } else {
-                MetaCompositor *compositor = meta_display_get_compositor (screenshot->display);
-
-                meta_compositor_disable_unredirect (compositor);
-                clutter_actor_queue_redraw (CLUTTER_ACTOR (screenshot->stage));
-                screenshot->flags = KIOSK_SCREENSHOT_FLAG_NONE;
-                screenshot->mode = KIOSK_SCREENSHOT_AREA;
-                g_signal_connect (screenshot->stage, "after-paint",
-                                  G_CALLBACK (on_after_paint), result);
-        }
+        task = g_task_new (screenshot, NULL, on_screenshot_written, result);
+        g_task_run_in_thread (task, write_screenshot_thread);
 }
 
 /**

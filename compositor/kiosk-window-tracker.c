@@ -9,9 +9,9 @@
 #include <string.h>
 
 #include <meta/display.h>
-#ifdef HAVE_X11_CLIENT
+#ifdef HAVE_XWAYLAND
 #include <meta/meta-x11-group.h>
-#endif /* HAVE_X11_CLIENT */
+#endif /* HAVE_XWAYLAND */
 
 #include <glib-object.h>
 
@@ -252,7 +252,7 @@ static KioskApp *
 get_app_from_window_group (KioskWindowTracker *tracker,
                            MetaWindow         *window)
 {
-#ifdef HAVE_X11_CLIENT
+#ifdef HAVE_XWAYLAND
         KioskApp *result;
         GSList *group_windows;
         MetaGroup *group;

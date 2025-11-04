@@ -222,11 +222,7 @@ start_ibus (KioskInputEngineManager *self)
                 g_subprocess_launcher_setenv (launcher, "DISPLAY", display, TRUE);
         }
 
-        if (meta_is_wayland_compositor ()) {
-                g_subprocess_launcher_spawn (launcher, &error, "ibus-daemon", NULL);
-        } else {
-                g_subprocess_launcher_spawn (launcher, &error, "ibus-daemon", "--xim", NULL);
-        }
+        g_subprocess_launcher_spawn (launcher, &error, "ibus-daemon", NULL);
 
         if (error != NULL) {
                 g_debug ("KioskInputEngineManager: Could not start IBus daemon: %s",

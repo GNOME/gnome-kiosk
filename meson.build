@@ -29,15 +29,13 @@ libmutter_clutter_name = 'mutter-clutter-@0@'.format(mutter_api_version)
 
 mutter_dependency = dependency(libmutter_name)
 mutter_libdir = mutter_dependency.get_pkgconfig_variable('typelibdir')
-mutter_have_x11 = mutter_dependency.get_variable('have_x11') == 'true'
-mutter_have_x11_client = mutter_dependency.get_variable('have_x11_client') == 'true'
+mutter_have_xwayland = mutter_dependency.get_variable('have_xwayland') == 'true'
 
 config_data = configuration_data()
 config_data.set_quoted('GETTEXT_PACKAGE', meson.project_name())
 config_data.set_quoted('VERSION', meson.project_version())
 config_data.set_quoted('LOCALEDIR', localedir)
-config_data.set('HAVE_X11', mutter_have_x11)
-config_data.set('HAVE_X11_CLIENT', mutter_have_x11_client)
+config_data.set('HAVE_XWAYLAND', mutter_have_xwayland)
 
 config_h = configure_file(
         input: 'config.h.meson',
@@ -167,9 +165,6 @@ compositor_sources += 'compositor/kiosk-shell-screenshot-service.c'
 compositor_sources += 'compositor/kiosk-window-config.c'
 compositor_sources += 'compositor/kiosk-screenshot.c'
 
-if mutter_have_x11
-        compositor_sources += 'compositor/kiosk-x-keyboard-manager.c'
-endif
 compositor_sources += 'compositor/main.c'
 
 foreach dbus_interface, sources: dbus_interface_sources_map
@@ -206,9 +201,6 @@ systemd_service_config_data.set('bindir', bindir)
 
 systemd_service_files = []
 systemd_service_files += 'compositor/data/systemd/org.gnome.Kiosk@wayland.service.in'
-if mutter_have_x11
-        systemd_service_files += 'compositor/data/systemd/org.gnome.Kiosk@x11.service.in'
-endif
 
 foreach service_file : systemd_service_files
         configure_file(
@@ -222,9 +214,6 @@ endforeach
 targetconf = configuration_data()
 
 sessions_wants = ['org.gnome.Kiosk@wayland.service']
-if mutter_have_x11
-        sessions_wants += ['org.gnome.Kiosk@x11.service']
-endif
 targetconf.set('SUPPORTED_SESSIONS', ' '.join(sessions_wants))
 target = configure_file(
         input: 'compositor/data/systemd/org.gnome.Kiosk.target.in',

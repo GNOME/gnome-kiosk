@@ -4,7 +4,6 @@
 
 #include "kiosk-input-source-group.h"
 #include "kiosk-input-engine-manager.h"
-#include "kiosk-x-keyboard-manager.h"
 
 typedef struct _KioskCompositor KioskCompositor;
 
@@ -19,7 +18,6 @@ G_DECLARE_FINAL_TYPE (KioskInputSourcesManager,
 
 KioskInputSourcesManager *kiosk_input_sources_manager_new (KioskCompositor *compositor);
 KioskInputEngineManager *kiosk_input_sources_manager_get_input_engine_manager (KioskInputSourcesManager *manager);
-KioskXKeyboardManager *kiosk_input_sources_manager_get_x_keyboard_manager (KioskInputSourcesManager *manager);
 
 void kiosk_input_sources_manager_clear_input_sources (KioskInputSourcesManager *self);
 gboolean kiosk_input_sources_manager_set_input_sources_from_locales (KioskInputSourcesManager *self,
