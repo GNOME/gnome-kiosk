@@ -30,10 +30,6 @@ i18n.merge_file(
         type: 'desktop'
 )
 
-if mutter_have_x11
-        subdir ('xsessions')
-endif
-
 subdir ('wayland-sessions')
 
 configure_file(

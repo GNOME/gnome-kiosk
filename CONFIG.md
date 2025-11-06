@@ -105,7 +105,7 @@ The following "*set*" keys are supported:
 Notes:
 
 The name of the monitor to use for `set-on-monitor` is from the output
-name as reported by `xrandr` on X11 or `wayland-info` on Wayland.
+name as reported by `wayland-info` on Wayland.
 
 Only a subset of window types are supported with `set-window-type`, namely:
  * 'desktop': This is intended for implementing desktop windows, usually a fullscreen window that can contain icons, menus, etc.

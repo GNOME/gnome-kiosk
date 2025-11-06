@@ -30,9 +30,7 @@ struct _KioskInputSourceGroup
         KioskCompositor          *compositor;
         KioskInputSourcesManager *input_sources_manager;
         KioskInputEngineManager  *input_engine_manager;
-#ifdef HAVE_X11
-        KioskXKeyboardManager    *x_keyboard_manager;
-#endif
+
         MetaDisplay              *display;
         MetaContext              *context;
         MetaBackend              *backend;
@@ -322,13 +320,6 @@ kiosk_input_source_group_activate (KioskInputSourceGroup *self)
         } else {
                 kiosk_input_engine_manager_activate_engine (self->input_engine_manager, NULL);
         }
-
-#ifdef HAVE_X11
-        if (self->x_keyboard_manager != NULL) {
-                keymap_already_set = kiosk_x_keyboard_manager_keymap_is_active (self->x_keyboard_manager, (const char * const *) self->layouts->pdata, (const char * const *) self->variants->pdata, self->options);
-                layout_group_already_locked = kiosk_x_keyboard_manager_layout_group_is_locked (self->x_keyboard_manager, self->layout_index);
-        }
-#endif
 
         if (!keymap_already_set) {
                 g_debug ("KioskInputSourceGroup: Setting keyboard mapping to [%s] (%s) [%s]",
@@ -638,9 +629,6 @@ kiosk_input_source_group_constructed (GObject *object)
         G_OBJECT_CLASS (kiosk_input_source_group_parent_class)->constructed (object);
 
         g_set_weak_pointer (&self->input_engine_manager, kiosk_input_sources_manager_get_input_engine_manager (self->input_sources_manager));
-#ifdef HAVE_X11
-        g_set_weak_pointer (&self->x_keyboard_manager, kiosk_input_sources_manager_get_x_keyboard_manager (self->input_sources_manager));
-#endif
         g_set_weak_pointer (&self->display, meta_plugin_get_display (META_PLUGIN (self->compositor)));
         g_set_weak_pointer (&self->context, meta_display_get_context (self->display));
         g_set_weak_pointer (&self->backend, meta_context_get_backend (self->context));
@@ -661,9 +649,6 @@ kiosk_input_source_group_dispose (GObject *object)
         g_clear_weak_pointer (&self->backend);
         g_clear_weak_pointer (&self->context);
         g_clear_weak_pointer (&self->display);
-#ifdef HAVE_X11
-        g_clear_weak_pointer (&self->x_keyboard_manager);
-#endif
         g_clear_weak_pointer (&self->input_engine_manager);
         g_clear_weak_pointer (&self->input_sources_manager);
 

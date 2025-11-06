@@ -3,8 +3,8 @@
 GNOME Kiosk provides a desktop environment suitable for fixed purpose, or
 single application deployments like wall displays and point-of-sale systems.
 
-It provides a very minimal wayland display server and compositor and Xorg
-compositor and window manager. It automatically starts applications fullscreen.
+It provides a very minimal wayland display server and compositor.
+It automatically starts applications fullscreen.
 
 Notably, GNOME Kiosk features no panels, dashes, or docks that could distract
 from the application using it as a platform.
@@ -16,8 +16,7 @@ full screen Mozilla Firefox window.
 
 The search appliance ships with three parts:
 
-1. A GNOME Display Manager session file that gets installed in
-   `/usr/share/xsessions` and `/usr/share/wayland-sessions`.
+1. A GNOME Display Manager session file that gets installed in `/usr/share/wayland-sessions`.
    This file is responsible for telling the display manager how to start the
    session. It informs the display manager to start GNOME Session in a special,
    custom mode, designed specifically for setting up the kiosk environment.
