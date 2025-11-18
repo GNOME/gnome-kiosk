@@ -133,6 +133,12 @@ dbus_proxies += {
         'interface': 'Presence',
 }
 
+dbus_proxies += {
+        'prefix': 'org.gnome',
+        'namespace': 'Kiosk',
+        'interface': 'ScreenSaver',
+}
+
 dbus_interface_sources_map = {}
 foreach dbus_proxy : dbus_proxies
         dbus_interface = dbus_proxy['prefix'] + '.' + dbus_proxy['interface']
@@ -255,6 +261,8 @@ compositor_sources = [
         'compositor/kiosk-monitor-constraint.h',
         'compositor/kiosk-screensaver.c',
         'compositor/kiosk-screensaver.h',
+        'compositor/kiosk-screensaver-service.c',
+        'compositor/kiosk-screensaver-service.h',
         'compositor/kiosk-screenshot.c',
         'compositor/kiosk-screenshot.h',
         'compositor/kiosk-service.c',

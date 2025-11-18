@@ -30,6 +30,7 @@
 #include "kiosk-shell-service.h"
 #include "kiosk-shell-introspect-service.h"
 #include "kiosk-shell-screenshot-service.h"
+#include "kiosk-screensaver-service.h"
 #include "kiosk-window-config.h"
 #include "kiosk-magnifier.h"
 #include "kiosk-brightness.h"
@@ -66,6 +67,7 @@ struct _KioskCompositor
         KioskMagnifier              *magnifier;
         KioskBrightness             *brightness;
         KioskSessionPresence        *session_presence;
+        KioskScreenSaverService     *screensaver_service;
         GSettings                   *interface_settings;
 
         /* private */
@@ -106,6 +108,7 @@ kiosk_compositor_dispose (GObject *object)
         g_clear_object (&self->shell_service);
         g_clear_object (&self->brightness);
         g_clear_object (&self->session_presence);
+        g_clear_object (&self->screensaver_service);
         g_clear_object (&self->interface_settings);
         g_clear_object (&self->service);
 
@@ -357,6 +360,8 @@ kiosk_compositor_start (MetaPlugin *plugin)
         kiosk_brightness_start (self->brightness, &error);
         self->session_presence = kiosk_session_presence_new (self);
         kiosk_session_presence_start (self->session_presence, &error);
+        self->screensaver_service = kiosk_screensaver_service_new (self);
+        kiosk_screensaver_service_start (self->screensaver_service, &error);
 
         if (error != NULL) {
                 g_debug ("KioskCompositor: Could not start D-Bus service: %s", error->message);
