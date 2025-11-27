@@ -116,6 +116,7 @@ The following "*set*" keys are supported:
  * `set-above` (boolean) - Whether the window should be placed on a layer above
  * `set-on-monitor` (string) - Place the window on the given monitor
  * `lock-on-monitor` (boolean) - Lock the window on the monitor
+ * `lock-on-monitor-area` (string) - Lock the window within a specific area on the monitor (format: "x,y WxH")
  * `set-window-type` (string) - Change the window type
 
 Notes:
@@ -136,6 +137,19 @@ specified by `set-on-monitor`.<br>
 The window will be hidden if the monitor is removed and shown again when the monitor
 is reconnected.
 
+The `lock-on-monitor-area` option constrains a window to stay within a specific
+rectangular area on the monitor specified by `set-on-monitor`.<br>
+This option only applies to windows that have `set-on-monitor` configured.<br>
+The window will be hidden if the monitor is removed and shown again when the monitor
+is reconnected, just like with `lock-on-monitor`.<br>
+The area is defined in the format "x,y WxH" where:
+
+ * `x,y` are the coordinates of the top-left corner of the area, relative to the monitor
+ * `W` is the width of the area
+ * `H` is the height of the area
+ * The coordinates of the areas are relative to the monitor's top-left corner
+ * Width and height must be positive values (> 0)
+
 ## Example
 
 ```
@@ -152,6 +166,13 @@ is reconnected.
   match-class=org.mozilla.*
   set-fullscreen=true
   set-on-monitor=eDP-1
+
+  # Lock a specific window within a 800x600 area starting at (100,100)
+  # on monitor "HDMI-1", relative to the monitor's location
+  [restricted-app]
+  match-class=RestrictedApp
+  set-on-monitor=HDMI-1
+  lock-on-monitor-area=100,100 800x600
 
   # Set the window type to match the window tag name for the supported types
   [desktop]
