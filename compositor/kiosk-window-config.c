@@ -784,6 +784,22 @@ kiosk_window_config_should_lock_window_on_monitor_area (KioskWindowConfig *self,
 }
 
 static gboolean
+kiosk_window_config_should_lock_window_on_area (KioskWindowConfig *self,
+                                                MetaWindow        *window,
+                                                MtkRectangle      *area)
+{
+        g_autofree gchar *area_string = NULL;
+
+        if (!kiosk_window_config_get_string_for_window (self,
+                                                        window,
+                                                        "lock-on-area",
+                                                        &area_string))
+                return FALSE;
+
+        return kiosk_window_config_parse_lock_area (area_string, area);
+}
+
+static gboolean
 kiosk_window_config_wants_window_type (KioskWindowConfig *self,
                                        MetaWindow        *window,
                                        MetaWindowType    *window_type)
@@ -1008,6 +1024,7 @@ kiosk_window_config_on_window_created (MetaDisplay *display,
         MtkRectangle lock_area;
         gboolean lock_on_monitor;
         gboolean lock_on_monitor_area;
+        gboolean lock_on_area;
 
         g_signal_connect (window,
                           "configure",
@@ -1046,6 +1063,19 @@ kiosk_window_config_on_window_created (MetaDisplay *display,
                          lock_area.x, lock_area.y,
                          lock_area.width, lock_area.height);
                 constraint = kiosk_area_constraint_new (self->compositor, &lock_area, FALSE);
+                g_hash_table_insert (self->locked_areas, window, constraint);
+                meta_window_add_external_constraint (window, META_EXTERNAL_CONSTRAINT (constraint));
+        }
+
+        lock_on_area = kiosk_window_config_should_lock_window_on_area (self, window, &lock_area);
+        if (lock_on_area) {
+                KioskAreaConstraint *constraint;
+
+                g_debug ("KioskWindowConfig: Window %s is locked on absolute area %d,%d %dx%d",
+                         meta_window_get_description (window),
+                         lock_area.x, lock_area.y,
+                         lock_area.width, lock_area.height);
+                constraint = kiosk_area_constraint_new (self->compositor, &lock_area, TRUE);
                 g_hash_table_insert (self->locked_areas, window, constraint);
                 meta_window_add_external_constraint (window, META_EXTERNAL_CONSTRAINT (constraint));
         }

@@ -117,6 +117,7 @@ The following "*set*" keys are supported:
  * `set-on-monitor` (string) - Place the window on the given monitor
  * `lock-on-monitor` (boolean) - Lock the window on the monitor
  * `lock-on-monitor-area` (string) - Lock the window within a specific area on the monitor (format: "x,y WxH")
+ * `lock-on-area` (string) - Lock the window within a specific area using absolute coordinates (format: "x,y WxH")
  * `set-window-type` (string) - Change the window type
 
 Notes:
@@ -150,6 +151,17 @@ The area is defined in the format "x,y WxH" where:
  * The coordinates of the areas are relative to the monitor's top-left corner
  * Width and height must be positive values (> 0)
 
+The `lock-on-area` option constrains a window to stay within a specific rectangular
+area using absolute screen coordinates.<br>
+Unlike `lock-on-monitor-area`, this option does not require `set-on-monitor` and the
+window will not be hidden when monitors are added or removed.<br>
+The area is defined in the format "x,y WxH" where:
+
+ * `x,y` are the absolute coordinates of the top-left corner of the area
+ * `W` is the width of the area
+ * `H` is the height of the area
+ * Width and height must be positive values (> 0)
+
 ## Example
 
 ```
@@ -173,6 +185,12 @@ The area is defined in the format "x,y WxH" where:
   match-class=RestrictedApp
   set-on-monitor=HDMI-1
   lock-on-monitor-area=100,100 800x600
+
+  # Lock a window within a 640x480 area at absolute position (200,150)
+  # This does not depend on any specific monitor
+  [fixed-position-app]
+  match-class=FixedApp
+  lock-on-area=200,150 640x480
 
   # Set the window type to match the window tag name for the supported types
   [desktop]
