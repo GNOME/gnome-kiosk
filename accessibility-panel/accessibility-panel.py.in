@@ -122,6 +122,13 @@ class AccessibilityPanel(Gtk.ApplicationWindow):
         # Define accessibility features with their properties
         features = [
             {
+                'label': _('Enable Screen Magnifier'),
+                'description': _('Zoom in on the screen'),
+                'schema': 'a11y_apps',
+                'key': 'screen-magnifier-enabled',
+                'name': 'screen_magnifier'
+            },
+            {
                 'label': _('Enable Screen Reader'),
                 'description': _('Announces screen content and controls'),
                 'schema': 'a11y_apps',

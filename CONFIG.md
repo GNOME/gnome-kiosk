@@ -53,6 +53,21 @@ gsettings set org.gnome.desktop.a11y.keyboard bouncekeys-enable true
 ```sh
 gsettings set org.gnome.desktop.a11y.keyboard mousekeys-enable true
 ```
+
+## Screen Magnifier
+
+Enable screen magnification:
+
+```sh
+gsettings set org.gnome.desktop.a11y.applications screen-magnifier-enabled true
+```
+
+The magnification factor can be adjusted with:
+
+```sh
+gsettings set org.gnome.desktop.a11y.magnifier mag-factor 2.0
+```
+
 # Configuration file
 
 GNOME Kiosk takes a configuration file to specify the windows configuration at start-up.

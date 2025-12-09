@@ -16,6 +16,7 @@
 #include <meta/util.h>
 #include <meta/meta-window-config.h>
 #include <meta/meta-window-group.h>
+#include <meta/meta-cursor-tracker.h>
 
 #include <systemd/sd-daemon.h>
 
@@ -30,6 +31,7 @@
 #include "kiosk-shell-introspect-service.h"
 #include "kiosk-shell-screenshot-service.h"
 #include "kiosk-window-config.h"
+#include "kiosk-magnifier.h"
 
 #include "org.gnome.DisplayManager.Manager.h"
 
@@ -58,6 +60,7 @@ struct _KioskCompositor
         KioskShellScreenshotService *screenshot_service;
         KioskWindowConfig           *kiosk_window_config;
         KioskShellService           *shell_service;
+        KioskMagnifier              *magnifier;
         GSettings                   *interface_settings;
 };
 
@@ -89,6 +92,7 @@ kiosk_compositor_dispose (GObject *object)
         g_clear_object (&self->app_system);
         g_clear_object (&self->tracker);
         g_clear_object (&self->kiosk_window_config);
+        g_clear_object (&self->magnifier);
         g_clear_object (&self->introspect_service);
         g_clear_object (&self->screenshot_service);
         g_clear_object (&self->shell_service);
@@ -273,6 +277,7 @@ kiosk_compositor_start (MetaPlugin *plugin)
         self->app_system = kiosk_app_system_new (self);
         self->tracker = kiosk_window_tracker_new (self, self->app_system);
         self->kiosk_window_config = kiosk_window_config_new (self);
+        self->magnifier = kiosk_magnifier_new (self);
         self->introspect_service = kiosk_shell_introspect_service_new (self);
         kiosk_shell_introspect_service_start (self->introspect_service, &error);
         self->screenshot_service = kiosk_shell_screenshot_service_new (self);
