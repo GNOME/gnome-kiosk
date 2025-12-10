@@ -123,36 +123,9 @@ set_background_color_from_settings (KioskBackgrounds *self,
 }
 
 static void
-on_background_image_loaded (KioskBackgrounds    *self,
-                            MetaBackgroundImage *background_image)
-{
-        MetaBackground *background;
-        GDesktopBackgroundStyle background_style;
-        GFile *picture_file = NULL;
-
-        g_signal_handlers_disconnect_by_func (G_OBJECT (background_image),
-                                              on_background_image_loaded,
-                                              self);
-
-        background = g_object_get_data (G_OBJECT (background_image), "kiosk-background");
-
-        picture_file = g_object_get_data (G_OBJECT (background), "picture-file");
-        background_style = g_settings_get_enum (self->settings, KIOSK_BACKGROUNDS_PICTURE_OPTIONS_SETTING);
-
-        meta_background_set_file (background, picture_file, background_style);
-        set_background_color_from_settings (self, background);
-
-        g_object_set_data (G_OBJECT (background), "picture-file", NULL);
-
-        background = NULL;
-        g_object_set_data (G_OBJECT (background_image), "kiosk-background", NULL);
-
-        g_object_unref (background_image);
-}
-
-static void
 set_background_file_from_settings (KioskBackgrounds *self,
-                                   MetaBackground   *background)
+                                   MetaBackground   *background,
+                                   GDesktopBackgroundStyle background_style)
 {
         g_autofree char *uri = NULL;
         g_autoptr (GFile) picture_file = NULL;
@@ -160,33 +133,7 @@ set_background_file_from_settings (KioskBackgrounds *self,
 
         uri = g_settings_get_string (self->settings, KIOSK_BACKGROUNDS_PICTURE_URI_SETTING);
         picture_file = g_file_new_for_commandline_arg (uri);
-
-        /* We explicitly prime the file in the cache so we can defer setting the background color
-         * until the image is fully loaded and avoid flicker at startup.
-         */
-        background_image = meta_background_image_cache_load (self->image_cache, picture_file);
-        g_object_set_data_full (G_OBJECT (background_image),
-                                "kiosk-background",
-                                g_object_ref (background),
-                                g_object_unref);
-        g_object_set_data_full (G_OBJECT (background),
-                                "picture-file",
-                                g_steal_pointer (&picture_file),
-                                g_object_unref);
-
-        if (meta_background_image_is_loaded (background_image)) {
-                kiosk_gobject_utils_queue_immediate_callback (G_OBJECT (self),
-                                                              "[kiosk-backgrounds] on_background_image_loaded",
-                                                              self->cancellable,
-                                                              KIOSK_OBJECT_CALLBACK (on_background_image_loaded),
-                                                              background_image);
-        } else {
-                g_signal_connect_object (G_OBJECT (background_image),
-                                         "loaded",
-                                         G_CALLBACK (on_background_image_loaded),
-                                         self,
-                                         G_CONNECT_SWAPPED);
-        }
+        meta_background_set_file (background, picture_file, background_style);
 }
 
 static void
@@ -207,7 +154,7 @@ create_background_for_monitor (KioskBackgrounds *self,
         if (background_style == G_DESKTOP_BACKGROUND_STYLE_NONE) {
                 set_background_color_from_settings (self, background);
         } else {
-                set_background_file_from_settings (self, background);
+                set_background_file_from_settings (self, background, background_style);
         }
 
         background_actor = meta_background_actor_new (self->display, monitor_index);
