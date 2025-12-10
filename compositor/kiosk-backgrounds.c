@@ -123,9 +123,9 @@ set_background_color_from_settings (KioskBackgrounds *self,
 }
 
 static void
-set_background_file_from_settings (KioskBackgrounds *self,
-                                   MetaBackground   *background,
-                                   GDesktopBackgroundStyle background_style)
+set_background_file_from_settings (KioskBackgrounds        *self,
+                                   MetaBackground          *background,
+                                   GDesktopBackgroundStyle  background_style)
 {
         g_autofree char *uri = NULL;
         g_autoptr (GFile) picture_file = NULL;
