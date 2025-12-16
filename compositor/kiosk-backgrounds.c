@@ -129,7 +129,6 @@ set_background_file_from_settings (KioskBackgrounds        *self,
 {
         g_autofree char *uri = NULL;
         g_autoptr (GFile) picture_file = NULL;
-        MetaBackgroundImage *background_image;
 
         uri = g_settings_get_string (self->settings, KIOSK_BACKGROUNDS_PICTURE_URI_SETTING);
         picture_file = g_file_new_for_commandline_arg (uri);
