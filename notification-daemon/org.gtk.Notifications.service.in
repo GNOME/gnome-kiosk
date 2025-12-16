@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=org.gtk.Notifications
+Exec=@bindir@/gnome-service-client --tag=gnome-kiosk-notification @libexecdir@/gnome-kiosk-notification-daemon
+SystemdService=gnome-kiosk-notification-daemon.service

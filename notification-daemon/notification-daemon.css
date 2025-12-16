@@ -1,0 +1,66 @@
+/* Parent container window */
+.notification-container {
+    background: transparent;
+}
+
+/* Individual notification widget */
+.notification-widget {
+    background: linear-gradient(160deg, #1e1e2e 0%, #181825 100%);
+    border-radius: 16px;
+    border: 1px solid rgba(203, 166, 247, 0.15);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4),
+                0 0 0 1px rgba(0, 0, 0, 0.2);
+    padding: 14px 16px;
+}
+
+.notification-app-name {
+    font-size: 10px;
+    font-weight: 600;
+    color: #6c7086;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.notification-icon {
+    color: #cba6f7;
+}
+
+.notification-summary {
+    font-size: 14px;
+    font-weight: 700;
+    color: #cdd6f4;
+    letter-spacing: 0.2px;
+}
+
+.notification-body {
+    font-size: 12px;
+    color: #a6adc8;
+    line-height: 1.5;
+}
+
+.notification-close {
+    color: #6c7086;
+    min-width: 22px;
+    min-height: 22px;
+}
+
+.notification-close:hover {
+    color: #f38ba8;
+    background: rgba(243, 139, 168, 0.1);
+}
+
+.notification-action {
+    background: rgba(137, 180, 250, 0.1);
+    color: #89b4fa;
+    border: 1px solid rgba(137, 180, 250, 0.25);
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+.notification-action:hover {
+    background: rgba(137, 180, 250, 0.2);
+    border-color: #89b4fa;
+}

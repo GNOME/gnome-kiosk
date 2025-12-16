@@ -1,0 +1,530 @@
+#!/usr/bin/env python3
+"""
+GNOME Kiosk Notification Daemon
+A simple notification daemon implementing both org.freedesktop.Notifications
+and org.gtk.Notifications interfaces using GTK4 and libadwaita for the UI.
+"""
+
+import gi
+gi.require_version('Gtk', '4.0')
+gi.require_version('Adw', '1')
+gi.require_version('Gdk', '4.0')
+
+from gi.repository import Gtk, Adw, GLib, Gio, Gdk, Pango
+import dbus
+import dbus.service
+import dbus.mainloop.glib
+import gettext
+import locale
+
+# Set up internationalization
+GETTEXT_PACKAGE = '@GETTEXT_PACKAGE@'
+LOCALEDIR = '@LOCALEDIR@'
+
+try:
+    locale.bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR)
+    locale.textdomain(GETTEXT_PACKAGE)
+    gettext.bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR)
+    gettext.textdomain(GETTEXT_PACKAGE)
+except AttributeError:
+    # Python built without locale support
+    pass
+
+# Translation function
+_ = gettext.gettext
+
+# Close reasons for org.freedesktop.Notifications
+CLOSE_REASON_EXPIRED = 1
+CLOSE_REASON_DISMISSED = 2
+CLOSE_REASON_CLOSED = 3
+CLOSE_REASON_UNDEFINED = 4
+
+DEFAULT_TIMEOUT = 5000
+
+# Priority to timeout mapping for org.gtk.Notifications (ms)
+PRIORITY_TIMEOUTS = {
+    'low': 3000,
+    'normal': 5000,
+    'high': 8000,
+    'urgent': 0,  # No auto-dismiss for urgent
+}
+
+CSS_FILE = '@DATADIR@/@PACKAGE@/notification-daemon.css'
+
+
+class NotificationWidget(Gtk.Box):
+    """Base GTK4 widget for displaying a notification."""
+
+    def __init__(self, app_name, icon_name, title, body, buttons, timeout):
+        """
+        Create a notification widget.
+
+        Args:
+            app_name: Application name to display
+            icon_name: Icon name (or None)
+            title: Notification title/summary
+            body: Notification body text
+            buttons: List of (action_id, label) tuples
+            timeout: Auto-close timeout in ms (0 = no timeout)
+        """
+        super().__init__(
+            orientation=Gtk.Orientation.VERTICAL,
+            spacing=8,
+            css_classes=['notification-widget'],
+            accessible_role=Gtk.AccessibleRole.ALERT
+        )
+
+        self.timeout_id = None
+
+        # Header with icon, app name, and close button
+        header_box = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            spacing=8
+        )
+
+        if icon_name:
+            icon = Gtk.Image(
+                pixel_size=16,
+                css_classes=['notification-icon']
+            )
+            icon.set_from_icon_name(icon_name)
+            header_box.append(icon)
+
+        app_label = Gtk.Label(
+            label=app_name if app_name else "Notification",
+            hexpand=True,
+            halign=Gtk.Align.START,
+            css_classes=['notification-app-name']
+        )
+        header_box.append(app_label)
+
+        close_button = Gtk.Button(
+            icon_name="window-close-symbolic",
+            halign=Gtk.Align.END,
+            tooltip_text=_("Close"),
+            css_classes=['flat', 'circular', 'notification-close']
+        )
+        close_button.update_property(
+            [Gtk.AccessibleProperty.LABEL],
+            [_("Close")]
+        )
+        close_button.connect('clicked', self._on_close_clicked)
+        header_box.append(close_button)
+
+        self.append(header_box)
+
+        # Title/summary
+        if title:
+            title_label = Gtk.Label(
+                label=title,
+                halign=Gtk.Align.START,
+                css_classes=['notification-summary']
+            )
+            self.append(title_label)
+
+        # Body
+        if body:
+            body_label = Gtk.Label(
+                label=body,
+                halign=Gtk.Align.START,
+                wrap=True,
+                wrap_mode=Pango.WrapMode.WORD_CHAR,
+                max_width_chars=80,
+                css_classes=['notification-body']
+            )
+            self.append(body_label)
+
+        # Action buttons
+        if buttons:
+            buttons_box = Gtk.Box(
+                orientation=Gtk.Orientation.HORIZONTAL,
+                spacing=5,
+                margin_top=5,
+                halign=Gtk.Align.END
+            )
+
+            for action_id, label in buttons:
+                button = Gtk.Button(
+                    label=label,
+                    css_classes=['notification-action']
+                )
+                button.connect('clicked', self._on_action_clicked, action_id)
+                buttons_box.append(button)
+
+            self.append(buttons_box)
+
+        # Setup timeout for auto-close
+        if timeout > 0:
+            self.timeout_id = GLib.timeout_add(timeout, self._on_timeout)
+
+    def _on_close_clicked(self, button):
+        """Handle close button click."""
+        self._do_close(user_dismissed=True)
+
+    def _on_action_clicked(self, button, action_id):
+        """Handle action button click."""
+        self._do_action(action_id)
+        self._do_close(user_dismissed=True)
+
+    def _on_timeout(self):
+        """Handle notification timeout."""
+        self._do_close(user_dismissed=False)
+        return False
+
+    def _cancel_timeout(self):
+        """Cancel the auto-close timeout."""
+        if self.timeout_id:
+            GLib.source_remove(self.timeout_id)
+            self.timeout_id = None
+
+    def _do_close(self, user_dismissed):
+        """Close this notification. Override in subclasses."""
+        self._cancel_timeout()
+
+    def _do_action(self, action_id):
+        """Handle action invocation. Override in subclasses."""
+        pass
+
+    def close_by_request(self):
+        """Close when requested via D-Bus."""
+        self._cancel_timeout()
+        self._do_close(user_dismissed=False)
+
+
+class FdoNotificationWidget(NotificationWidget):
+    """Widget for org.freedesktop.Notifications."""
+
+    def __init__(self, daemon, notification_id, app_name, app_icon, summary, body, actions, timeout):
+        # Convert actions from [key, label, key, label, ...] to [(key, label), ...]
+        buttons = []
+        if actions and len(actions) >= 2:
+            for i in range(0, len(actions) - 1, 2):
+                buttons.append((actions[i], actions[i + 1]))
+
+        # Handle default timeout
+        effective_timeout = timeout if timeout >= 0 else DEFAULT_TIMEOUT
+
+        super().__init__(app_name, app_icon, summary, body, buttons, effective_timeout)
+
+        self.daemon = daemon
+        self.notification_id = notification_id
+
+    def _do_close(self, user_dismissed):
+        """Close with appropriate reason code."""
+        self._cancel_timeout()
+        if user_dismissed:
+            reason = CLOSE_REASON_DISMISSED
+        else:
+            reason = CLOSE_REASON_EXPIRED
+        self.daemon.notification_closed(self.notification_id, reason)
+
+    def _do_action(self, action_id):
+        """Emit ActionInvoked signal."""
+        self.daemon.emit_action_invoked(self.notification_id, action_id)
+
+    def close_by_request(self):
+        """Close when requested via D-Bus CloseNotification."""
+        self._cancel_timeout()
+        self.daemon.notification_closed(self.notification_id, CLOSE_REASON_CLOSED)
+
+
+class GtkNotificationWidget(NotificationWidget):
+    """Widget for org.gtk.Notifications."""
+
+    def __init__(self, daemon, app_id, notification_id, title, body, icon, buttons_data, timeout):
+        # Derive app name from app_id
+        app_name = app_id.split('.')[-1].replace('-', ' ').title() if app_id else "Notification"
+
+        # Convert buttons from [{label, action}, ...] to [(action, label), ...]
+        buttons = []
+        if buttons_data:
+            for btn in buttons_data:
+                buttons.append((btn.get('action', ''), btn.get('label', '')))
+
+        super().__init__(app_name, icon, title, body, buttons, timeout)
+
+        self.daemon = daemon
+        self.app_id = app_id
+        self.notification_id = notification_id
+
+    def _do_close(self, user_dismissed):
+        """Close notification."""
+        self._cancel_timeout()
+        self.daemon.notification_closed(self.app_id, self.notification_id)
+
+    def _do_action(self, action_id):
+        """Activate action on the application."""
+        self.daemon.activate_action(self.app_id, self.notification_id, action_id)
+
+
+class NotificationContainer(Gtk.Window):
+    """Parent window that contains all notification widgets."""
+
+    def __init__(self):
+        super().__init__()
+
+        self.set_decorated(False)
+        self.set_resizable(False)
+        self.set_name("gnome-kiosk-notification")
+        self.set_title("gnome-kiosk-notification")
+        self.add_css_class('notification-container')
+
+        self.notifications_box = Gtk.Box(
+            orientation=Gtk.Orientation.VERTICAL,
+            spacing=5,
+            margin_top=5,
+            margin_bottom=5,
+            margin_start=5,
+            margin_end=5
+        )
+
+        self.set_child(self.notifications_box)
+
+    def add_notification(self, widget):
+        """Add a notification widget to the container."""
+        self.notifications_box.append(widget)
+        self.present()
+
+    def remove_notification(self, widget):
+        """Remove a notification widget from the container."""
+        self.notifications_box.remove(widget)
+
+        # Hide window if no more notifications
+        if not self._has_notifications():
+            self.set_visible(False)
+
+    def _has_notifications(self):
+        """Check if there are any notifications."""
+        child = self.notifications_box.get_first_child()
+        return child is not None
+
+
+class FdoNotificationDaemon(dbus.service.Object):
+    """D-Bus service implementing org.freedesktop.Notifications."""
+
+    def __init__(self, bus, container):
+        self.next_id = 1
+        self.notifications = {}  # id -> FdoNotificationWidget
+        self.container = container
+
+        bus_name = dbus.service.BusName('org.freedesktop.Notifications', bus)
+        dbus.service.Object.__init__(self, bus_name, '/org/freedesktop/Notifications')
+
+    @dbus.service.method('org.freedesktop.Notifications',
+                         in_signature='susssasa{sv}i', out_signature='u')
+    def Notify(self, app_name, replaces_id, app_icon, summary, body, actions, hints, expire_timeout):
+        """Show a notification."""
+        # Determine notification ID
+        if replaces_id > 0 and replaces_id in self.notifications:
+            old_widget = self.notifications[replaces_id]
+            self.container.remove_notification(old_widget)
+            del self.notifications[replaces_id]
+            notification_id = replaces_id
+        else:
+            notification_id = self.next_id
+            self.next_id += 1
+
+        widget = FdoNotificationWidget(
+            self, notification_id,
+            str(app_name), str(app_icon), str(summary), str(body),
+            list(actions), int(expire_timeout)
+        )
+
+        self.notifications[notification_id] = widget
+        self.container.add_notification(widget)
+
+        print(f"Notification #{notification_id}: {summary}")
+        return notification_id
+
+    @dbus.service.method('org.freedesktop.Notifications',
+                         in_signature='u', out_signature='')
+    def CloseNotification(self, id):
+        """Close a notification by ID."""
+        if id in self.notifications:
+            self.notifications[id].close_by_request()
+
+    @dbus.service.method('org.freedesktop.Notifications',
+                         in_signature='', out_signature='as')
+    def GetCapabilities(self):
+        """Return supported capabilities."""
+        return ['body', 'actions', 'icon-static', 'persistence']
+
+    @dbus.service.method('org.freedesktop.Notifications',
+                         in_signature='', out_signature='ssss')
+    def GetServerInformation(self):
+        """Return server information."""
+        return ('GNOME Kiosk Notification Daemon', 'GNOME', '1.0', '1.2')
+
+    @dbus.service.signal('org.freedesktop.Notifications', signature='uu')
+    def NotificationClosed(self, id, reason):
+        """Signal emitted when a notification is closed."""
+        pass
+
+    @dbus.service.signal('org.freedesktop.Notifications', signature='us')
+    def ActionInvoked(self, id, action_key):
+        """Signal emitted when an action is invoked."""
+        pass
+
+    @dbus.service.signal('org.freedesktop.Notifications', signature='us')
+    def ActivationToken(self, id, activation_token):
+        """Signal emitted with activation token."""
+        pass
+
+    def notification_closed(self, notification_id, reason):
+        """Handle notification closed."""
+        if notification_id in self.notifications:
+            widget = self.notifications[notification_id]
+            self.container.remove_notification(widget)
+            del self.notifications[notification_id]
+        self.NotificationClosed(notification_id, reason)
+
+    def emit_action_invoked(self, notification_id, action_key):
+        """Emit ActionInvoked signal."""
+        self.ActionInvoked(notification_id, action_key)
+
+
+class GtkNotificationDaemon(dbus.service.Object):
+    """D-Bus service implementing org.gtk.Notifications."""
+
+    def __init__(self, bus, container):
+        self.notifications = {}  # (app_id, notification_id) -> GtkNotificationWidget
+        self.container = container
+
+        bus_name = dbus.service.BusName('org.gtk.Notifications', bus)
+        dbus.service.Object.__init__(self, bus_name, '/org/gtk/Notifications')
+
+    @dbus.service.method('org.gtk.Notifications',
+                         in_signature='ssa{sv}', out_signature='')
+    def AddNotification(self, app_id, notification_id, notification):
+        """Add or replace a notification."""
+        key = (str(app_id), str(notification_id))
+
+        # Remove existing notification if present
+        if key in self.notifications:
+            old_widget = self.notifications[key]
+            self.container.remove_notification(old_widget)
+            del self.notifications[key]
+
+        # Extract notification properties
+        title = str(notification.get('title', ''))
+        body = str(notification.get('body', ''))
+
+        # Handle icon (can be string or serialized GIcon)
+        icon = None
+        if 'icon' in notification:
+            icon_variant = notification['icon']
+            if isinstance(icon_variant, str):
+                icon = icon_variant
+            elif hasattr(icon_variant, '__iter__') and len(icon_variant) >= 2:
+                icon_type = icon_variant[0] if len(icon_variant) > 0 else None
+                if icon_type == 'themed':
+                    names = icon_variant[1] if len(icon_variant) > 1 else []
+                    if names:
+                        icon = names[0] if isinstance(names, (list, tuple)) else str(names)
+
+        # Handle priority -> timeout
+        priority = str(notification.get('priority', 'normal'))
+        timeout = PRIORITY_TIMEOUTS.get(priority, DEFAULT_TIMEOUT)
+
+        # Handle buttons
+        buttons = []
+        if 'buttons' in notification:
+            for btn in notification['buttons']:
+                buttons.append({
+                    'label': str(btn.get('label', '')),
+                    'action': str(btn.get('action', '')),
+                })
+
+        widget = GtkNotificationWidget(
+            self, str(app_id), str(notification_id),
+            title, body, icon, buttons, timeout
+        )
+
+        self.notifications[key] = widget
+        self.container.add_notification(widget)
+
+        print(f"GTK Notification [{app_id}:{notification_id}]: {title}")
+
+    @dbus.service.method('org.gtk.Notifications',
+                         in_signature='ss', out_signature='')
+    def RemoveNotification(self, app_id, notification_id):
+        """Remove a notification."""
+        key = (str(app_id), str(notification_id))
+        if key in self.notifications:
+            self.notifications[key].close_by_request()
+
+    def notification_closed(self, app_id, notification_id):
+        """Handle notification closed."""
+        key = (app_id, notification_id)
+        if key in self.notifications:
+            widget = self.notifications[key]
+            self.container.remove_notification(widget)
+            del self.notifications[key]
+
+    def activate_action(self, app_id, notification_id, action):
+        """Activate an action on the application."""
+        print(f"GTK Action '{action}' invoked for [{app_id}:{notification_id}]")
+
+
+class NotificationApp(Adw.Application):
+    """GTK4 Application for the notification daemon."""
+
+    def __init__(self):
+        super().__init__(
+            application_id='@NOTIFICATION_DAEMON_APP_ID@',
+            flags=Gio.ApplicationFlags.FLAGS_NONE
+        )
+        self.container = None
+        self.fdo_daemon = None
+        self.gtk_daemon = None
+        self.css_provider = None
+
+    def do_startup(self):
+        Adw.Application.do_startup(self)
+
+        # Load CSS from file before creating any widgets
+        self._load_css()
+
+        # Create shared notification container
+        self.container = NotificationContainer()
+
+        # Setup D-Bus services - both share the same container
+        session_bus = dbus.SessionBus()
+        self.fdo_daemon = FdoNotificationDaemon(session_bus, self.container)
+        self.gtk_daemon = GtkNotificationDaemon(session_bus, self.container)
+
+        print("GNOME Kiosk Notification Daemon started")
+        print("Listening on org.freedesktop.Notifications and org.gtk.Notifications")
+
+        self.hold()
+
+    def _load_css(self):
+        """Load CSS stylesheet."""
+        self.css_provider = Gtk.CssProvider()
+        css_file = Gio.File.new_for_path(CSS_FILE)
+
+        try:
+            self.css_provider.load_from_file(css_file)
+        except GLib.Error as e:
+            print(f"Warning: Could not load CSS file {CSS_FILE}: {e.message}")
+            return
+
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(),
+            self.css_provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+
+    def do_activate(self):
+        pass
+
+
+def main():
+    dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+
+    app = NotificationApp()
+    return app.run(None)
+
+
+if __name__ == '__main__':
+    main()

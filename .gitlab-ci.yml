@@ -80,6 +80,7 @@ dist-kiosk:
         --wrap-mode nofallback
         -Daccessibility-panel=true
         -Dinput-selector=true
+        -Dnotification-daemon=true
         -Dbuildtype=debugoptimized
     - meson dist -C build --include-subprojects
   artifacts:

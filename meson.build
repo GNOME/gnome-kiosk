@@ -340,6 +340,10 @@ if get_option('accessibility-panel')
         subdir('accessibility-panel')
 endif
 
+if get_option('notification-daemon')
+        subdir('notification-daemon')
+endif
+
 gnome.post_install(
   gtk_update_icon_cache: true,
   glib_compile_schemas: true,
