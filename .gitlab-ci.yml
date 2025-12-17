@@ -77,6 +77,8 @@ dist-kiosk:
         --prefix /usr
         --werror
         --wrap-mode nofallback
+        -Daccessibility-panel=true
+        -Dinput-selector=true
         -Dbuildtype=debugoptimized
     - meson dist -C build --include-subprojects
   artifacts:
