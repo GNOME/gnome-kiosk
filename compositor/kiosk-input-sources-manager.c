@@ -1312,7 +1312,7 @@ kiosk_input_sources_manager_remove_key_bindings (KioskInputSourcesManager *self)
 static void
 kiosk_input_sources_manager_maybe_activate_higher_priority_input_engine (KioskInputSourcesManager *self)
 {
-        size_t i;
+        ssize_t i;
 
         /* It's possible the user has an input engine configured to be used, but it wasn't ready
          * before. If so, now that it's ready, we should activate it.
