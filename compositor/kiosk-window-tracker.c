@@ -206,7 +206,6 @@ get_app_from_window_wmclass (KioskWindowTracker *tracker,
 
 static KioskApp *
 get_app_from_id (KioskWindowTracker *tracker,
-                 MetaWindow         *window,
                  const char         *id)
 {
         KioskApp *app;
@@ -232,7 +231,7 @@ get_app_from_gapplication_id (KioskWindowTracker *tracker,
         if (!id)
                 return NULL;
 
-        return get_app_from_id (tracker, window, id);
+        return get_app_from_id (tracker, id);
 }
 
 static KioskApp *
@@ -245,7 +244,7 @@ get_app_from_sandboxed_app_id (KioskWindowTracker *tracker,
         if (!id)
                 return NULL;
 
-        return get_app_from_id (tracker, window, id);
+        return get_app_from_id (tracker, id);
 }
 
 static KioskApp *
