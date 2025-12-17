@@ -316,6 +316,11 @@ dconf_defaults = custom_target('gnomekiosk.dconf.compiled',
         install_dir: dconf_dir
 )
 
+# Install default window configuration
+install_data('window-config.ini',
+        install_dir: join_paths(datadir, meson.project_name())
+)
+
 if get_option('kiosk-script')
         subdir ('kiosk-script')
 endif
