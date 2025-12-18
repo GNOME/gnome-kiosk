@@ -589,10 +589,10 @@ kiosk_window_config_get_boolean_for_window (KioskWindowConfig *kiosk_window_conf
                                             const char        *key_name,
                                             gboolean          *value)
 {
-        g_auto (GStrv) sections;
+        g_auto (GStrv) sections = NULL;
         gsize length;
         gboolean key_found = FALSE;
-        int i;
+        gsize i;
 
         sections = g_key_file_get_groups (kiosk_window_config->config_key_file, &length);
         for (i = 0; i < length; i++) {
@@ -621,10 +621,10 @@ kiosk_window_config_get_string_for_window (KioskWindowConfig *kiosk_window_confi
                                            const char        *key_name,
                                            char             **value)
 {
-        g_auto (GStrv) sections;
+        g_auto (GStrv) sections = NULL;
         gsize length;
         gboolean key_found = FALSE;
-        int i;
+        gsize i;
 
         sections = g_key_file_get_groups (kiosk_window_config->config_key_file, &length);
         for (i = 0; i < length; i++) {
@@ -716,7 +716,7 @@ kiosk_window_config_wants_window_type (KioskWindowConfig *self,
                 { "dock",    META_WINDOW_DOCK         },
                 { "splash",  META_WINDOW_SPLASHSCREEN },
         };
-        int i;
+        long unsigned int i;
 
         if (!kiosk_window_config_get_string_for_window (self,
                                                         window,
@@ -741,9 +741,9 @@ kiosk_window_config_update_window (KioskWindowConfig *kiosk_window_config,
                                    MetaWindow        *window,
                                    MetaWindowConfig  *window_config)
 {
-        g_auto (GStrv) sections;
+        g_auto (GStrv) sections = NULL;
         gsize length;
-        int i;
+        gsize i;
 
         sections = g_key_file_get_groups (kiosk_window_config->config_key_file, &length);
         for (i = 0; i < length; i++) {
