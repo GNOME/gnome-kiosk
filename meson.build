@@ -7,6 +7,67 @@ add_project_arguments('-D_GNU_SOURCE',
 )
 
 c_compiler = meson.get_compiler('c')
+buildtype = get_option('buildtype')
+if buildtype != 'plain'
+  kiosk_c_args = [
+    '-fno-omit-frame-pointer',
+    '-mno-omit-leaf-frame-pointer',
+    '-fno-strict-aliasing',
+    '-Wpointer-arith',
+    '-Wmissing-declarations',
+    '-Wformat=2',
+    '-Wstrict-prototypes',
+    '-Wmissing-prototypes',
+    '-Wnested-externs',
+    '-Wold-style-definition',
+    '-Wundef',
+    '-Wunused',
+    '-Wcast-align',
+    '-Wmissing-noreturn',
+    '-Wmissing-format-attribute',
+    '-Wmissing-include-dirs',
+    '-Wlogical-op',
+    '-Wignored-qualifiers',
+    '-Werror=redundant-decls',
+    '-Werror=implicit',
+    '-Werror=nonnull',
+    '-Werror=init-self',
+    '-Werror=main',
+    '-Werror=missing-braces',
+    '-Werror=sequence-point',
+    '-Werror=return-type',
+    '-Werror=trigraphs',
+    '-Werror=array-bounds',
+    '-Werror=write-strings',
+    '-Werror=address',
+    '-Werror=int-to-pointer-cast',
+    '-Werror=pointer-to-int-cast',
+    '-Werror=empty-body',
+    '-Werror=write-strings',
+    '-Werror=strict-aliasing',
+    '-Wno-sign-compare',
+    '-Wno-cast-function-type',
+    '-Wno-unused-parameter',
+    '-Wno-missing-field-initializers',
+    '-Wno-type-limits',
+    '-Wshadow',
+    '-Wfloat-conversion',
+  ]
+
+  if get_option('debug')
+    kiosk_c_args += [
+      '-DG_ENABLE_DEBUG',
+    ]
+  else
+    kiosk_c_args += [
+      '-DG_DISABLE_ASSERT',
+      '-DG_DISABLE_CAST_CHECKS',
+    ]
+  endif
+
+  supported_kiosk_c_args = c_compiler.get_supported_arguments(kiosk_c_args)
+  add_project_arguments(supported_kiosk_c_args, language: 'c')
+endif
 
 gnome = import('gnome')
 i18n = import('i18n')

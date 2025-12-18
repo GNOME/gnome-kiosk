@@ -467,10 +467,10 @@ draw_cursor_image (KioskScreenshot *screenshot,
                 return;
 
         meta_cursor_tracker_get_pointer (tracker, &point, NULL);
-        x = point.x;
-        y = point.y;
+        x = (int) point.x;
+        y = (int) point.y;
 
-        if (!mtk_rectangle_contains_point (&area, point.x, point.y))
+        if (!mtk_rectangle_contains_point (&area, x, y))
                 return;
 
         meta_cursor_tracker_get_hot (tracker, &xhot, &yhot);
