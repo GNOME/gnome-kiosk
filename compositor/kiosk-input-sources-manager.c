@@ -443,7 +443,7 @@ sync_all_input_sources_to_dbus_service (KioskInputSourcesManager *self)
                 const char *backend_type;
                 const char *backend_id;
                 g_auto (GStrv) layouts = NULL;
-                size_t i;
+                size_t j;
 
                 input_engine_name = kiosk_input_source_group_get_input_engine (input_source_group);
 
@@ -469,13 +469,13 @@ sync_all_input_sources_to_dbus_service (KioskInputSourcesManager *self)
                 layouts = kiosk_input_source_group_get_layouts (input_source_group);
 
                 backend_type = "xkb";
-                for (i = 0; layouts[i] != NULL; i++) {
+                for (j = 0; layouts[j] != NULL; j++) {
                         char *object_path_name = NULL;
                         const char *short_name = NULL;
                         const char *full_name = NULL;
                         gboolean layout_info_found;
 
-                        backend_id = layouts[i];
+                        backend_id = layouts[j];
 
                         layout_info_found = gnome_xkb_info_get_layout_info (self->xkb_info,
                                                                             backend_id,
@@ -826,7 +826,7 @@ kiosk_input_sources_manager_add_input_engine (KioskInputSourcesManager *self,
 }
 
 
-gboolean
+static gboolean
 kiosk_input_sources_manager_set_input_sources_from_system_configuration (KioskInputSourcesManager *self)
 {
         g_autofree char *localed_name_owner = NULL;
