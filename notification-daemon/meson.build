@@ -18,6 +18,16 @@ notification_daemon_script = configure_file(
   install_mode: 'rwxr-xr-x'
 )
 
+# Notification send utility
+configure_file(
+  input: 'gnome-kiosk-notification-send.py.in',
+  output: 'gnome-kiosk-notification-send',
+  copy: true,
+  install: true,
+  install_dir: get_option('bindir'),
+  install_mode: 'rwxr-xr-x'
+)
+
 # Install CSS file
 install_data(
   'notification-daemon.css',
