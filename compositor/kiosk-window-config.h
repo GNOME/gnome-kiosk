@@ -5,6 +5,7 @@
 
 #include <meta/window.h>
 #include <meta/meta-window-config.h>
+#include <meta/meta-external-constraint.h>
 
 G_BEGIN_DECLS
 
