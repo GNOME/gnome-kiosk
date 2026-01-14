@@ -6,6 +6,7 @@
 #include "kiosk-compositor.h"
 #include "kiosk-window-config.h"
 #include "kiosk-monitor-constraint.h"
+#include "kiosk-area-constraint.h"
 
 #include <meta/display.h>
 #include <meta/meta-backend.h>

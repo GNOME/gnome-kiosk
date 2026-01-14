@@ -6,6 +6,7 @@
 #include <meta/window.h>
 #include <meta/meta-window-config.h>
 #include <meta/meta-external-constraint.h>
+#include <mtk/mtk-rectangle.h>
 
 G_BEGIN_DECLS
 
