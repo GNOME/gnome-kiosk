@@ -21,3 +21,9 @@ option('accessibility-panel',
   value: false,
   description: 'Build accessibility panel'
 )
+
+option('notification-daemon',
+  type: 'boolean',
+  value: false,
+  description: 'Build notification daemon'
+)

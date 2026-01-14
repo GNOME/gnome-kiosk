@@ -316,6 +316,11 @@ dconf_defaults = custom_target('gnomekiosk.dconf.compiled',
         install_dir: dconf_dir
 )
 
+# Install default window configuration
+install_data('window-config.ini',
+        install_dir: join_paths(datadir, meson.project_name())
+)
+
 if get_option('kiosk-script')
         subdir ('kiosk-script')
 endif
@@ -333,6 +338,10 @@ test('check-format', find_program('scripts/check-format.sh'))
 
 if get_option('accessibility-panel')
         subdir('accessibility-panel')
+endif
+
+if get_option('notification-daemon')
+        subdir('notification-daemon')
 endif
 
 gnome.post_install(

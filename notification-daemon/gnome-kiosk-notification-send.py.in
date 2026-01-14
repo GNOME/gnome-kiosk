@@ -1,0 +1,131 @@
+#!/usr/bin/env python3
+"""
+gnome-kiosk-notification-send - Send notifications via org.gtk.Notifications
+
+A simple utility to send notifications using GApplication/GNotification,
+which uses the org.gtk.Notifications D-Bus interface.
+"""
+
+import gi
+gi.require_version('Gtk', '4.0')
+gi.require_version('Gio', '2.0')
+
+from gi.repository import Gio, GLib
+import argparse
+import sys
+
+
+class NotificationSender(Gio.Application):
+    """Application that sends a notification and exits."""
+
+    def __init__(self, app_id, title, body, icon, priority, notification_id):
+        super().__init__(
+            application_id=app_id,
+            flags=Gio.ApplicationFlags.FLAGS_NONE
+        )
+        self.notif_title = title
+        self.notif_body = body
+        self.notif_icon = icon
+        self.notif_priority = priority
+        self.notif_id = notification_id
+
+    def do_activate(self):
+        """Send the notification when activated."""
+        notification = Gio.Notification.new(self.notif_title)
+
+        if self.notif_body:
+            notification.set_body(self.notif_body)
+
+        if self.notif_icon:
+            icon = Gio.ThemedIcon.new(self.notif_icon)
+            notification.set_icon(icon)
+
+        # Set priority
+        priority_map = {
+            'low': Gio.NotificationPriority.LOW,
+            'normal': Gio.NotificationPriority.NORMAL,
+            'high': Gio.NotificationPriority.HIGH,
+            'urgent': Gio.NotificationPriority.URGENT,
+        }
+        priority = priority_map.get(self.notif_priority, Gio.NotificationPriority.NORMAL)
+        notification.set_priority(priority)
+
+        # Send the notification
+        self.send_notification(self.notif_id, notification)
+
+        # Schedule exit after a short delay to ensure notification is sent
+        GLib.timeout_add(100, self._quit)
+
+    def _quit(self):
+        """Quit the application."""
+        self.quit()
+        return False
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Send notifications via org.gtk.Notifications',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog='''
+Examples:
+  %(prog)s "Hello World"
+  %(prog)s "Title" "This is the body text"
+  %(prog)s -i dialog-information "Info" "Something happened"
+  %(prog)s -p high "Alert" "Important message"
+  %(prog)s --app-id com.example.MyApp "Custom App" "Notification from custom app"
+'''
+    )
+
+    parser.add_argument(
+        'title',
+        help='Notification title'
+    )
+    parser.add_argument(
+        'body',
+        nargs='?',
+        default='',
+        help='Notification body text (optional)'
+    )
+    parser.add_argument(
+        '-i', '--icon',
+        default='',
+        help='Icon name (e.g., dialog-information, dialog-warning)'
+    )
+    parser.add_argument(
+        '-p', '--priority',
+        choices=['low', 'normal', 'high', 'urgent'],
+        default='normal',
+        help='Notification priority (default: normal)'
+    )
+    parser.add_argument(
+        '--app-id',
+        default='org.gnome.Kiosk.NotificationSend',
+        help='Application ID (default: org.gnome.Kiosk.NotificationSend)'
+    )
+    parser.add_argument(
+        '--notification-id',
+        default='notification',
+        help='Notification ID for replacing (default: notification)'
+    )
+
+    args = parser.parse_args()
+
+    # Validate app-id format
+    if '.' not in args.app_id:
+        print(f"Error: app-id must contain at least one dot (e.g., com.example.App)", file=sys.stderr)
+        sys.exit(1)
+
+    app = NotificationSender(
+        app_id=args.app_id,
+        title=args.title,
+        body=args.body,
+        icon=args.icon,
+        priority=args.priority,
+        notification_id=args.notification_id
+    )
+
+    return app.run(None)
+
+
+if __name__ == '__main__':
+    sys.exit(main())
