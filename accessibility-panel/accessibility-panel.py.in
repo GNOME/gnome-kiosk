@@ -56,6 +56,14 @@ class AccessibilitySettings:
         scale_factor = 1.25 if enabled else 1.0
         self.interface.set_double("text-scaling-factor", scale_factor)
 
+    def get_cursor_size(self):
+        """Get the current cursor size."""
+        return self.interface.get_int("cursor-size")
+
+    def set_cursor_size(self, size):
+        """Set the cursor size."""
+        self.interface.set_int("cursor-size", size)
+
 
 class AccessibilityPanel(Gtk.ApplicationWindow):
     """Main window for the accessibility panel."""
@@ -197,6 +205,10 @@ class AccessibilityPanel(Gtk.ApplicationWindow):
             # Store reference to toggle button (now directly returned from create functions)
             self.toggle_buttons[feature['name']] = toggle_button
 
+        # Add cursor size selector
+        cursor_size_row = self.create_cursor_size_row()
+        self.list_box.append(cursor_size_row)
+
     def create_bound_toggle_row_and_switch(self, label_text, description_text, schema_name, key):
         """Create a toggle row with direct GSettings binding.
 
@@ -337,6 +349,116 @@ class AccessibilityPanel(Gtk.ApplicationWindow):
         toggle_switch.handler_block_by_func(self.on_large_text_toggle_changed)
         toggle_switch.set_active(self.settings.get_large_text_enabled())
         toggle_switch.handler_unblock_by_func(self.on_large_text_toggle_changed)
+
+    def create_cursor_size_row(self):
+        """Create a row with cursor size dropdown selector."""
+        # Cursor size options: value -> label
+        cursor_sizes = [
+            (24, _("Small (24)")),
+            (32, _("Default (32)")),
+            (48, _("Large (48)")),
+            (64, _("Larger (64)")),
+            (96, _("Huge (96)")),
+        ]
+
+        # Create main row container
+        row = Gtk.ListBoxRow(activatable=False)
+
+        # Create horizontal box for row content
+        row_box = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            spacing=12,
+            margin_top=12,
+            margin_bottom=12,
+            margin_start=12,
+            margin_end=12
+        )
+
+        # Create vertical box for labels
+        label_box = Gtk.Box(
+            orientation=Gtk.Orientation.VERTICAL,
+            spacing=4,
+            hexpand=True
+        )
+
+        # Create main label
+        main_label = Gtk.Label(
+            label=_("Cursor Size"),
+            halign=Gtk.Align.START,
+            css_classes=["heading"]
+        )
+
+        # Create description label
+        desc_label = Gtk.Label(
+            label=_("Change the size of the mouse cursor"),
+            halign=Gtk.Align.START,
+            css_classes=["dim-label", "caption"],
+            wrap=True
+        )
+
+        label_box.append(main_label)
+        label_box.append(desc_label)
+
+        # Create dropdown for cursor size selection
+        # Build string list for dropdown
+        string_list = Gtk.StringList()
+        for size, label in cursor_sizes:
+            string_list.append(label)
+
+        dropdown = Gtk.DropDown(
+            model=string_list,
+            valign=Gtk.Align.CENTER
+        )
+
+        # Set initial selection based on current cursor size
+        current_size = self.settings.get_cursor_size()
+        selected_index = 1  # Default to index 1 (32)
+        for i, (size, label) in enumerate(cursor_sizes):
+            if size == current_size:
+                selected_index = i
+                break
+        dropdown.set_selected(selected_index)
+
+        # Store cursor sizes for use in callback
+        self.cursor_sizes = cursor_sizes
+
+        # Connect to selection change
+        dropdown.connect('notify::selected', self.on_cursor_size_changed)
+
+        # Store dropdown reference for external updates
+        self.cursor_size_dropdown = dropdown
+
+        # Cursor settings changes
+        self.settings.interface.connect('changed::cursor-size',
+                                        self.on_cursor_size_setting_changed)
+
+        # Add components to row
+        row_box.append(label_box)
+        row_box.append(dropdown)
+        row.set_child(row_box)
+
+        return row
+
+    def on_cursor_size_changed(self, dropdown, param):
+        """Handle cursor size dropdown selection change."""
+        selected_index = dropdown.get_selected()
+        if selected_index < len(self.cursor_sizes):
+            size, label = self.cursor_sizes[selected_index]
+            try:
+                self.settings.set_cursor_size(size)
+            except Exception as e:
+                print(_("Error setting cursor size: {}").format(e))
+
+    def on_cursor_size_setting_changed(self, settings, key):
+        """Handle cursor-size setting changes to update dropdown."""
+        current_size = self.settings.get_cursor_size()
+        for i, (size, label) in enumerate(self.cursor_sizes):
+            if size == current_size:
+                # Block signal to avoid loops
+                self.cursor_size_dropdown.handler_block_by_func(self.on_cursor_size_changed)
+                self.cursor_size_dropdown.set_selected(i)
+                self.cursor_size_dropdown.handler_unblock_by_func(self.on_cursor_size_changed)
+                break
 
 
 class AccessibilityApp(Gtk.Application):
