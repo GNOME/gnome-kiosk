@@ -592,3 +592,11 @@ kiosk_compositor_get_window_tracker (KioskCompositor *self)
 
         return KIOSK_WINDOW_TRACKER (self->tracker);
 }
+
+KioskWindowConfig *
+kiosk_compositor_get_window_config (KioskCompositor *self)
+{
+        g_return_val_if_fail (KIOSK_IS_COMPOSITOR (self), NULL);
+
+        return KIOSK_WINDOW_CONFIG (self->kiosk_window_config);
+}

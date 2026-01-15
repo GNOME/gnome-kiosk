@@ -8,6 +8,7 @@
 #include "kiosk-service.h"
 #include "kiosk-app-system.h"
 #include "kiosk-window-tracker.h"
+#include "kiosk-window-config.h"
 
 G_BEGIN_DECLS
 #define KIOSK_TYPE_COMPOSITOR (kiosk_compositor_get_type ())
@@ -21,5 +22,6 @@ KioskInputSourcesManager *kiosk_compositor_get_input_sources_manager (KioskCompo
 KioskService *kiosk_compositor_get_service (KioskCompositor *compositor);
 KioskAppSystem *kiosk_compositor_get_app_system (KioskCompositor *compositor);
 KioskWindowTracker *kiosk_compositor_get_window_tracker (KioskCompositor *compositor);
+KioskWindowConfig *kiosk_compositor_get_window_config (KioskCompositor *compositor);
 
 G_END_DECLS
