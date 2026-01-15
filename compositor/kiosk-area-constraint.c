@@ -23,6 +23,7 @@ struct _KioskAreaConstraint
         MetaMonitorManager *monitor_manager;
 
         MtkRectangle        area;
+        gboolean            is_absolute;
 };
 
 enum
@@ -30,6 +31,7 @@ enum
         PROP_0,
         PROP_COMPOSITOR,
         PROP_AREA,
+        PROP_IS_ABSOLUTE,
         N_PROPS
 };
 static GParamSpec *props[N_PROPS] = { NULL, };
@@ -84,6 +86,9 @@ kiosk_area_constraint_set_property (GObject      *object,
                 if (area)
                         self->area = *area;
                 break;
+        case PROP_IS_ABSOLUTE:
+                self->is_absolute = g_value_get_boolean (value);
+                break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id,
                                                    param_spec);
@@ -105,6 +110,9 @@ kiosk_area_constraint_get_property (GObject    *object,
                 break;
         case PROP_AREA:
                 g_value_set_boxed (value, &self->area);
+                break;
+        case PROP_IS_ABSOLUTE:
+                g_value_set_boolean (value, self->is_absolute);
                 break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id,
@@ -157,6 +165,16 @@ kiosk_area_constraint_class_init (KioskAreaConstraintClass *klass)
                                                | G_PARAM_STATIC_NICK
                                                | G_PARAM_STATIC_BLURB);
 
+        props[PROP_IS_ABSOLUTE] = g_param_spec_boolean ("is-absolute",
+                                                        NULL,
+                                                        NULL,
+                                                        FALSE,
+                                                        G_PARAM_CONSTRUCT_ONLY
+                                                        | G_PARAM_READWRITE
+                                                        | G_PARAM_STATIC_NAME
+                                                        | G_PARAM_STATIC_NICK
+                                                        | G_PARAM_STATIC_BLURB);
+
         g_object_class_install_properties (object_class, N_PROPS, props);
 }
 
@@ -205,6 +223,12 @@ kiosk_area_constraint_get_constraint_area (KioskAreaConstraint *self,
         int monitor_index;
         MtkRectangle monitor_geometry = { 0, };
 
+        /* For absolute areas, use the area directly */
+        if (self->is_absolute) {
+                *constraint_area = self->area;
+                return TRUE;
+        }
+
         /* For monitor-relative areas, convert to absolute coordinates */
         output_name = kiosk_window_config_lookup_window_output_name (self->config, window);
         if (!output_name) {
@@ -244,8 +268,9 @@ kiosk_area_constraint_constrain (MetaExternalConstraint     *constraint,
         if (!self->config)
                 return TRUE;
 
-        g_debug ("KioskAreaConstraint: Constraining window %s on relative area",
-                 meta_window_get_description (window));
+        g_debug ("KioskAreaConstraint: Constraining window %s on %s area",
+                 meta_window_get_description (window),
+                 self->is_absolute ? "absolute" : "monitor-relative");
 
         if (!kiosk_area_constraint_get_constraint_area (self, window, &constraint_area))
                 return TRUE;
@@ -267,10 +292,12 @@ kiosk_area_constraint_constrain (MetaExternalConstraint     *constraint,
 
 KioskAreaConstraint *
 kiosk_area_constraint_new (KioskCompositor *compositor,
-                           MtkRectangle    *area)
+                           MtkRectangle    *area,
+                           gboolean         is_absolute)
 {
         return g_object_new (KIOSK_TYPE_AREA_CONSTRAINT,
                              "compositor", compositor,
                              "area", area,
+                             "is-absolute", is_absolute,
                              NULL);
 }

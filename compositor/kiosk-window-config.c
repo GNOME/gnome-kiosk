@@ -1045,7 +1045,7 @@ kiosk_window_config_on_window_created (MetaDisplay *display,
                          meta_window_get_description (window), output_name,
                          lock_area.x, lock_area.y,
                          lock_area.width, lock_area.height);
-                constraint = kiosk_area_constraint_new (self->compositor, &lock_area);
+                constraint = kiosk_area_constraint_new (self->compositor, &lock_area, FALSE);
                 g_hash_table_insert (self->locked_areas, window, constraint);
                 meta_window_add_external_constraint (window, META_EXTERNAL_CONSTRAINT (constraint));
         }
