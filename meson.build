@@ -225,6 +225,7 @@ compositor_sources += 'compositor/kiosk-shell-introspect-service.c'
 compositor_sources += 'compositor/kiosk-shell-screenshot-service.c'
 compositor_sources += 'compositor/kiosk-window-config.c'
 compositor_sources += 'compositor/kiosk-screenshot.c'
+compositor_sources += 'compositor/kiosk-magnifier.c'
 
 compositor_sources += 'compositor/main.c'
 
