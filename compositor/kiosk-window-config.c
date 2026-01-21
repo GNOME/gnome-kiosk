@@ -5,11 +5,14 @@
 
 #include "kiosk-compositor.h"
 #include "kiosk-window-config.h"
+#include "kiosk-monitor-constraint.h"
+#include "kiosk-area-constraint.h"
 
 #include <meta/display.h>
 #include <meta/meta-backend.h>
 #include <meta/meta-context.h>
 #include <meta/meta-monitor-manager.h>
+#include <meta/meta-external-constraint.h>
 
 #include <glib-object.h>
 #include <glib.h>
@@ -26,17 +29,26 @@ typedef gpointer (*KioskWindowConfigGetKeyValue) (GKeyFile   *key_file,
 
 struct _KioskWindowConfig
 {
-        GObject          parent;
+        GObject             parent;
 
         /* Weak references */
-        KioskCompositor *compositor;
-        MetaDisplay     *display;
-        MetaContext     *context;
+        KioskCompositor    *compositor;
+        MetaDisplay        *display;
+        MetaContext        *context;
+        MetaBackend        *backend;
+        MetaMonitorManager *monitor_manager;
 
         /* Strong references */
-        GKeyFile        *config_key_file;
-        GFileMonitor    *config_file_monitor;
-        gchar           *user_config_file_path;
+        GKeyFile           *config_key_file;
+        GFileMonitor       *config_file_monitor;
+        gchar              *user_config_file_path;
+
+        /* <MetaWindow * window, const char *output_name> */
+        GHashTable         *windows_on_monitors;
+        /* <MetaWindow * window, KioskMonitorConstraint *> */
+        GHashTable         *locked_monitors;
+        /* <MetaWindow * window, KioskAreaConstraint *> */
+        GHashTable         *locked_areas;
 };
 
 enum
@@ -46,6 +58,13 @@ enum
         N_PROPS
 };
 static GParamSpec *props[N_PROPS] = { NULL, };
+
+typedef enum
+{
+        MONITOR_NOT_SET = 0,
+        MONITOR_NOT_FOUND,
+        MONITOR_FOUND,
+} KioskWindowConfigMonitor;
 
 G_DEFINE_TYPE (KioskWindowConfig, kiosk_window_config, G_TYPE_OBJECT)
 
@@ -57,6 +76,15 @@ static void
 kiosk_window_config_update_window (KioskWindowConfig *kiosk_window_config,
                                    MetaWindow        *window,
                                    MetaWindowConfig  *window_config);
+
+static void
+kiosk_window_config_on_window_created (MetaDisplay *display,
+                                       MetaWindow  *window,
+                                       gpointer     user_data);
+
+static void
+kiosk_window_config_on_monitors_changed (MetaMonitorManager *monitor_manager,
+                                         gpointer            user_data);
 
 static gboolean
 kiosk_window_config_try_load_file (KioskWindowConfig *kiosk_window_config,
@@ -153,62 +181,6 @@ kiosk_window_config_on_file_changed (GFileMonitor      *monitor,
 }
 
 static void
-kiosk_window_config_on_window_configure (MetaWindow       *window,
-                                         MetaWindowConfig *window_config,
-                                         gpointer          user_data)
-{
-        KioskWindowConfig *self = KIOSK_WINDOW_CONFIG (user_data);
-        gboolean fullscreen;
-
-        if (!meta_window_config_get_is_initial (window_config)) {
-                g_debug ("KioskWindowConfig: Ignoring configure for window: %s",
-                         meta_window_get_description (window));
-                return;
-        }
-
-        g_debug ("KioskWindowConfig: configure window: %s", meta_window_get_description (window));
-
-        fullscreen = kiosk_window_config_wants_window_fullscreen (self, window);
-        meta_window_config_set_is_fullscreen (window_config, fullscreen);
-        kiosk_window_config_update_window (self,
-                                           window,
-                                           window_config);
-}
-
-static void
-kiosk_window_config_on_window_unmanaged (MetaWindow *window,
-                                         gpointer    user_data)
-{
-        KioskWindowConfig *self = KIOSK_WINDOW_CONFIG (user_data);
-
-        g_signal_handlers_disconnect_by_func (window,
-                                              G_CALLBACK (kiosk_window_config_on_window_configure),
-                                              self);
-
-        g_signal_handlers_disconnect_by_func (window,
-                                              G_CALLBACK (kiosk_window_config_on_window_unmanaged),
-                                              self);
-}
-
-static void
-kiosk_window_config_on_window_created (MetaDisplay *display,
-                                       MetaWindow  *window,
-                                       gpointer     user_data)
-{
-        KioskWindowConfig *self = KIOSK_WINDOW_CONFIG (user_data);
-
-        g_signal_connect (window,
-                          "configure",
-                          G_CALLBACK (kiosk_window_config_on_window_configure),
-                          self);
-
-        g_signal_connect (window,
-                          "unmanaged",
-                          G_CALLBACK (kiosk_window_config_on_window_unmanaged),
-                          self);
-}
-
-static void
 kiosk_window_config_setup_file_monitoring (KioskWindowConfig *self)
 {
         g_autoptr (GFile) config_file = NULL;
@@ -244,6 +216,12 @@ kiosk_window_config_constructed (GObject *object)
 
         g_set_weak_pointer (&self->display, meta_plugin_get_display (META_PLUGIN (self->compositor)));
         g_set_weak_pointer (&self->context, meta_display_get_context (self->display));
+        g_set_weak_pointer (&self->backend, meta_context_get_backend (self->context));
+        g_set_weak_pointer (&self->monitor_manager, meta_backend_get_monitor_manager (self->backend));
+
+        self->windows_on_monitors = g_hash_table_new_full (NULL, NULL, NULL, g_free);
+        self->locked_monitors = g_hash_table_new_full (NULL, NULL, NULL, g_object_unref);
+        self->locked_areas = g_hash_table_new_full (NULL, NULL, NULL, g_object_unref);
 
         g_signal_connect (self->display,
                           "window-created",
@@ -252,6 +230,11 @@ kiosk_window_config_constructed (GObject *object)
 
         /* Setup file monitoring after configuration is loaded */
         kiosk_window_config_setup_file_monitoring (self);
+
+        g_signal_connect (self->monitor_manager,
+                          "monitors-changed",
+                          G_CALLBACK (kiosk_window_config_on_monitors_changed),
+                          self);
 
         G_OBJECT_CLASS (kiosk_window_config_parent_class)->constructed (object);
 }
@@ -282,6 +265,8 @@ kiosk_window_config_dispose (GObject *object)
         g_clear_weak_pointer (&self->compositor);
         g_clear_weak_pointer (&self->display);
         g_clear_weak_pointer (&self->context);
+        g_clear_weak_pointer (&self->backend);
+        g_clear_weak_pointer (&self->monitor_manager);
 
         G_OBJECT_CLASS (kiosk_window_config_parent_class)->dispose (object);
 }
@@ -293,6 +278,9 @@ kiosk_window_config_finalize (GObject *object)
 
         g_clear_pointer (&self->config_key_file, g_key_file_free);
         g_clear_pointer (&self->user_config_file_path, g_free);
+        g_clear_pointer (&self->windows_on_monitors, g_hash_table_unref);
+        g_clear_pointer (&self->locked_monitors, g_hash_table_unref);
+        g_clear_pointer (&self->locked_areas, g_hash_table_unref);
 
         G_OBJECT_CLASS (kiosk_window_config_parent_class)->finalize (object);
 }
@@ -671,34 +659,144 @@ kiosk_window_config_wants_window_above (KioskWindowConfig *self,
         return TRUE;
 }
 
-static gboolean
-kiosk_window_config_wants_window_on_monitor (KioskWindowConfig *self,
-                                             MetaWindow        *window,
-                                             int               *monitor)
+static const char *
+kiosk_window_config_get_connector_for_window (KioskWindowConfig *self,
+                                              MetaWindow        *window)
 {
-        g_autofree gchar *output_name = NULL;
-        MetaBackend *backend;
-        MetaMonitorManager *monitor_manager;
-        int m;
+        char *output_name = NULL;
 
         if (!kiosk_window_config_get_string_for_window (self,
                                                         window,
                                                         "set-on-monitor",
                                                         &output_name))
-                return FALSE;
+                return NULL;
 
-        backend = meta_context_get_backend (self->context);
-        monitor_manager = meta_backend_get_monitor_manager (backend);
-        m = meta_monitor_manager_get_monitor_for_connector (monitor_manager,
+        return output_name;
+}
+
+static KioskWindowConfigMonitor
+kiosk_window_config_wants_window_on_monitor (KioskWindowConfig *self,
+                                             MetaWindow        *window,
+                                             int               *monitor)
+{
+        const char *output_name;
+        int m;
+
+        output_name = g_hash_table_lookup (self->windows_on_monitors, window);
+        if (!output_name)
+                return MONITOR_NOT_SET;
+
+        m = meta_monitor_manager_get_monitor_for_connector (self->monitor_manager,
                                                             output_name);
         if (m < 0) {
                 g_warning ("Could not find monitor named \"%s\"", output_name);
-                return FALSE;
+                return MONITOR_NOT_FOUND;
         }
 
         *monitor = m;
 
+        return MONITOR_FOUND;
+}
+
+static gboolean
+kiosk_window_config_should_lock_window_on_monitor (KioskWindowConfig *self,
+                                                   MetaWindow        *window)
+{
+        gboolean lock_on_monitor = FALSE;
+
+        if (kiosk_window_config_get_boolean_for_window (self,
+                                                        window,
+                                                        "lock-on-monitor",
+                                                        &lock_on_monitor)) {
+                return lock_on_monitor;
+        }
+
+        return FALSE;
+}
+
+static gboolean
+kiosk_window_config_wants_window_locked_on_monitor (KioskWindowConfig *self,
+                                                    MetaWindow        *window)
+{
+        return g_hash_table_contains (self->locked_monitors, window);
+}
+
+static gboolean
+kiosk_window_config_wants_window_locked_on_monitor_area (KioskWindowConfig *self,
+                                                         MetaWindow        *window)
+{
+        return g_hash_table_contains (self->locked_areas, window);
+}
+
+static gboolean
+kiosk_window_config_parse_lock_area (const char   *area_string,
+                                     MtkRectangle *area)
+{
+        int x, y, width, height;
+        int parsed;
+        g_autofree char *str = NULL;
+
+        if (!area_string || !area)
+                return FALSE;
+
+        /* Strip leading and trailing whitespace */
+        str = g_strstrip (g_strdup (area_string));
+        parsed = sscanf (str, " %d , %d %d x %d", &x, &y, &width, &height);
+
+        if (parsed != 4) {
+                g_warning ("KioskWindowConfig: Invalid lock-on-monitor-area format '%s', expected 'x,y WxH'",
+                           area_string);
+                return FALSE;
+        }
+
+        if (width <= 0 || height <= 0) {
+                g_warning ("KioskWindowConfig: Invalid lock-on-monitor-area dimensions '%s', width and height must be > 0",
+                           area_string);
+                return FALSE;
+        }
+
+        /* Store as MtkRectangle */
+        area->x = x;
+        area->y = y;
+        area->width = width;
+        area->height = height;
+
+        g_debug ("KioskWindowConfig: Parsed lock area: %d,%d %dx%d",
+                 area->x, area->y, area->width, area->height);
+
         return TRUE;
+}
+
+static gboolean
+kiosk_window_config_should_lock_window_on_monitor_area (KioskWindowConfig *self,
+                                                        MetaWindow        *window,
+                                                        MtkRectangle      *area)
+{
+        g_autofree gchar *area_string = NULL;
+
+        if (!kiosk_window_config_get_string_for_window (self,
+                                                        window,
+                                                        "lock-on-monitor-area",
+                                                        &area_string))
+                return FALSE;
+
+        return kiosk_window_config_parse_lock_area (area_string, area);
+}
+
+static gboolean
+kiosk_window_config_should_lock_window_on_area (KioskWindowConfig *self,
+                                                MetaWindow        *window,
+                                                MtkRectangle      *area)
+{
+        g_autofree gchar *area_string = NULL;
+
+        if (!kiosk_window_config_get_string_for_window (self,
+                                                        window,
+                                                        "lock-on-area",
+                                                        &area_string))
+                return FALSE;
+
+        return kiosk_window_config_parse_lock_area (area_string, area);
 }
 
 static gboolean
@@ -758,6 +856,231 @@ kiosk_window_config_update_window (KioskWindowConfig *kiosk_window_config,
         }
 }
 
+const char *
+kiosk_window_config_lookup_window_output_name (KioskWindowConfig *self,
+                                               MetaWindow        *window)
+{
+        return g_hash_table_lookup (self->windows_on_monitors, window);
+}
+
+static void
+kiosk_window_config_on_window_configure_initial (KioskWindowConfig *self,
+                                                 MetaWindow        *window,
+                                                 MetaWindowConfig  *window_config)
+{
+        gboolean fullscreen;
+
+        g_debug ("KioskWindowConfig: configure window: %s", meta_window_get_description (window));
+
+        fullscreen = kiosk_window_config_wants_window_fullscreen (self, window);
+        meta_window_config_set_is_fullscreen (window_config, fullscreen);
+        kiosk_window_config_update_window (self,
+                                           window,
+                                           window_config);
+}
+
+static void
+kiosk_window_config_show_window (MetaWindow *window)
+{
+        if (!meta_window_is_mapped_inhibited (window)) {
+                g_debug ("KioskWindowConfig: Window %s is not hidden",
+                         meta_window_get_description (window));
+                return;
+        }
+
+        g_debug ("KioskWindowConfig: Showing window: %s", meta_window_get_description (window));
+        meta_window_uninhibit_mapped (window);
+}
+
+static void
+kiosk_window_config_hide_window (MetaWindow *window)
+{
+        if (meta_window_is_mapped_inhibited (window)) {
+                g_debug ("KioskWindowConfig: Window %s is already hidden",
+                         meta_window_get_description (window));
+                return;
+        }
+
+        g_debug ("KioskWindowConfig: Hiding window: %s", meta_window_get_description (window));
+        meta_window_inhibit_mapped (window);
+}
+
+static void
+kiosk_window_config_update_window_on_monitor (KioskWindowConfig *self,
+                                              MetaWindow        *window)
+{
+        KioskWindowConfigMonitor monitor_status;
+        int monitor_index;
+
+        monitor_status =
+                kiosk_window_config_wants_window_on_monitor (self, window, &monitor_index);
+
+        if (monitor_status == MONITOR_NOT_SET) {
+                g_debug ("KioskWindowConfig: Window %s is not set on a monitor",
+                         meta_window_get_description (window));
+                return;
+        }
+
+        if (monitor_status == MONITOR_FOUND) {
+                g_debug ("KioskWindowConfig: Moving window %s to monitor %i",
+                         meta_window_get_description (window), monitor_index);
+                meta_window_move_to_monitor (window, monitor_index);
+        }
+
+        if (kiosk_window_config_wants_window_locked_on_monitor (self, window) ||
+            kiosk_window_config_wants_window_locked_on_monitor_area (self, window)) {
+                if (monitor_status == MONITOR_FOUND) {
+                        kiosk_window_config_show_window (window);
+                } else if (monitor_status == MONITOR_NOT_FOUND) {
+                        kiosk_window_config_hide_window (window);
+                }
+        }
+}
+
+static void
+kiosk_window_config_on_monitors_changed (MetaMonitorManager *monitor_manager,
+                                         gpointer            user_data)
+{
+        KioskWindowConfig *self = KIOSK_WINDOW_CONFIG (user_data);
+        g_autoptr (GHashTable) windows = NULL;
+        GHashTableIter iter;
+        gpointer window;
+
+        g_debug ("KioskWindowConfig: Monitors changed");
+
+        /* Use a temporary set to avoid duplicates, hence calling the update function more
+         * than once on the same window.
+         */
+        windows = g_hash_table_new (NULL, NULL);
+
+        g_hash_table_iter_init (&iter, self->locked_monitors);
+        while (g_hash_table_iter_next (&iter, &window, NULL)) {
+                g_hash_table_add (windows, window);
+        }
+
+        g_hash_table_iter_init (&iter, self->locked_areas);
+        while (g_hash_table_iter_next (&iter, &window, NULL)) {
+                g_hash_table_add (windows, window);
+        }
+
+        g_hash_table_iter_init (&iter, windows);
+        while (g_hash_table_iter_next (&iter, &window, NULL)) {
+                kiosk_window_config_update_window_on_monitor (self, window);
+        }
+}
+
+static void
+kiosk_window_config_on_window_configure (MetaWindow       *window,
+                                         MetaWindowConfig *window_config,
+                                         gpointer          user_data)
+{
+        KioskWindowConfig *self = KIOSK_WINDOW_CONFIG (user_data);
+
+        if (meta_window_config_get_is_initial (window_config))
+                kiosk_window_config_on_window_configure_initial (self, window, window_config);
+        else
+                g_debug ("KioskWindowConfig: Ignoring configure for window: %s",
+                         meta_window_get_description (window));
+}
+
+static void
+kiosk_window_config_on_window_unmanaged (MetaWindow *window,
+                                         gpointer    user_data)
+{
+        KioskWindowConfig *self = KIOSK_WINDOW_CONFIG (user_data);
+        KioskMonitorConstraint *monitor_constraint;
+        KioskAreaConstraint *area_constraint;
+
+        g_signal_handlers_disconnect_by_func (window,
+                                              G_CALLBACK (kiosk_window_config_on_window_configure),
+                                              self);
+
+        g_signal_handlers_disconnect_by_func (window,
+                                              G_CALLBACK (kiosk_window_config_on_window_unmanaged),
+                                              self);
+
+        g_hash_table_remove (self->windows_on_monitors, window);
+
+        monitor_constraint = g_hash_table_lookup (self->locked_monitors, window);
+        if (monitor_constraint) {
+                meta_window_remove_external_constraint (window, META_EXTERNAL_CONSTRAINT (monitor_constraint));
+                g_hash_table_remove (self->locked_monitors, window);
+        }
+
+        area_constraint = g_hash_table_lookup (self->locked_areas, window);
+        if (area_constraint) {
+                meta_window_remove_external_constraint (window, META_EXTERNAL_CONSTRAINT (area_constraint));
+                g_hash_table_remove (self->locked_areas, window);
+        }
+}
+
+static void
+kiosk_window_config_on_window_created (MetaDisplay *display,
+                                       MetaWindow  *window,
+                                       gpointer     user_data)
+{
+        KioskWindowConfig *self = KIOSK_WINDOW_CONFIG (user_data);
+        const char *output_name;
+        MtkRectangle lock_area;
+        gboolean lock_on_monitor;
+        gboolean lock_on_monitor_area;
+        gboolean lock_on_area;
+
+        g_signal_connect (window,
+                          "configure",
+                          G_CALLBACK (kiosk_window_config_on_window_configure),
+                          self);
+
+        g_signal_connect (window,
+                          "unmanaged",
+                          G_CALLBACK (kiosk_window_config_on_window_unmanaged),
+                          self);
+
+        output_name = kiosk_window_config_get_connector_for_window (self, window);
+        if (output_name) {
+                g_debug ("KioskWindowConfig: Window %s is set on monitor %s",
+                         meta_window_get_description (window), output_name);
+                g_hash_table_insert (self->windows_on_monitors, window, g_strdup (output_name));
+        }
+
+        lock_on_monitor = kiosk_window_config_should_lock_window_on_monitor (self, window);
+        if (lock_on_monitor) {
+                KioskMonitorConstraint *constraint;
+
+                g_debug ("KioskWindowConfig: Window %s is locked on monitor",
+                         meta_window_get_description (window));
+                constraint = kiosk_monitor_constraint_new (self->compositor);
+                g_hash_table_insert (self->locked_monitors, window, constraint);
+                meta_window_add_external_constraint (window, META_EXTERNAL_CONSTRAINT (constraint));
+        }
+
+        lock_on_monitor_area = kiosk_window_config_should_lock_window_on_monitor_area (self, window, &lock_area);
+        if (lock_on_monitor_area) {
+                KioskAreaConstraint *constraint;
+
+                g_debug ("KioskWindowConfig: Window %s is locked on monitor %s with area %d,%d %dx%d",
+                         meta_window_get_description (window), output_name,
+                         lock_area.x, lock_area.y,
+                         lock_area.width, lock_area.height);
+                constraint = kiosk_area_constraint_new (self->compositor, &lock_area, FALSE);
+                g_hash_table_insert (self->locked_areas, window, constraint);
+                meta_window_add_external_constraint (window, META_EXTERNAL_CONSTRAINT (constraint));
+        }
+
+        lock_on_area = kiosk_window_config_should_lock_window_on_area (self, window, &lock_area);
+        if (lock_on_area) {
+                KioskAreaConstraint *constraint;
+
+                g_debug ("KioskWindowConfig: Window %s is locked on absolute area %d,%d %dx%d",
+                         meta_window_get_description (window),
+                         lock_area.x, lock_area.y,
+                         lock_area.width, lock_area.height);
+                constraint = kiosk_area_constraint_new (self->compositor, &lock_area, TRUE);
+                g_hash_table_insert (self->locked_areas, window, constraint);
+                meta_window_add_external_constraint (window, META_EXTERNAL_CONSTRAINT (constraint));
+        }
+}
+
 void
 kiosk_window_config_apply_initial_config (KioskWindowConfig *kiosk_window_config,
                                           MetaWindow        *window)
@@ -772,9 +1095,9 @@ kiosk_window_config_apply_initial_config (KioskWindowConfig *kiosk_window_config
                 }
         }
 
-        if (kiosk_window_config_wants_window_on_monitor (kiosk_window_config, window, &monitor)) {
-                g_debug ("KioskWindowConfig: Moving window to monitor %i", monitor);
-                meta_window_move_to_monitor (window, monitor);
+        if (kiosk_window_config_wants_window_on_monitor (kiosk_window_config, window, &monitor) == MONITOR_FOUND) {
+                g_debug ("KioskWindowConfig: Moving window to monitor");
+                kiosk_window_config_update_window_on_monitor (kiosk_window_config, window);
         }
 
         if (kiosk_window_config_wants_window_type (kiosk_window_config, window, &window_type)) {

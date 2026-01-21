@@ -5,6 +5,8 @@
 
 #include <meta/window.h>
 #include <meta/meta-window-config.h>
+#include <meta/meta-external-constraint.h>
+#include <mtk/mtk-rectangle.h>
 
 G_BEGIN_DECLS
 
@@ -18,5 +20,8 @@ KioskWindowConfig *kiosk_window_config_new (KioskCompositor * compositor);
 
 void kiosk_window_config_apply_initial_config (KioskWindowConfig *kiosk_window_config,
                                                MetaWindow        *window);
+
+const char *kiosk_window_config_lookup_window_output_name (KioskWindowConfig *self,
+                                                           MetaWindow        *window);
 
 G_END_DECLS
