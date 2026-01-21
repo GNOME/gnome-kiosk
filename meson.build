@@ -253,6 +253,8 @@ compositor_sources = [
         'compositor/kiosk-magnifier.h',
         'compositor/kiosk-monitor-constraint.c',
         'compositor/kiosk-monitor-constraint.h',
+        'compositor/kiosk-screensaver.c',
+        'compositor/kiosk-screensaver.h',
         'compositor/kiosk-screenshot.c',
         'compositor/kiosk-screenshot.h',
         'compositor/kiosk-service.c',
