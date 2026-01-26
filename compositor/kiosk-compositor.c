@@ -300,20 +300,6 @@ kiosk_compositor_start (MetaPlugin *plugin)
 }
 
 static void
-kiosk_compositor_minimize (MetaPlugin      *plugin,
-                           MetaWindowActor *actor)
-{
-        meta_plugin_minimize_completed (plugin, actor);
-}
-
-static void
-kiosk_compositor_unminimize (MetaPlugin      *plugin,
-                             MetaWindowActor *actor)
-{
-        meta_plugin_unminimize_completed (plugin, actor);
-}
-
-static void
 kiosk_compositor_size_changed (MetaPlugin      *plugin,
                                MetaWindowActor *actor)
 {
@@ -516,8 +502,6 @@ kiosk_compositor_class_init (KioskCompositorClass *compositor_class)
 
         plugin_class->start = kiosk_compositor_start;
         plugin_class->map = kiosk_compositor_map;
-        plugin_class->minimize = kiosk_compositor_minimize;
-        plugin_class->unminimize = kiosk_compositor_unminimize;
         plugin_class->size_changed = kiosk_compositor_size_changed;
         plugin_class->size_change = kiosk_compositor_size_change;
         plugin_class->destroy = kiosk_compositor_destroy;
