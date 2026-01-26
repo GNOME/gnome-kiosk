@@ -1,3 +1,2 @@
 [GNOME Session]
 Name=Kiosk
-RequiredComponents=org.gnome.Kiosk;org.gnome.Kiosk.Script;
