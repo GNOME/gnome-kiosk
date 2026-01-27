@@ -127,6 +127,12 @@ dbus_proxies += {
         'interface': 'SessionManager',
 }
 
+dbus_proxies += {
+        'prefix':   'org.gnome.SessionManager',
+        'namespace': 'Gsm',
+        'interface': 'Presence',
+}
+
 dbus_interface_sources_map = {}
 foreach dbus_proxy : dbus_proxies
         dbus_interface = dbus_proxy['prefix'] + '.' + dbus_proxy['interface']
@@ -251,6 +257,8 @@ compositor_sources = [
         'compositor/kiosk-screenshot.h',
         'compositor/kiosk-service.c',
         'compositor/kiosk-service.h',
+        'compositor/kiosk-session-presence.c',
+        'compositor/kiosk-session-presence.h',
         'compositor/kiosk-shell-introspect-service.c',
         'compositor/kiosk-shell-introspect-service.h',
         'compositor/kiosk-shell-screenshot-service.c',
