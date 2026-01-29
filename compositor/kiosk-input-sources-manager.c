@@ -1033,7 +1033,7 @@ kiosk_input_sources_manager_set_input_sources_from_locales (KioskInputSourcesMan
         g_autofree char *old_selected_layout = NULL;
         g_autofree char *old_input_engine = NULL;
         g_autofree char *locales_string = NULL;
-        gboolean input_source_group_active;
+        gboolean input_source_group_active = TRUE;
 
         g_return_val_if_fail (KIOSK_IS_INPUT_SOURCES_MANAGER (self), FALSE);
         g_return_val_if_fail (locales != NULL, FALSE);
