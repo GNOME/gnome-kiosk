@@ -10,6 +10,8 @@
 #include <meta/util.h>
 
 #include <meta/meta-backend.h>
+#include <meta/meta-context.h>
+#include <meta/meta-keymap-description.h>
 #include <meta/meta-plugin.h>
 
 #define GNOME_DESKTOP_USE_UNSTABLE_API
@@ -51,6 +53,7 @@ struct _KioskInputSourcesManager
         /* weak references */
         KioskCompositor              *compositor;
         MetaDisplay                  *display;
+        MetaBackend                  *backend;
 
         KioskDBusInputSourcesManager *dbus_service;
         GDBusObjectManagerServer     *dbus_object_manager;
@@ -138,9 +141,24 @@ kiosk_input_sources_manager_get_selected_input_source_group (KioskInputSourcesMa
 }
 
 static gboolean
+kiosk_input_sources_manager_is_locked (KioskInputSourcesManager *self)
+{
+        MetaKeymapDescription *current_keymap_description;
+
+        current_keymap_description = meta_backend_get_keymap_description (self->backend);
+        if (!current_keymap_description)
+                return FALSE;
+
+        return meta_keymap_description_is_locked (current_keymap_description);
+}
+
+static gboolean
 activate_first_available_input_source_group (KioskInputSourcesManager *self)
 {
         size_t i;
+
+        if (kiosk_input_sources_manager_is_locked (self))
+                return FALSE;
 
         for (i = 0; i < self->input_source_groups->len; i++) {
                 KioskInputSourceGroup *input_source_group = g_ptr_array_index (self->input_source_groups, i);
@@ -248,6 +266,9 @@ activate_input_source_group_with_layout (KioskInputSourcesManager *self,
         gboolean input_source_group_active = FALSE;
         size_t i;
 
+        if (kiosk_input_sources_manager_is_locked (self))
+                return FALSE;
+
         input_source_group = kiosk_input_sources_manager_get_selected_input_source_group (self);
 
         if (input_source_group != NULL) {
@@ -278,6 +299,9 @@ activate_best_available_input_source_group (KioskInputSourcesManager *self,
                                             const char               *selected_layout)
 {
         gboolean input_source_group_active = FALSE;
+
+        if (kiosk_input_sources_manager_is_locked (self))
+                return FALSE;
 
         if (input_engine != NULL) {
                 input_source_group_active = activate_input_source_group_with_engine (self, input_engine);
@@ -667,6 +691,9 @@ on_dbus_service_handle_select_input_source (KioskInputSourcesManager *self,
 
         g_debug ("KioskService: Handling SelectInputSource('%s') call", object_path);
 
+        if (kiosk_input_sources_manager_is_locked (self))
+                return TRUE;
+
         dbus_input_source = g_dbus_object_manager_get_interface (G_DBUS_OBJECT_MANAGER (self->dbus_object_manager),
                                                                  object_path,
                                                                  KIOSK_DBUS_INPUT_SOURCES_MANGER_INPUT_SOURCE_INTERFACE);
@@ -699,6 +726,9 @@ on_dbus_service_handle_select_next_input_source (KioskInputSourcesManager *self,
 {
         g_debug ("KioskService: Handling SelectNextInputSource() call");
 
+        if (kiosk_input_sources_manager_is_locked (self))
+                return TRUE;
+
         kiosk_input_sources_manager_switch_to_next_input_source (self);
         kiosk_dbus_input_sources_manager_complete_select_next_input_source (self->dbus_service, invocation);
 
@@ -710,6 +740,9 @@ on_dbus_service_handle_select_previous_input_source (KioskInputSourcesManager *s
                                                      GDBusMethodInvocation    *invocation)
 {
         g_debug ("KioskService: Handling SelectPreviousInputSource() call");
+
+        if (kiosk_input_sources_manager_is_locked (self))
+                return TRUE;
 
         kiosk_input_sources_manager_switch_to_previous_input_source (self);
         kiosk_dbus_input_sources_manager_complete_select_previous_input_source (self->dbus_service, invocation);
@@ -1051,7 +1084,8 @@ kiosk_input_sources_manager_set_input_sources_from_locales (KioskInputSourcesMan
                 }
         }
 
-        input_source_group_active = activate_first_available_input_source_group (self);
+        if (!kiosk_input_sources_manager_is_locked (self))
+                input_source_group_active = activate_first_available_input_source_group (self);
 
         sync_dbus_service (self);
 
@@ -1141,6 +1175,8 @@ kiosk_input_sources_manager_activate_input_sources (KioskInputSourcesManager *se
 {
         KioskInputSourceGroup *input_source_group;
         gboolean input_source_group_active;
+
+        g_return_if_fail (!kiosk_input_sources_manager_is_locked (self));
 
         input_source_group = kiosk_input_sources_manager_get_selected_input_source_group (self);
 
@@ -1249,6 +1285,9 @@ on_switch_input_sources (MetaDisplay              *display,
 {
         g_debug ("KioskInputSourcesManager: Keybinding pressed to change input source");
 
+        if (kiosk_input_sources_manager_is_locked (self))
+                return;
+
         if (meta_key_binding_is_reversed (binding)) {
                 kiosk_input_sources_manager_switch_to_previous_input_source (self);
         } else {
@@ -1261,6 +1300,9 @@ on_modifiers_switch_input_sources_cb (MetaDisplay              *display,
                                       KioskInputSourcesManager *self)
 {
         g_debug ("KioskInputSourcesManager: ISO_Next_Group key combo pressed to change input source");
+
+        if (kiosk_input_sources_manager_is_locked (self))
+                return FALSE;
 
         kiosk_input_sources_manager_switch_to_next_input_source (self);
 
@@ -1314,6 +1356,9 @@ kiosk_input_sources_manager_maybe_activate_higher_priority_input_engine (KioskIn
 {
         ssize_t i;
 
+        if (kiosk_input_sources_manager_is_locked (self))
+                return;
+
         /* It's possible the user has an input engine configured to be used, but it wasn't ready
          * before. If so, now that it's ready, we should activate it.
          */
@@ -1345,6 +1390,9 @@ on_input_engine_manager_is_loaded_changed (KioskInputSourcesManager *self)
 {
         gboolean input_engine_manager_is_loaded;
 
+        if (kiosk_input_sources_manager_is_locked (self))
+                return;
+
         input_engine_manager_is_loaded = kiosk_input_engine_manager_is_loaded (self->input_engine_manager);
 
         if (!input_engine_manager_is_loaded) {
@@ -1370,6 +1418,9 @@ on_input_engine_manager_active_engine_changed (KioskInputSourcesManager *self)
                 g_debug ("KioskInputSourcesManager: Input engine changed while input engine manager unloaded. Ignoring...");
                 return;
         }
+
+        if (kiosk_input_sources_manager_is_locked (self))
+                return;
 
         active_input_engine = kiosk_input_engine_manager_get_active_engine (self->input_engine_manager);
 
@@ -1446,12 +1497,16 @@ static void
 kiosk_input_sources_manager_constructed (GObject *object)
 {
         KioskInputSourcesManager *self = KIOSK_INPUT_SOURCES_MANAGER (object);
+        MetaContext *context;
 
         g_debug ("KioskInputSourcesManager: Initializing");
 
         G_OBJECT_CLASS (kiosk_input_sources_manager_parent_class)->constructed (object);
 
         g_set_weak_pointer (&self->display, meta_plugin_get_display (META_PLUGIN (self->compositor)));
+
+        context = meta_display_get_context (self->display);
+        g_set_weak_pointer (&self->backend, meta_context_get_backend (context));
 
         self->cancellable = g_cancellable_new ();
 
@@ -1495,6 +1550,7 @@ kiosk_input_sources_manager_dispose (GObject *object)
         kiosk_input_sources_manager_remove_key_bindings (self);
         g_clear_weak_pointer (&self->dbus_service);
         g_clear_weak_pointer (&self->dbus_object_manager);
+        g_clear_weak_pointer (&self->backend);
         g_clear_weak_pointer (&self->display);
         g_clear_weak_pointer (&self->compositor);
 
