@@ -2,7 +2,9 @@
 Description=Kiosk script
 BindsTo=gnome-session.target
 After=gnome-session.target
+OnFailure=gnome-session-shutdown.target
+OnSuccess=gnome-session-shutdown.target
 
 [Service]
 ExecStart=@bindir@/gnome-kiosk-script
-Restart=always
+ExitType=cgroup
