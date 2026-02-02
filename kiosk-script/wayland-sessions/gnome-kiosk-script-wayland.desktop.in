@@ -5,5 +5,5 @@ Exec=gnome-session --session gnome-kiosk-script
 TryExec=gnome-session
 Type=Application
 DesktopNames=GNOME-Kiosk;GNOME;
-X-GDM-SessionRegisters=true
+X-GDM-SessionRegisters=false
 X-GDM-CanRunHeadless=true
