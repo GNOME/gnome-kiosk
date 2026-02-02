@@ -39,3 +39,32 @@ i18n.merge_file(
   install_dir: desktop_data_dir,
   type: 'desktop'
 )
+
+# Systemd service file
+configure_file(
+  input: 'systemd/org.gnome.Kiosk.Menu.service.in',
+  output: '@BASENAME@',
+  configuration: systemd_service_config_data,
+  install_dir: systemd_user_unit_dir
+)
+
+# Session target configuration
+kiosk_menu_systemd_target_dir = join_paths(systemd_user_unit_dir, 'gnome-session@gnome-kiosk-menu.target.d')
+install_data('systemd/session.conf',
+  install_dir: kiosk_menu_systemd_target_dir
+)
+
+# Session file
+install_data('gnome-session/gnome-kiosk-menu.session',
+  install_dir: session_dir,
+)
+
+# Wayland session file
+i18n.merge_file(
+  input: 'wayland-sessions/gnome-kiosk-menu-wayland.desktop.in',
+  output: '@BASENAME@',
+  po_dir: po_dir,
+  install: true,
+  install_dir: wayland_sessions_dir,
+  type: 'desktop'
+)
