@@ -27,3 +27,9 @@ option('notification-daemon',
   value: false,
   description: 'Build notification daemon'
 )
+
+option('kiosk-menu',
+  type: 'boolean',
+  value: false,
+  description: 'Build kiosk menu application'
+)
