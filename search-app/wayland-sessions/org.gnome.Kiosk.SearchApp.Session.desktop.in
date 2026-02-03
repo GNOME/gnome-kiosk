@@ -5,5 +5,5 @@ Exec=gnome-session --session org.gnome.Kiosk.SearchApp
 TryExec=gnome-session
 Type=Application
 DesktopNames=GNOME-Kiosk;GNOME;
-X-GDM-SessionRegisters=true
+X-GDM-SessionRegisters=false
 X-GDM-CanRunHeadless=true
