@@ -1,5 +1,20 @@
 # NEWS
 
+## 50.alpha
+
+- Reload window configuration on change
+- Add an example of accessibility panel (optional)
+- Document accessibility settings
+- Dropped X11 backend from Mutter
+- Fix wallpaper with multi-monitor
+- Add a basic notification daemon (optional)
+- Add a magnifier for accessibility
+- Add "lock-on-monitor" option
+- Add "lock-on-monitor-area" option
+- Add "lock-on-area" option
+- Fix minimized windows remaining on screen when maximized
+- Various code and compilation warnings fixes
+
 ## 49.0
 
 - Disable fade-in animations based on GNOME desktop setting
