@@ -32,6 +32,7 @@
 #include "kiosk-shell-screenshot-service.h"
 #include "kiosk-window-config.h"
 #include "kiosk-magnifier.h"
+#include "main.h"
 
 #include "org.gnome.DisplayManager.Manager.h"
 
@@ -231,12 +232,41 @@ neuter_builtin_keybindings (KioskCompositor *self)
                 "move-to-workspace-down",
                 NULL
         };
+        const char *native_keybindings[] = {
+                "switch-to-session-1",
+                "switch-to-session-2",
+                "switch-to-session-3",
+                "switch-to-session-4",
+                "switch-to-session-5",
+                "switch-to-session-6",
+                "switch-to-session-7",
+                "switch-to-session-8",
+                "switch-to-session-9",
+                "switch-to-session-10",
+                "switch-to-session-11",
+                "switch-to-session-12",
+                NULL
+        };
         size_t i;
 
         g_debug ("KioskCompositor: Neutering builtin keybindings");
 
         for (i = 0; builtin_keybindings[i] != NULL; i++) {
                 meta_keybindings_set_custom_handler (builtin_keybindings[i],
+                                                     (MetaKeyHandlerFunc)
+                                                     on_builtin_keybinding_triggered,
+                                                     self,
+                                                     NULL);
+        }
+
+        if (is_vt_switch_enabled ()) {
+                g_debug ("KioskCompositor: Keeping VT keybindings enabled");
+                return;
+        }
+
+        g_debug ("KioskCompositor: Neutering VT switching keybindings");
+        for (i = 0; native_keybindings[i] != NULL; i++) {
+                meta_keybindings_set_custom_handler (native_keybindings[i],
                                                      (MetaKeyHandlerFunc)
                                                      on_builtin_keybinding_triggered,
                                                      self,

@@ -1,0 +1,9 @@
+#pragma once
+
+#include <glib.h>
+
+G_BEGIN_DECLS
+
+gboolean is_vt_switch_enabled (void);
+
+G_END_DECLS
