@@ -206,30 +206,31 @@ kiosk_enums = gnome.mkenums_simple('kiosk-enum-types',
   sources: compositor_headers
 )
 
-compositor_sources = []
-compositor_sources += kiosk_enums
-compositor_sources += 'compositor/kiosk-backgrounds.c'
-compositor_sources += 'compositor/kiosk-compositor.c'
-compositor_sources += 'compositor/kiosk-app.c'
-compositor_sources += 'compositor/kiosk-app-system.c'
-compositor_sources += 'compositor/kiosk-window-tracker.c'
-compositor_sources += 'compositor/kiosk-dbus-utils.c'
-compositor_sources += 'compositor/kiosk-gobject-utils.c'
-compositor_sources += 'compositor/kiosk-automount-manager.c'
-compositor_sources += 'compositor/kiosk-input-sources-manager.c'
-compositor_sources += 'compositor/kiosk-input-engine-manager.c'
-compositor_sources += 'compositor/kiosk-input-source-group.c'
-compositor_sources += 'compositor/kiosk-service.c'
-compositor_sources += 'compositor/kiosk-shell-service.c'
-compositor_sources += 'compositor/kiosk-shell-introspect-service.c'
-compositor_sources += 'compositor/kiosk-shell-screenshot-service.c'
-compositor_sources += 'compositor/kiosk-window-config.c'
-compositor_sources += 'compositor/kiosk-monitor-constraint.c'
-compositor_sources += 'compositor/kiosk-area-constraint.c'
-compositor_sources += 'compositor/kiosk-screenshot.c'
-compositor_sources += 'compositor/kiosk-magnifier.c'
+compositor_sources = [
+        'compositor/kiosk-backgrounds.c',
+        'compositor/kiosk-compositor.c',
+        'compositor/kiosk-app.c',
+        'compositor/kiosk-app-system.c',
+        'compositor/kiosk-window-tracker.c',
+        'compositor/kiosk-dbus-utils.c',
+        'compositor/kiosk-gobject-utils.c',
+        'compositor/kiosk-automount-manager.c',
+        'compositor/kiosk-input-sources-manager.c',
+        'compositor/kiosk-input-engine-manager.c',
+        'compositor/kiosk-input-source-group.c',
+        'compositor/kiosk-service.c',
+        'compositor/kiosk-shell-service.c',
+        'compositor/kiosk-shell-introspect-service.c',
+        'compositor/kiosk-shell-screenshot-service.c',
+        'compositor/kiosk-window-config.c',
+        'compositor/kiosk-monitor-constraint.c',
+        'compositor/kiosk-area-constraint.c',
+        'compositor/kiosk-screenshot.c',
+        'compositor/kiosk-magnifier.c',
+        'compositor/main.c'
+]
 
-compositor_sources += 'compositor/main.c'
+compositor_sources += kiosk_enums
 
 foreach dbus_interface, sources: dbus_interface_sources_map
         compositor_sources += sources
