@@ -247,7 +247,8 @@ compositor_sources = [
         'compositor/kiosk-window-config.h',
         'compositor/kiosk-window-tracker.c',
         'compositor/kiosk-window-tracker.h',
-        'compositor/main.c'
+        'compositor/main.c',
+        'compositor/main.h'
 ]
 
 compositor_sources += kiosk_enums

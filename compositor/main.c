@@ -11,8 +11,10 @@
 #include <meta/prefs.h>
 
 #include "kiosk-compositor.h"
+#include "main.h"
 
 static char **argv_ignored = NULL;
+static gboolean enable_vt_switch = FALSE;
 
 static void
 command_exited_cb (GPid      command_pid,
@@ -78,6 +80,12 @@ static GOptionEntry
                 NULL
         },
         {
+                "enable-vt-switch", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE,
+                &enable_vt_switch,
+                N_ ("Enable VT switching keybindings"),
+                NULL
+        },
+        {
                 G_OPTION_REMAINING,
                 .arg = G_OPTION_ARG_STRING_ARRAY,
                 &argv_ignored,
@@ -85,6 +93,12 @@ static GOptionEntry
         },
         { NULL }
 };
+
+gboolean
+is_vt_switch_enabled (void)
+{
+        return enable_vt_switch;
+}
 
 static void
 set_working_directory (void)
