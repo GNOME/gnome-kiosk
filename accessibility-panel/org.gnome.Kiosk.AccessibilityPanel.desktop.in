@@ -8,3 +8,4 @@ Type=Application
 StartupNotify=true
 Categories=Settings;Accessibility;
 Keywords=accessibility;a11y;screen reader;high contrast;large text;visual alert;sticky keys;slow keys;bounce keys;mouse keys;
+OnlyShowIn=GNOME-Kiosk;
