@@ -96,7 +96,7 @@ kiosk_input_source_group_get_selected_layout (KioskInputSourceGroup *self)
 
         number_of_layouts = kiosk_input_source_group_get_number_of_layouts (self);
 
-        if (number_of_layouts == 0) {
+        if (number_of_layouts == 0 || self->layout_index >= number_of_layouts) {
                 return NULL;
         }
 

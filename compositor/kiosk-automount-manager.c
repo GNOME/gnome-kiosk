@@ -85,6 +85,19 @@ kiosk_automount_manager_class_init (KioskAutomountManagerClass *automount_manage
 }
 
 static void
+on_mount_ready (GObject      *source_object,
+                GAsyncResult *result,
+                gpointer      user_data)
+{
+        GVolume *volume = G_VOLUME (source_object);
+        g_autoptr (GError) error = NULL;
+
+        if (!g_volume_mount_finish (volume, result, &error)) {
+                g_debug ("KioskAutomountManager: Failed to mount volume: %s", error->message);
+        }
+}
+
+static void
 on_volume_added (KioskAutomountManager *self,
                  GVolume               *volume)
 {
@@ -104,7 +117,7 @@ on_volume_added (KioskAutomountManager *self,
                                 G_MOUNT_MOUNT_NONE,
                                 NULL,
                                 self->cancellable,
-                                NULL,
+                                on_mount_ready,
                                 NULL);
         }
 

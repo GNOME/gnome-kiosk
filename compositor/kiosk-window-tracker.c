@@ -315,6 +315,8 @@ kiosk_window_tracker_get_app_from_pid (KioskWindowTracker *tracker,
                         }
                 }
 
+                kiosk_app_process_iter_clear (&pid_iter);
+
                 if (result != NULL)
                         break;
         }
@@ -626,6 +628,7 @@ kiosk_window_tracker_dispose (GObject *object)
 
         g_clear_weak_pointer (&self->app_system);
         g_clear_weak_pointer (&self->compositor);
+        g_clear_object (&self->focused_app);
 
         G_OBJECT_CLASS (kiosk_window_tracker_parent_class)->dispose (object);
 }

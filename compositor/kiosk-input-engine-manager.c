@@ -428,15 +428,15 @@ kiosk_input_engine_manager_describe_engine (KioskInputEngineManager *self,
                 symbol = ibus_engine_desc_get_symbol (engine_description);
 
                 if (symbol == NULL || symbol[0] == '\0') {
-                        char *language_code = NULL;
+                        g_autofree char *language_code = NULL;
                         gboolean locale_parsed;
 
                         locale_parsed = gnome_parse_locale (locale, &language_code, NULL, NULL, NULL);
 
-                        if (!locale_parsed || strlen (language_code) > 3) {
+                        if (!locale_parsed || language_code == NULL || strlen (language_code) > 3) {
                                 *short_description = g_strdup ("⌨");
                         } else {
-                                *short_description = language_code;
+                                *short_description = g_steal_pointer (&language_code);
                         }
                 } else {
                         *short_description = g_strdup (symbol);
