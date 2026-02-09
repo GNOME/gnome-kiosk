@@ -315,6 +315,8 @@ kiosk_window_tracker_get_app_from_pid (KioskWindowTracker *tracker,
                         }
                 }
 
+                kiosk_app_process_iter_clear (&pid_iter);
+
                 if (result != NULL)
                         break;
         }

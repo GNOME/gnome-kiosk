@@ -203,6 +203,12 @@ kiosk_app_process_iter_next (KioskAppProcessIter *iter,
         return FALSE;
 }
 
+void
+kiosk_app_process_iter_clear (KioskAppProcessIter *iter)
+{
+        g_clear_pointer (&iter->seen_pids, g_hash_table_unref);
+}
+
 static int
 kiosk_app_get_last_user_time (KioskApp *app)
 {

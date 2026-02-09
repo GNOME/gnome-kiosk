@@ -43,6 +43,7 @@ void     kiosk_app_process_iter_init (KioskAppProcessIter *iter,
                                       KioskApp            *app);
 gboolean kiosk_app_process_iter_next (KioskAppProcessIter *iter,
                                       pid_t               *pid);
+void     kiosk_app_process_iter_clear (KioskAppProcessIter *iter);
 
 const char *kiosk_app_get_id (KioskApp *app);
 KioskAppState   kiosk_app_get_state (KioskApp *app);
