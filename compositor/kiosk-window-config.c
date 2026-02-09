@@ -146,17 +146,26 @@ out:
 static void
 kiosk_window_config_reload (KioskWindowConfig *kiosk_window_config)
 {
+        g_autoptr (GKeyFile) new_key_file = NULL;
+
         g_debug ("KioskWindowConfig: Reloading configuration");
 
-        /* Save the old key file */
-        g_key_file_free (kiosk_window_config->config_key_file);
-        kiosk_window_config->config_key_file = g_key_file_new ();
+        new_key_file = g_key_file_new ();
 
-        /* Reload the configuration */
+        /* Temporarily swap to load into new key file */
+        GKeyFile *old_key_file = kiosk_window_config->config_key_file;
+        kiosk_window_config->config_key_file = new_key_file;
+
         if (!kiosk_window_config_load (kiosk_window_config)) {
                 g_warning ("KioskWindowConfig: Failed to load the new configuration");
+                /* Restore old configuration */
+                kiosk_window_config->config_key_file = old_key_file;
                 return;
         }
+
+        /* Success - free old and steal new */
+        g_key_file_free (old_key_file);
+        kiosk_window_config->config_key_file = g_steal_pointer (&new_key_file);
 
         g_debug ("KioskWindowConfig: New configuration loaded successfully");
 }
