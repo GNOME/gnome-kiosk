@@ -63,6 +63,9 @@ struct _KioskCompositor
         KioskShellService           *shell_service;
         KioskMagnifier              *magnifier;
         GSettings                   *interface_settings;
+
+        /* private */
+        gboolean                     animations_enabled;
 };
 
 enum
@@ -275,6 +278,16 @@ neuter_builtin_keybindings (KioskCompositor *self)
 }
 
 static void
+on_enable_animations_changed (GSettings       *settings,
+                              const char      *key,
+                              KioskCompositor *self)
+{
+        self->animations_enabled = g_settings_get_boolean (settings, key);
+        g_debug ("KioskCompositor: Animations %s",
+                 self->animations_enabled ? "enabled" : "disabled");
+}
+
+static void
 kiosk_compositor_start (MetaPlugin *plugin)
 {
         KioskCompositor *self = KIOSK_COMPOSITOR (plugin);
@@ -321,6 +334,12 @@ kiosk_compositor_start (MetaPlugin *plugin)
         }
 
         self->interface_settings = g_settings_new (GNOME_DESKTOP_INTERFACE_SCHEMA);
+        self->animations_enabled = g_settings_get_boolean (self->interface_settings,
+                                                           GNOME_DESKTOP_ENABLE_ANIMATIONS);
+        g_signal_connect (self->interface_settings,
+                          "changed::" GNOME_DESKTOP_ENABLE_ANIMATIONS,
+                          G_CALLBACK (on_enable_animations_changed),
+                          self);
 
         kiosk_gobject_utils_queue_immediate_callback (G_OBJECT (self),
                                                       "[kiosk-compositor] register_session",
@@ -404,7 +423,6 @@ kiosk_compositor_map (MetaPlugin      *plugin,
 {
         KioskCompositor *self = KIOSK_COMPOSITOR (plugin);
         MetaWindow *window;
-        gboolean animations_enabled;
 
         window = meta_window_actor_get_meta_window (actor);
 
@@ -418,10 +436,7 @@ kiosk_compositor_map (MetaPlugin      *plugin,
         clutter_actor_show (self->stage);
         clutter_actor_show (CLUTTER_ACTOR (actor));
 
-        animations_enabled = g_settings_get_boolean (self->interface_settings,
-                                                     GNOME_DESKTOP_ENABLE_ANIMATIONS);
-
-        if (animations_enabled) {
+        if (self->animations_enabled) {
                 kiosk_compositor_map_with_fade_in (self, actor, window);
         } else {
                 kiosk_compositor_map_immediately (self, actor);
@@ -618,4 +633,12 @@ kiosk_compositor_get_window_config (KioskCompositor *self)
         g_return_val_if_fail (KIOSK_IS_COMPOSITOR (self), NULL);
 
         return KIOSK_WINDOW_CONFIG (self->kiosk_window_config);
+}
+
+gboolean
+kiosk_compositor_are_animations_enabled (KioskCompositor *self)
+{
+        g_return_val_if_fail (KIOSK_IS_COMPOSITOR (self), FALSE);
+
+        return self->animations_enabled;
 }
