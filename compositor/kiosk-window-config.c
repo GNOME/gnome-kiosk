@@ -551,19 +551,22 @@ kiosk_window_config_wants_window_fullscreen (KioskWindowConfig *self,
         GList *node;
 
         if (!meta_window_allows_resize (window)) {
-                g_debug ("KioskWindowConfig: Window does not allow resizes");
+                g_debug ("KioskWindowConfig: Window '%s' does not allow resizes",
+                         meta_window_get_description (window));
                 return FALSE;
         }
 
         if (meta_window_is_override_redirect (window)) {
-                g_debug ("KioskWindowConfig: Window is override redirect");
+                g_debug ("KioskWindowConfig: Window '%s' is override redirect",
+                         meta_window_get_description (window));
                 return FALSE;
         }
 
         window_type = meta_window_get_window_type (window);
 
         if (window_type != META_WINDOW_NORMAL) {
-                g_debug ("KioskWindowConfig: Window is not normal");
+                g_debug ("KioskWindowConfig: Window '%s' is not normal",
+                         meta_window_get_description (window));
                 return FALSE;
         }
 
@@ -573,9 +576,14 @@ kiosk_window_config_wants_window_fullscreen (KioskWindowConfig *self,
                 MetaWindow *existing_window = node->data;
 
                 if (meta_window_is_monitor_sized (existing_window)) {
+                        g_debug ("KioskWindowConfig: Another window '%s' is already fullscreen",
+                                 meta_window_get_description (existing_window));
                         return FALSE;
                 }
         }
+
+        g_debug ("KioskWindowConfig: Should make window '%s' fullscreen by default",
+                 meta_window_get_description (window));
 
         return TRUE;
 }
