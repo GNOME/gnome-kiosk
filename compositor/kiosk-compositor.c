@@ -640,5 +640,8 @@ kiosk_compositor_are_animations_enabled (KioskCompositor *self)
 {
         g_return_val_if_fail (KIOSK_IS_COMPOSITOR (self), FALSE);
 
+        if (are_animations_forced ())
+                return TRUE;
+
         return self->animations_enabled;
 }
