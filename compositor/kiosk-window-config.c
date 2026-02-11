@@ -570,7 +570,7 @@ kiosk_window_config_wants_window_fullscreen (KioskWindowConfig *self,
                 return FALSE;
         }
 
-        windows = meta_display_get_tab_list (self->display, META_TAB_LIST_NORMAL_ALL, NULL);
+        windows = meta_display_get_tab_list (self->display, META_TAB_LIST_NORMAL, NULL);
 
         for (node = windows; node != NULL; node = node->next) {
                 MetaWindow *existing_window = node->data;
