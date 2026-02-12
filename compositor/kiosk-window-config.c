@@ -567,13 +567,9 @@ kiosk_window_config_match_window (KioskWindowConfig *kiosk_window_config,
 #undef VALUE_OR_EMPTY
 
 static gboolean
-kiosk_window_config_wants_window_fullscreen (KioskWindowConfig *self,
-                                             MetaWindow        *window)
+kiosk_window_config_can_make_fullscreen (MetaWindow *window)
 {
         MetaWindowType window_type;
-
-        g_autoptr (GList) windows = NULL;
-        GList *node;
 
         if (!meta_window_allows_resize (window) &&
             !meta_window_is_maximized (window) &&
@@ -593,6 +589,22 @@ kiosk_window_config_wants_window_fullscreen (KioskWindowConfig *self,
 
         if (window_type != META_WINDOW_NORMAL) {
                 g_debug ("KioskWindowConfig: Window '%s' is not normal",
+                         meta_window_get_description (window));
+                return FALSE;
+        }
+
+        return TRUE;
+}
+
+static gboolean
+kiosk_window_config_wants_window_fullscreen (KioskWindowConfig *self,
+                                             MetaWindow        *window)
+{
+        g_autoptr (GList) windows = NULL;
+        GList *node;
+
+        if (!kiosk_window_config_can_make_fullscreen (window)) {
+                g_debug ("KioskWindowConfig: Window '%s' cannot be made fullscreen",
                          meta_window_get_description (window));
                 return FALSE;
         }
