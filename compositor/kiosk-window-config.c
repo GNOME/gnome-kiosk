@@ -577,6 +577,10 @@ kiosk_window_config_wants_window_fullscreen (KioskWindowConfig *self,
         for (node = windows; node != NULL; node = node->next) {
                 MetaWindow *existing_window = node->data;
 
+                /* Don't check our own window */
+                if (existing_window == window)
+                        continue;
+
                 if (meta_window_is_monitor_sized (existing_window)) {
                         g_debug ("KioskWindowConfig: Another window '%s' is already fullscreen",
                                  meta_window_get_description (existing_window));
