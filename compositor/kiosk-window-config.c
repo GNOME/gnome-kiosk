@@ -550,7 +550,9 @@ kiosk_window_config_wants_window_fullscreen (KioskWindowConfig *self,
         g_autoptr (GList) windows = NULL;
         GList *node;
 
-        if (!meta_window_allows_resize (window)) {
+        if (!meta_window_allows_resize (window) &&
+            !meta_window_is_maximized (window) &&
+            !meta_window_is_fullscreen (window)) {
                 g_debug ("KioskWindowConfig: Window '%s' does not allow resizes",
                          meta_window_get_description (window));
                 return FALSE;
