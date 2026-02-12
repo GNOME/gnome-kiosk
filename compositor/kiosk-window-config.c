@@ -49,6 +49,8 @@ struct _KioskWindowConfig
         GHashTable         *locked_monitors;
         /* <MetaWindow * window, KioskAreaConstraint *> */
         GHashTable         *locked_areas;
+        /* Set of <MetaWindow * window> */
+        GHashTable         *window_initial_config;
 };
 
 enum
@@ -231,6 +233,7 @@ kiosk_window_config_constructed (GObject *object)
         self->windows_on_monitors = g_hash_table_new_full (NULL, NULL, NULL, g_free);
         self->locked_monitors = g_hash_table_new_full (NULL, NULL, NULL, g_object_unref);
         self->locked_areas = g_hash_table_new_full (NULL, NULL, NULL, g_object_unref);
+        self->window_initial_config = g_hash_table_new (g_direct_hash, g_direct_equal);
 
         g_signal_connect (self->display,
                           "window-created",
@@ -290,6 +293,7 @@ kiosk_window_config_finalize (GObject *object)
         g_clear_pointer (&self->windows_on_monitors, g_hash_table_unref);
         g_clear_pointer (&self->locked_monitors, g_hash_table_unref);
         g_clear_pointer (&self->locked_areas, g_hash_table_unref);
+        g_clear_pointer (&self->window_initial_config, g_hash_table_destroy);
 
         G_OBJECT_CLASS (kiosk_window_config_parent_class)->finalize (object);
 }
@@ -410,6 +414,27 @@ kiosk_window_config_check_for_boolean_value (KioskWindowConfig *kiosk_window_con
                                               key_name,
                                               g_key_file_get_boolean,
                                               value);
+}
+
+static void
+kiosk_window_config_set_initial (KioskWindowConfig *kiosk_window_config,
+                                 MetaWindow        *window)
+{
+        g_hash_table_add (kiosk_window_config->window_initial_config, window);
+}
+
+static void
+kiosk_window_config_unset_initial (KioskWindowConfig *kiosk_window_config,
+                                   MetaWindow        *window)
+{
+        g_hash_table_remove (kiosk_window_config->window_initial_config, window);
+}
+
+static gboolean
+kiosk_window_config_is_initial (KioskWindowConfig *kiosk_window_config,
+                                MetaWindow        *window)
+{
+        return g_hash_table_contains (kiosk_window_config->window_initial_config, window);
 }
 
 static void
@@ -999,11 +1024,16 @@ kiosk_window_config_on_window_configure (MetaWindow       *window,
 {
         KioskWindowConfig *self = KIOSK_WINDOW_CONFIG (user_data);
 
-        if (meta_window_config_get_is_initial (window_config))
-                kiosk_window_config_on_window_configure_initial (self, window, window_config);
-        else
+        g_debug ("KioskWindowConfig: configure window: %s", meta_window_get_description (window));
+
+        if (!kiosk_window_config_is_initial (self, window)) {
                 g_debug ("KioskWindowConfig: Ignoring configure for window: %s",
                          meta_window_get_description (window));
+                return;
+        }
+
+        kiosk_window_config_on_window_configure_initial (self, window, window_config);
+        kiosk_window_config_unset_initial (self, window);
 }
 
 static void
@@ -1035,6 +1065,8 @@ kiosk_window_config_on_window_unmanaged (MetaWindow *window,
                 meta_window_remove_external_constraint (window, META_EXTERNAL_CONSTRAINT (area_constraint));
                 g_hash_table_remove (self->locked_areas, window);
         }
+
+        kiosk_window_config_unset_initial (self, window);
 }
 
 static void
@@ -1048,6 +1080,8 @@ kiosk_window_config_on_window_created (MetaDisplay *display,
         gboolean lock_on_monitor;
         gboolean lock_on_monitor_area;
         gboolean lock_on_area;
+
+        kiosk_window_config_set_initial (self, window);
 
         g_signal_connect (window,
                           "configure",
