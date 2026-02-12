@@ -23,5 +23,6 @@ KioskService *kiosk_compositor_get_service (KioskCompositor *compositor);
 KioskAppSystem *kiosk_compositor_get_app_system (KioskCompositor *compositor);
 KioskWindowTracker *kiosk_compositor_get_window_tracker (KioskCompositor *compositor);
 KioskWindowConfig *kiosk_compositor_get_window_config (KioskCompositor *compositor);
+gboolean kiosk_compositor_are_animations_enabled (KioskCompositor *compositor);
 
 G_END_DECLS
