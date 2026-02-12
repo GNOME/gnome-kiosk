@@ -1150,12 +1150,101 @@ kiosk_window_config_on_window_created (MetaDisplay *display,
         }
 }
 
+static void
+kiosk_window_config_ensure_window_state (KioskWindowConfig *kiosk_window_config,
+                                         MetaWindow        *window,
+                                         MetaWindowConfig  *window_config)
+{
+        gboolean want_fullscreen;
+
+        want_fullscreen = meta_window_config_get_is_fullscreen (window_config);
+        if (want_fullscreen == meta_window_is_fullscreen (window)) {
+                g_debug ("KioskWindowConfig: Window '%s' state is already %s",
+                         meta_window_get_description (window),
+                         want_fullscreen ? "fullscreen" : "un-fullscreen");
+                return;
+        }
+
+        if (want_fullscreen) {
+                if (kiosk_window_config_can_make_fullscreen (window)) {
+                        meta_window_make_fullscreen (window);
+                        g_debug ("KioskWindowConfig: Made window '%s' fullscreen",
+                                 meta_window_get_description (window));
+                } else {
+                        g_debug ("KioskWindowConfig: Cannot make window '%s' fullscreen",
+                                 meta_window_get_description (window));
+                }
+        } else {
+                meta_window_unmake_fullscreen (window);
+                g_debug ("KioskWindowConfig: Made window '%s' un-fullscreen",
+                         meta_window_get_description (window));
+        }
+}
+
+static void
+kiosk_window_config_ensure_window_size_and_position (KioskWindowConfig *kiosk_window_config,
+                                                     MetaWindow        *window,
+                                                     MetaWindowConfig  *window_config)
+{
+        MtkRectangle config_rect;
+        MtkRectangle frame_rect;
+
+        config_rect = meta_window_config_get_rect (window_config);
+        meta_window_get_frame_rect (window, &frame_rect);
+
+        if (mtk_rectangle_equal (&config_rect, &frame_rect)) {
+                g_debug ("KioskWindowConfig: Window '%s' already at (%i,%i) [%ix%i]",
+                         meta_window_get_description (window),
+                         config_rect.x, config_rect.y, config_rect.width, config_rect.height);
+                return;
+        }
+
+        meta_window_move_resize_frame (window, FALSE, config_rect.x, config_rect.y, config_rect.width, config_rect.height);
+        g_debug ("KioskWindowConfig: Fixed window '%s' size and position to (%i,%i) [%ix%i]",
+                 meta_window_get_description (window),
+                 config_rect.x, config_rect.y, config_rect.width, config_rect.height);
+}
+
+static MetaWindowConfig *
+kiosk_window_config_create_from_window (MetaWindow *window)
+{
+        MetaWindowConfig *window_config;
+        MtkRectangle rect;
+        gboolean is_fullscreen;
+
+        window_config = meta_window_config_new ();
+
+        meta_window_get_frame_rect (window, &rect);
+        meta_window_config_set_rect (window_config, rect);
+
+        is_fullscreen = meta_window_is_fullscreen (window);
+        meta_window_config_set_is_fullscreen (window_config, is_fullscreen);
+
+        return window_config;
+}
+
 void
 kiosk_window_config_apply_initial_config (KioskWindowConfig *kiosk_window_config,
                                           MetaWindow        *window)
 {
         int monitor;
         MetaWindowType window_type;
+        g_autoptr (MetaWindowConfig) temp_config = NULL;
+
+        /* If the initial config was not applied on configure, apply it now! */
+        if (kiosk_window_config_is_initial (kiosk_window_config, window)) {
+                temp_config = kiosk_window_config_create_from_window (window);
+                kiosk_window_config_on_window_configure_initial (kiosk_window_config,
+                                                                 window,
+                                                                 temp_config);
+                kiosk_window_config_ensure_window_size_and_position (kiosk_window_config,
+                                                                     window,
+                                                                     temp_config);
+                kiosk_window_config_ensure_window_state (kiosk_window_config,
+                                                         window,
+                                                         temp_config);
+                kiosk_window_config_unset_initial (kiosk_window_config, window);
+        }
 
         if (!meta_window_is_fullscreen (window)) {
                 if (kiosk_window_config_wants_window_above (kiosk_window_config, window)) {
