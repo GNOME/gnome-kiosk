@@ -638,10 +638,16 @@ kiosk_compositor_get_window_config (KioskCompositor *self)
 gboolean
 kiosk_compositor_are_animations_enabled (KioskCompositor *self)
 {
+        MetaBackend *meta_backend;
+
         g_return_val_if_fail (KIOSK_IS_COMPOSITOR (self), FALSE);
 
         if (are_animations_forced ())
                 return TRUE;
+
+        meta_backend = meta_context_get_backend (self->context);
+        if (!meta_backend_is_rendering_hardware_accelerated (meta_backend))
+                return FALSE;
 
         return self->animations_enabled;
 }
