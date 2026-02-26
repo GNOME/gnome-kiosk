@@ -288,6 +288,23 @@ on_enable_animations_changed (GSettings       *settings,
 }
 
 static void
+kiosk_compositor_hide_cursor (KioskCompositor *self)
+{
+        MetaCursorTracker *cursor_tracker;
+        MetaBackend *meta_backend;
+        ClutterBackend *clutter_backend;
+        ClutterSeat *clutter_seat;
+
+        clutter_backend = clutter_get_default_backend ();
+        clutter_seat = clutter_backend_get_default_seat (clutter_backend);
+        meta_backend = meta_context_get_backend (self->context);
+        cursor_tracker = meta_backend_get_cursor_tracker (meta_backend);
+
+        meta_cursor_tracker_inhibit_cursor_visibility (cursor_tracker);
+        clutter_seat_inhibit_unfocus (clutter_seat);
+}
+
+static void
 kiosk_compositor_start (MetaPlugin *plugin)
 {
         KioskCompositor *self = KIOSK_COMPOSITOR (plugin);
@@ -301,6 +318,9 @@ kiosk_compositor_start (MetaPlugin *plugin)
         g_set_weak_pointer (&self->stage, CLUTTER_ACTOR (meta_compositor_get_stage (compositor)));
 
         clutter_actor_show (self->stage);
+
+        if (is_no_cursor_enabled ())
+                kiosk_compositor_hide_cursor (self);
 
         self->cancellable = g_cancellable_new ();
 
