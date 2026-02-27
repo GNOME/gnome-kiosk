@@ -16,6 +16,7 @@
 static char **argv_ignored = NULL;
 static gboolean enable_vt_switch = FALSE;
 static gboolean force_animations = FALSE;
+static gboolean no_cursor = FALSE;
 
 static void
 command_exited_cb (GPid      command_pid,
@@ -93,6 +94,12 @@ static GOptionEntry
                 NULL
         },
         {
+                "no-cursor", 0, G_OPTION_FLAG_NONE, G_OPTION_ARG_NONE,
+                &no_cursor,
+                N_ ("Hide the cursor in the compositor"),
+                NULL
+        },
+        {
                 G_OPTION_REMAINING,
                 .arg = G_OPTION_ARG_STRING_ARRAY,
                 &argv_ignored,
@@ -111,6 +118,12 @@ gboolean
 are_animations_forced (void)
 {
         return force_animations;
+}
+
+gboolean
+is_no_cursor_enabled (void)
+{
+        return no_cursor;
 }
 
 static void
