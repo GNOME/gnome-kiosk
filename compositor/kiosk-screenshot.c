@@ -431,6 +431,7 @@ do_grab_screenshot (KioskScreenshot     *screenshot,
                                             cairo_image_surface_get_data (image),
                                             cairo_image_surface_get_stride (image),
                                             COGL_PIXEL_FORMAT_CAIRO_ARGB32_COMPAT,
+                                            NULL,
                                             paint_flags,
                                             &error)) {
                 cairo_surface_destroy (image);
