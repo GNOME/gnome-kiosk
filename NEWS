@@ -1,5 +1,24 @@
 # NEWS
 
+## 50.rc
+
+- Update for mutter 50.rc API change
+- Add a new option `--no-cursor` to hide the cursor
+- Ensure initial window state, size and position are applied
+- Improve auto-fullscreen detection by default
+- Disable animations when hardware acceleration is not available
+- Add a new option `--force-animations` to force animations
+- Start accessibility settings in systemd sessions (required for Orca)
+- Do not restart the script session on exit (allows logout)
+- Disable the VT switch keybindings by default
+- Add a new option `--enable-vt-switch` to enable VT switch keybindings
+- Hide the accessibility panel app from other desktops
+- Add error logging for mount failures
+- Fix bounds checking for layout_index in get_selected_layout
+- Fix race condition in configuration file reload
+- Fix null pointer dereference in input engine manager
+- Fix memory leaks in window tracker
+
 ## 50.beta
 
 - Fix session (not) registering causing a hang in GDM
