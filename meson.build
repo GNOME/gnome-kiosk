@@ -193,6 +193,7 @@ compositor_dependencies += dependency('gnome-desktop-4')
 compositor_dependencies += dependency('gobject-2.0')
 compositor_dependencies += dependency('ibus-1.0')
 compositor_dependencies += dependency('gdk-pixbuf-2.0')
+compositor_dependencies += dependency('cairo')
 compositor_dependencies += dependency(libmutter_cogl_name)
 compositor_dependencies += dependency(libmutter_clutter_name)
 compositor_dependencies += mutter_dependency

@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <cairo.h>
 #include <cogl/cogl.h>
 
 #include <meta/display.h>
@@ -23,6 +24,8 @@
 #include <meta/meta-background.h>
 
 /* This code is a largely based on GNOME Shell implementation of ShellScreenshot */
+
+static cairo_user_data_key_t data_key;
 
 typedef enum _KioskScreenshotFlag
 {
@@ -550,6 +553,8 @@ grab_window_screenshot (KioskScreenshot     *screenshot,
         ClutterActor *window_actor;
         gfloat actor_x, actor_y;
         MtkRectangle rect;
+        uint8_t *data;
+        int width, height, stride;
 
         window_actor = CLUTTER_ACTOR (meta_window_get_compositor_private (window));
         clutter_actor_get_position (window_actor, &actor_x, &actor_y);
@@ -561,15 +566,20 @@ grab_window_screenshot (KioskScreenshot     *screenshot,
 
         screenshot->screenshot_area = rect;
 
-        screenshot->image = meta_window_actor_get_image (META_WINDOW_ACTOR (window_actor),
-                                                         NULL);
-
-        if (!screenshot->image) {
+        if (!meta_window_actor_get_image (META_WINDOW_ACTOR (window_actor), NULL,
+                                          COGL_PIXEL_FORMAT_CAIRO_ARGB32_COMPAT,
+                                          &width, &height, &stride, &data)) {
                 g_task_report_new_error (screenshot, on_screenshot_written, result, NULL,
                                          G_IO_ERROR, G_IO_ERROR_FAILED,
                                          "Capturing window failed");
                 return;
         }
+
+        screenshot->image = cairo_image_surface_create_for_data (data, CAIRO_FORMAT_ARGB32,
+                                                                 width, height, stride);
+
+        /* Attach buffer to surface for automatic cleanup */
+        cairo_surface_set_user_data (screenshot->image, &data_key, data, g_free);
 
         screenshot->datetime = g_date_time_new_now_local ();
 
