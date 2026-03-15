@@ -436,7 +436,7 @@ do_grab_screenshot (KioskScreenshot     *screenshot,
                                             &screenshot_rect, scale,
                                             cairo_image_surface_get_data (image),
                                             cairo_image_surface_get_stride (image),
-                                            COGL_PIXEL_FORMAT_CAIRO_ARGB32_COMPAT,
+                                            COGL_PIXEL_FORMAT_ARGB32_NATIVE,
                                             NULL,
                                             paint_flags,
                                             &error)) {
@@ -485,7 +485,7 @@ draw_cursor_image (KioskScreenshot *screenshot,
         height = cogl_texture_get_height (texture);
         stride = 4 * width;
         data = g_new (guint8, stride * height);
-        cogl_texture_get_data (texture, COGL_PIXEL_FORMAT_CAIRO_ARGB32_COMPAT, stride, data);
+        cogl_texture_get_data (texture, COGL_PIXEL_FORMAT_ARGB32_NATIVE, stride, data);
 
         /* FIXME: cairo-gl? */
         cursor_surface = cairo_image_surface_create_for_data (data,
@@ -570,7 +570,7 @@ grab_window_screenshot (KioskScreenshot     *screenshot,
         screenshot->screenshot_area = rect;
 
         bitmap = meta_window_actor_paint_to_bitmap (META_WINDOW_ACTOR (window_actor), NULL,
-                                                    COGL_PIXEL_FORMAT_CAIRO_ARGB32_COMPAT);
+                                                    COGL_PIXEL_FORMAT_ARGB32_NATIVE);
         if (!bitmap) {
                 g_task_report_new_error (screenshot, on_screenshot_written, result, NULL,
                                          G_IO_ERROR, G_IO_ERROR_FAILED,
