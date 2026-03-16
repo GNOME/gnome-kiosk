@@ -114,7 +114,6 @@ kiosk_compositor_dispose (GObject *object)
 
         g_clear_weak_pointer (&self->display);
         g_clear_weak_pointer (&self->context);
-        g_clear_weak_pointer (&self->backend);
         g_clear_weak_pointer (&self->stage);
 
         G_OBJECT_CLASS (kiosk_compositor_parent_class)->dispose (object);
@@ -301,10 +300,12 @@ kiosk_compositor_hide_cursor (KioskCompositor *self)
 {
         MetaCursorTracker *cursor_tracker;
         MetaBackend *meta_backend;
+        ClutterContext *clutter_context;
         ClutterBackend *clutter_backend;
         ClutterSeat *clutter_seat;
 
-        clutter_backend = clutter_get_default_backend ();
+        clutter_context = clutter_actor_get_context (CLUTTER_ACTOR (self->stage));
+        clutter_backend = clutter_context_get_backend (clutter_context);
         clutter_seat = clutter_backend_get_default_seat (clutter_backend);
         meta_backend = meta_context_get_backend (self->context);
         cursor_tracker = meta_backend_get_cursor_tracker (meta_backend);
@@ -323,7 +324,6 @@ kiosk_compositor_start (MetaPlugin *plugin)
 
         g_set_weak_pointer (&self->display, display);
         g_set_weak_pointer (&self->context, meta_display_get_context (self->display));
-        g_set_weak_pointer (&self->backend, clutter_get_default_backend ());
         g_set_weak_pointer (&self->stage, CLUTTER_ACTOR (meta_compositor_get_stage (compositor)));
 
         clutter_actor_show (self->stage);
