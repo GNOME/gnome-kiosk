@@ -20,7 +20,7 @@ typedef struct _KioskCompositor KioskCompositor;
 #define KIOSK_TYPE_SCREENSHOT (kiosk_screenshot_get_type ())
 
 G_DECLARE_FINAL_TYPE (KioskScreenshot, kiosk_screenshot,
-                      KIOSK, SCREENSHOT, GObject)
+                      KIOSK, SCREENSHOT, GObject);
 
 KioskScreenshot *kiosk_screenshot_new (KioskCompositor * compositor);
 

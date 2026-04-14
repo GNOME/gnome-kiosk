@@ -9,7 +9,7 @@
 typedef struct _KioskCompositor KioskCompositor;
 
 #define KIOSK_TYPE_APP_SYSTEM (kiosk_app_system_get_type ())
-G_DECLARE_FINAL_TYPE (KioskAppSystem, kiosk_app_system, KIOSK, APP_SYSTEM, GObject)
+G_DECLARE_FINAL_TYPE (KioskAppSystem, kiosk_app_system, KIOSK, APP_SYSTEM, GObject);
 
 /* App iterator */
 typedef struct _KioskAppSystemAppIter

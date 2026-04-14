@@ -23,7 +23,7 @@ struct _KioskInputSelectorApplication
         GDBusObjectManager       *object_manager;
 };
 
-G_DEFINE_FINAL_TYPE (KioskInputSelectorApplication, kiosk_input_selector_application, GTK_TYPE_APPLICATION)
+G_DEFINE_FINAL_TYPE (KioskInputSelectorApplication, kiosk_input_selector_application, GTK_TYPE_APPLICATION);
 
 KioskInputSelectorApplication *
 kiosk_input_selector_application_new (void){

@@ -40,7 +40,7 @@ static void kiosk_monitor_constraint_iface_init (MetaExternalConstraintInterface
 
 G_DEFINE_FINAL_TYPE_WITH_CODE (KioskMonitorConstraint, kiosk_monitor_constraint, G_TYPE_OBJECT,
                                G_IMPLEMENT_INTERFACE (META_TYPE_EXTERNAL_CONSTRAINT,
-                                                      kiosk_monitor_constraint_iface_init))
+                                                      kiosk_monitor_constraint_iface_init));
 
 static void
 kiosk_monitor_constraint_dispose (GObject *object)

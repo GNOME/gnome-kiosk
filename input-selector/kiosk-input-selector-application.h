@@ -8,7 +8,7 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE (KioskInputSelectorApplication, kiosk_input_selector_application,
                       KIOSK, INPUT_SELECTOR_APPLICATION,
-                      GtkApplication)
+                      GtkApplication);
 
 KioskInputSelectorApplication *kiosk_input_selector_application_new (void);
 

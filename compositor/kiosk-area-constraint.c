@@ -45,7 +45,7 @@ static void kiosk_area_constraint_iface_init (MetaExternalConstraintInterface *i
 
 G_DEFINE_FINAL_TYPE_WITH_CODE (KioskAreaConstraint, kiosk_area_constraint, G_TYPE_OBJECT,
                                G_IMPLEMENT_INTERFACE (META_TYPE_EXTERNAL_CONSTRAINT,
-                                                      kiosk_area_constraint_iface_init))
+                                                      kiosk_area_constraint_iface_init));
 
 static void
 kiosk_area_constraint_dispose (GObject *object)

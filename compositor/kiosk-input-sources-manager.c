@@ -79,7 +79,7 @@ enum
 };
 static GParamSpec *kiosk_input_sources_manager_properties[NUMBER_OF_PROPERTIES] = { NULL, };
 
-G_DEFINE_FINAL_TYPE (KioskInputSourcesManager, kiosk_input_sources_manager, G_TYPE_OBJECT)
+G_DEFINE_FINAL_TYPE (KioskInputSourcesManager, kiosk_input_sources_manager, G_TYPE_OBJECT);
 
 static void kiosk_input_sources_manager_set_property (GObject      *object,
                                                       guint         property_id,
