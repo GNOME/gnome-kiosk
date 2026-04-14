@@ -94,7 +94,7 @@ populate_input_sources_menu_with_input_source_manager (KioskInputSelectorApplica
                          kiosk_input_source_get_backend_id (input_source));
 
                 action_id = g_action_print_detailed_name ("win.switch-input-source",
-                                                          g_variant_new ("o", object_path));
+                                                          g_variant_new_object_path (object_path));
 
                 g_menu_append (self->input_sources_menu,
                                kiosk_input_source_get_full_name (input_source),

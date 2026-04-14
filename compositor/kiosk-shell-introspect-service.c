@@ -326,7 +326,7 @@ kiosk_shell_introspect_add_window_properties (KioskApp        *app,
         g_variant_builder_add (window_properties_builder,
                                "{sv}",
                                "client-type",
-                               g_variant_new ("u", client_type));
+                               g_variant_new_uint32 (client_type));
 
         is_hidden = meta_window_is_hidden (window);
         g_variant_builder_add (window_properties_builder,
@@ -344,11 +344,11 @@ kiosk_shell_introspect_add_window_properties (KioskApp        *app,
         g_variant_builder_add (window_properties_builder,
                                "{sv}",
                                "width",
-                               g_variant_new ("u", frame_rect.width));
+                               g_variant_new_uint32 (frame_rect.width));
         g_variant_builder_add (window_properties_builder,
                                "{sv}",
                                "height",
-                               g_variant_new ("u", frame_rect.height));
+                               g_variant_new_uint32 (frame_rect.height));
 
         title = meta_window_get_title (window);
         if (title) {
