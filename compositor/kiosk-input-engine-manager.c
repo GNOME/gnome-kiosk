@@ -142,8 +142,7 @@ kiosk_input_engine_manager_set_active_engine (KioskInputEngineManager *self,
                 g_debug ("KioskInputEngineManager: Active input engine is now '%s'", active_engine);
         }
 
-        g_free (self->active_engine);
-        self->active_engine = g_strdup (active_engine);
+        g_set_str (&self->active_engine, active_engine);
 
         g_object_notify (G_OBJECT (self), "active-engine");
 }

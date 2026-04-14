@@ -251,8 +251,7 @@ kiosk_input_source_group_set_input_engine (KioskInputSourceGroup *self,
 {
         g_debug ("KioskInputSourceGroup: Setting input engine to '%s'", engine_name);
 
-        g_free (self->input_engine_name);
-        self->input_engine_name = g_strdup (engine_name);
+        g_set_str (&self->input_engine_name, engine_name);
 
         g_ptr_array_set_size (self->layouts, 0);
         g_ptr_array_set_size (self->variants, 0);
@@ -273,8 +272,7 @@ void
 kiosk_input_source_group_set_options (KioskInputSourceGroup *self,
                                       const char            *options)
 {
-        g_free (self->options);
-        self->options = g_strdup (options);
+        g_set_str (&self->options, options);
 }
 
 const char *
