@@ -117,7 +117,7 @@ kiosk_input_engine_manager_set_is_loaded (KioskInputEngineManager *self,
         }
 
         self->is_loaded = is_loaded;
-        g_object_notify (G_OBJECT (self), "is-loaded");
+        g_object_notify_by_pspec (G_OBJECT (self), kiosk_input_engine_manager_properties[PROP_IS_LOADED]);
 }
 
 gboolean
@@ -144,7 +144,7 @@ kiosk_input_engine_manager_set_active_engine (KioskInputEngineManager *self,
 
         g_set_str (&self->active_engine, active_engine);
 
-        g_object_notify (G_OBJECT (self), "active-engine");
+        g_object_notify_by_pspec (G_OBJECT (self), kiosk_input_engine_manager_properties[PROP_ACTIVE_ENGINE]);
 }
 
 const char *
