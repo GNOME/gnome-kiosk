@@ -53,7 +53,7 @@ struct _KioskAppSystem
 
 static void kiosk_app_system_finalize (GObject *object);
 
-G_DEFINE_TYPE (KioskAppSystem, kiosk_app_system, G_TYPE_OBJECT);
+G_DEFINE_FINAL_TYPE (KioskAppSystem, kiosk_app_system, G_TYPE_OBJECT);
 
 static void
 kiosk_app_system_set_property (GObject      *gobject,

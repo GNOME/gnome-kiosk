@@ -80,7 +80,7 @@ static guint kiosk_app_signals[LAST_SIGNAL] = { 0 };
 static void create_running_state (KioskApp *app);
 static void unref_running_state (KioskAppRunningState *state);
 
-G_DEFINE_TYPE (KioskApp, kiosk_app, G_TYPE_OBJECT)
+G_DEFINE_FINAL_TYPE (KioskApp, kiosk_app, G_TYPE_OBJECT)
 
 const char *
 kiosk_app_get_id (KioskApp * app){

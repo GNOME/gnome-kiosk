@@ -38,7 +38,7 @@ enum
 };
 static GParamSpec *kiosk_service_properties[NUMBER_OF_PROPERTIES] = { NULL, };
 
-G_DEFINE_TYPE (KioskService, kiosk_service, G_TYPE_OBJECT);
+G_DEFINE_FINAL_TYPE (KioskService, kiosk_service, G_TYPE_OBJECT);
 
 static void kiosk_service_set_property (GObject      *object,
                                         guint         property_id,

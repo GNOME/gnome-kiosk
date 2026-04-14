@@ -84,7 +84,7 @@ enum
 };
 static GParamSpec *kiosk_screenshot_properties[NUMBER_OF_PROPERTIES] = { NULL, };
 
-G_DEFINE_TYPE (KioskScreenshot, kiosk_screenshot, G_TYPE_OBJECT);
+G_DEFINE_FINAL_TYPE (KioskScreenshot, kiosk_screenshot, G_TYPE_OBJECT);
 
 static void
 kiosk_screenshot_dispose (GObject *object)

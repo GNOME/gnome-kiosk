@@ -40,7 +40,7 @@ struct _KioskWindowTracker
         GHashTable      *window_to_app;
 };
 
-G_DEFINE_TYPE (KioskWindowTracker, kiosk_window_tracker, G_TYPE_OBJECT);
+G_DEFINE_FINAL_TYPE (KioskWindowTracker, kiosk_window_tracker, G_TYPE_OBJECT);
 
 enum
 {

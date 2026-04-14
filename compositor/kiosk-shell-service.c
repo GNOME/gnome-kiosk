@@ -36,11 +36,11 @@ static GParamSpec *kiosk_shell_service_properties[NUMBER_OF_PROPERTIES] = { NULL
 
 static void kiosk_shell_dbus_service_interface_init (KioskShellDBusServiceIface *interface);
 
-G_DEFINE_TYPE_WITH_CODE (KioskShellService,
-                         kiosk_shell_service,
-                         KIOSK_TYPE_SHELL_DBUS_SERVICE_SKELETON,
-                         G_IMPLEMENT_INTERFACE (KIOSK_TYPE_SHELL_DBUS_SERVICE,
-                                                kiosk_shell_dbus_service_interface_init));
+G_DEFINE_FINAL_TYPE_WITH_CODE (KioskShellService,
+                               kiosk_shell_service,
+                               KIOSK_TYPE_SHELL_DBUS_SERVICE_SKELETON,
+                               G_IMPLEMENT_INTERFACE (KIOSK_TYPE_SHELL_DBUS_SERVICE,
+                                                      kiosk_shell_dbus_service_interface_init));
 
 static void kiosk_shell_service_set_property (GObject      *object,
                                               guint         property_id,

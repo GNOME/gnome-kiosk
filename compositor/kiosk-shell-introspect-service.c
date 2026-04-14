@@ -66,11 +66,11 @@ static void on_focused_app_changed (KioskWindowTracker *self,
 static void on_monitors_changed (MetaMonitorManager *monitor_manager,
                                  gpointer            user_data);
 
-G_DEFINE_TYPE_WITH_CODE (KioskShellIntrospectService,
-                         kiosk_shell_introspect_service,
-                         KIOSK_TYPE_SHELL_INTROSPECT_DBUS_SERVICE_SKELETON,
-                         G_IMPLEMENT_INTERFACE (KIOSK_TYPE_SHELL_INTROSPECT_DBUS_SERVICE,
-                                                kiosk_shell_introspect_dbus_service_interface_init));
+G_DEFINE_FINAL_TYPE_WITH_CODE (KioskShellIntrospectService,
+                               kiosk_shell_introspect_service,
+                               KIOSK_TYPE_SHELL_INTROSPECT_DBUS_SERVICE_SKELETON,
+                               G_IMPLEMENT_INTERFACE (KIOSK_TYPE_SHELL_INTROSPECT_DBUS_SERVICE,
+                                                      kiosk_shell_introspect_dbus_service_interface_init));
 
 static void kiosk_shell_introspect_service_set_property (GObject      *object,
                                                          guint         property_id,

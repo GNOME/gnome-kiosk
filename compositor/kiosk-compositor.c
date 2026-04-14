@@ -76,7 +76,7 @@ enum
 
 static guint signals[NUMBER_OF_SIGNALS] = { 0, };
 
-G_DEFINE_TYPE (KioskCompositor, kiosk_compositor, META_TYPE_PLUGIN)
+G_DEFINE_FINAL_TYPE (KioskCompositor, kiosk_compositor, META_TYPE_PLUGIN)
 
 static void kiosk_compositor_dispose (GObject *object);
 
