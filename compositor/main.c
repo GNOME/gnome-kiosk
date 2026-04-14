@@ -24,7 +24,7 @@ command_exited_cb (GPid      command_pid,
                    gpointer  user_data)
 {
         MetaContext *context = user_data;
-        GError *error;
+        GError *error = NULL;
 
         g_spawn_close_pid (command_pid);
 
