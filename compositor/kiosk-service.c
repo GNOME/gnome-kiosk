@@ -75,14 +75,9 @@ kiosk_service_class_init (KioskServiceClass *service_class)
         object_class->dispose = kiosk_service_dispose;
 
         kiosk_service_properties[PROP_COMPOSITOR] = g_param_spec_object ("compositor",
-                                                                         "compositor",
-                                                                         "compositor",
+                                                                         NULL, NULL,
                                                                          KIOSK_TYPE_COMPOSITOR,
-                                                                         G_PARAM_CONSTRUCT_ONLY
-                                                                         | G_PARAM_WRITABLE
-                                                                         | G_PARAM_STATIC_NAME
-                                                                         | G_PARAM_STATIC_NICK
-                                                                         | G_PARAM_STATIC_BLURB);
+                                                                         G_PARAM_CONSTRUCT_ONLY | G_PARAM_WRITABLE | G_PARAM_STATIC_NAME);
         g_object_class_install_properties (object_class, NUMBER_OF_PROPERTIES, kiosk_service_properties);
 }
 

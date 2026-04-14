@@ -104,14 +104,9 @@ kiosk_app_system_class_init (KioskAppSystemClass *klass)
                                                    KIOSK_TYPE_APP);
 
         props[PROP_COMPOSITOR] = g_param_spec_object ("compositor",
-                                                      "compositor",
-                                                      "compositor",
+                                                      NULL, NULL,
                                                       KIOSK_TYPE_COMPOSITOR,
-                                                      G_PARAM_CONSTRUCT_ONLY
-                                                      | G_PARAM_WRITABLE
-                                                      | G_PARAM_STATIC_NAME |
-                                                      G_PARAM_STATIC_NICK |
-                                                      G_PARAM_STATIC_BLURB);
+                                                      G_PARAM_CONSTRUCT_ONLY | G_PARAM_WRITABLE | G_PARAM_STATIC_NAME);
         g_object_class_install_properties (gobject_class, N_PROPS, props);
 }
 

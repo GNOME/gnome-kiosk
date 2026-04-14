@@ -138,29 +138,17 @@ kiosk_window_tracker_class_init (KioskWindowTrackerClass *klass)
                               0);
 
         props[PROP_APP_SYSTEM] = g_param_spec_object ("app-system",
-                                                      "App System",
-                                                      "Application system",
+                                                      NULL, NULL,
                                                       KIOSK_TYPE_APP_SYSTEM,
-                                                      G_PARAM_CONSTRUCT_ONLY
-                                                      | G_PARAM_WRITABLE
-                                                      | G_PARAM_STATIC_NAME
-                                                      | G_PARAM_STATIC_NICK
-                                                      | G_PARAM_STATIC_BLURB);
+                                                      G_PARAM_CONSTRUCT_ONLY | G_PARAM_WRITABLE | G_PARAM_STATIC_NAME);
         props[PROP_COMPOSITOR] = g_param_spec_object ("compositor",
-                                                      "compositor",
-                                                      "compositor",
+                                                      NULL, NULL,
                                                       KIOSK_TYPE_COMPOSITOR,
-                                                      G_PARAM_CONSTRUCT_ONLY
-                                                      | G_PARAM_WRITABLE
-                                                      | G_PARAM_STATIC_NAME
-                                                      | G_PARAM_STATIC_NICK
-                                                      | G_PARAM_STATIC_BLURB);
+                                                      G_PARAM_CONSTRUCT_ONLY | G_PARAM_WRITABLE | G_PARAM_STATIC_NAME);
         props[PROP_FOCUSED_APP] = g_param_spec_object ("focused-app",
-                                                       "Focused App",
-                                                       "Focused application",
+                                                       NULL, NULL,
                                                        KIOSK_TYPE_APP,
-                                                       G_PARAM_READABLE
-                                                       | G_PARAM_STATIC_STRINGS);
+                                                       G_PARAM_READABLE | G_PARAM_STATIC_NAME);
 
         g_object_class_install_properties (gobject_class, N_PROPS, props);
 }

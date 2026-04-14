@@ -544,23 +544,13 @@ kiosk_input_source_group_class_init (KioskInputSourceGroupClass *input_sources_c
         object_class->dispose = kiosk_input_source_group_dispose;
 
         kiosk_input_source_group_properties[PROP_COMPOSITOR] = g_param_spec_object ("compositor",
-                                                                                    "compositor",
-                                                                                    "compositor",
+                                                                                    NULL, NULL,
                                                                                     KIOSK_TYPE_COMPOSITOR,
-                                                                                    G_PARAM_CONSTRUCT_ONLY
-                                                                                    | G_PARAM_WRITABLE
-                                                                                    | G_PARAM_STATIC_NAME
-                                                                                    | G_PARAM_STATIC_NICK
-                                                                                    | G_PARAM_STATIC_BLURB);
+                                                                                    G_PARAM_CONSTRUCT_ONLY | G_PARAM_WRITABLE | G_PARAM_STATIC_NAME);
         kiosk_input_source_group_properties[PROP_INPUT_SOURCES_MANAGER] = g_param_spec_object ("input-sources-manager",
-                                                                                               "input-sources-manager",
-                                                                                               "input-sources-manager",
+                                                                                               NULL, NULL,
                                                                                                KIOSK_TYPE_INPUT_SOURCES_MANAGER,
-                                                                                               G_PARAM_CONSTRUCT_ONLY
-                                                                                               | G_PARAM_WRITABLE
-                                                                                               | G_PARAM_STATIC_NAME
-                                                                                               | G_PARAM_STATIC_NICK
-                                                                                               | G_PARAM_STATIC_BLURB);
+                                                                                               G_PARAM_CONSTRUCT_ONLY | G_PARAM_WRITABLE | G_PARAM_STATIC_NAME);
 
         g_object_class_install_properties (object_class, NUMBER_OF_PROPERTIES, kiosk_input_source_group_properties);
 }
