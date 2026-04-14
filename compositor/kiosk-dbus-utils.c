@@ -35,5 +35,5 @@ kiosk_dbus_utils_escape_object_path (const char *data,
                 g_string_append_printf (string, "_%x_", character);
         }
 
-        return g_string_free (string, FALSE);
+        return g_string_free_and_steal (string);
 }
