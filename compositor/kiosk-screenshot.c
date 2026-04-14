@@ -447,7 +447,7 @@ draw_cursor_image (KioskScreenshot *screenshot,
         CoglTexture *texture;
         int width, height;
         int stride;
-        guint8 *data;
+        g_autofree guint8 *data = NULL;
         MetaCursorTracker *tracker;
         cairo_surface_t *cursor_surface;
         cairo_t *cr;
@@ -508,7 +508,6 @@ draw_cursor_image (KioskScreenshot *screenshot,
 
         cairo_destroy (cr);
         cairo_surface_destroy (cursor_surface);
-        g_free (data);
 }
 
 static void
@@ -517,7 +516,7 @@ grab_screenshot (KioskScreenshot     *screenshot,
                  GTask               *result)
 {
         int width, height;
-        GTask *task;
+        g_autoptr (GTask) task = NULL;
 
         meta_display_get_size (screenshot->display, &width, &height);
 
@@ -533,7 +532,6 @@ grab_screenshot (KioskScreenshot     *screenshot,
         task = g_task_new (screenshot, NULL, on_screenshot_written, result);
         g_task_set_source_tag (task, grab_screenshot);
         g_task_run_in_thread (task, write_screenshot_thread);
-        g_object_unref (task);
 }
 
 static void
@@ -541,7 +539,7 @@ grab_window_screenshot (KioskScreenshot     *screenshot,
                         KioskScreenshotFlag  flags,
                         GTask               *result)
 {
-        GTask *task;
+        g_autoptr (GTask) task = NULL;
         MetaWindow *window = meta_display_get_focus_window (screenshot->display);
         ClutterActor *window_actor;
         gfloat actor_x, actor_y;
@@ -587,7 +585,6 @@ grab_window_screenshot (KioskScreenshot     *screenshot,
         task = g_task_new (screenshot, NULL, on_screenshot_written, result);
         g_task_set_source_tag (task, grab_window_screenshot);
         g_task_run_in_thread (task, write_screenshot_thread);
-        g_object_unref (task);
 }
 
 static gboolean
