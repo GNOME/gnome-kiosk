@@ -83,7 +83,8 @@ static void unref_running_state (KioskAppRunningState *state);
 G_DEFINE_FINAL_TYPE (KioskApp, kiosk_app, G_TYPE_OBJECT);
 
 const char *
-kiosk_app_get_id (KioskApp * app){
+kiosk_app_get_id (KioskApp *app)
+{
         if (app->info)
                 return g_app_info_get_id (G_APP_INFO (app->info));
         return app->window_id_string;

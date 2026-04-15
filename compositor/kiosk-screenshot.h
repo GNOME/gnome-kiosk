@@ -22,7 +22,7 @@ typedef struct _KioskCompositor KioskCompositor;
 G_DECLARE_FINAL_TYPE (KioskScreenshot, kiosk_screenshot,
                       KIOSK, SCREENSHOT, GObject);
 
-KioskScreenshot *kiosk_screenshot_new (KioskCompositor * compositor);
+KioskScreenshot *kiosk_screenshot_new (KioskCompositor *compositor);
 
 void    kiosk_screenshot_screenshot_area (KioskScreenshot     *screenshot,
                                           int                  x,

@@ -26,7 +26,8 @@ struct _KioskInputSelectorApplication
 G_DEFINE_FINAL_TYPE (KioskInputSelectorApplication, kiosk_input_selector_application, GTK_TYPE_APPLICATION);
 
 KioskInputSelectorApplication *
-kiosk_input_selector_application_new (void){
+kiosk_input_selector_application_new (void)
+{
         GObject *object;
         guint flags = G_APPLICATION_NON_UNIQUE
                       | G_APPLICATION_HANDLES_COMMAND_LINE;
