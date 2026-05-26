@@ -23,10 +23,11 @@ struct _KioskInputSelectorApplication
         GDBusObjectManager       *object_manager;
 };
 
-G_DEFINE_TYPE (KioskInputSelectorApplication, kiosk_input_selector_application, GTK_TYPE_APPLICATION)
+G_DEFINE_FINAL_TYPE (KioskInputSelectorApplication, kiosk_input_selector_application, GTK_TYPE_APPLICATION);
 
 KioskInputSelectorApplication *
-kiosk_input_selector_application_new (void){
+kiosk_input_selector_application_new (void)
+{
         GObject *object;
         guint flags = G_APPLICATION_NON_UNIQUE
                       | G_APPLICATION_HANDLES_COMMAND_LINE;
@@ -94,7 +95,7 @@ populate_input_sources_menu_with_input_source_manager (KioskInputSelectorApplica
                          kiosk_input_source_get_backend_id (input_source));
 
                 action_id = g_action_print_detailed_name ("win.switch-input-source",
-                                                          g_variant_new ("o", object_path));
+                                                          g_variant_new_object_path (object_path));
 
                 g_menu_append (self->input_sources_menu,
                                kiosk_input_source_get_full_name (input_source),

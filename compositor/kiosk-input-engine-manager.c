@@ -49,7 +49,7 @@ enum
 
 static GParamSpec *kiosk_input_engine_manager_properties[NUMBER_OF_PROPERTIES] = { NULL, };
 
-G_DEFINE_TYPE (KioskInputEngineManager, kiosk_input_engine_manager, G_TYPE_OBJECT)
+G_DEFINE_FINAL_TYPE (KioskInputEngineManager, kiosk_input_engine_manager, G_TYPE_OBJECT);
 
 static void kiosk_input_engine_manager_set_property (GObject      *object,
                                                      guint         property_id,
@@ -86,31 +86,18 @@ kiosk_input_engine_manager_class_init (KioskInputEngineManagerClass *input_engin
         object_class->dispose = kiosk_input_engine_manager_dispose;
 
         kiosk_input_engine_manager_properties[PROP_INPUT_SOURCES_MANAGER] = g_param_spec_object ("input-sources-manager",
-                                                                                                 "input-sources-manager",
-                                                                                                 "input-sources-manager",
+                                                                                                 NULL, NULL,
                                                                                                  KIOSK_TYPE_INPUT_SOURCES_MANAGER,
-                                                                                                 G_PARAM_CONSTRUCT_ONLY
-                                                                                                 | G_PARAM_WRITABLE
-                                                                                                 | G_PARAM_STATIC_NAME
-                                                                                                 | G_PARAM_STATIC_NICK
-                                                                                                 | G_PARAM_STATIC_BLURB);
+                                                                                                 G_PARAM_CONSTRUCT_ONLY | G_PARAM_WRITABLE | G_PARAM_STATIC_NAME);
         kiosk_input_engine_manager_properties[PROP_IS_LOADED] = g_param_spec_boolean ("is-loaded",
-                                                                                      "is-loaded",
-                                                                                      "is-loaded",
+                                                                                      NULL, NULL,
                                                                                       FALSE,
-                                                                                      G_PARAM_READABLE
-                                                                                      | G_PARAM_STATIC_NAME
-                                                                                      | G_PARAM_STATIC_NICK
-                                                                                      | G_PARAM_STATIC_BLURB);
+                                                                                      G_PARAM_READABLE | G_PARAM_STATIC_NAME);
 
         kiosk_input_engine_manager_properties[PROP_ACTIVE_ENGINE] = g_param_spec_string ("active-engine",
-                                                                                         "active-engine",
-                                                                                         "active-engine",
+                                                                                         NULL, NULL,
                                                                                          NULL,
-                                                                                         G_PARAM_READABLE
-                                                                                         | G_PARAM_STATIC_NAME
-                                                                                         | G_PARAM_STATIC_NICK
-                                                                                         | G_PARAM_STATIC_BLURB);
+                                                                                         G_PARAM_READABLE | G_PARAM_STATIC_NAME);
 
         g_object_class_install_properties (object_class, NUMBER_OF_PROPERTIES, kiosk_input_engine_manager_properties);
 }
@@ -130,7 +117,7 @@ kiosk_input_engine_manager_set_is_loaded (KioskInputEngineManager *self,
         }
 
         self->is_loaded = is_loaded;
-        g_object_notify (G_OBJECT (self), "is-loaded");
+        g_object_notify_by_pspec (G_OBJECT (self), kiosk_input_engine_manager_properties[PROP_IS_LOADED]);
 }
 
 gboolean
@@ -155,10 +142,9 @@ kiosk_input_engine_manager_set_active_engine (KioskInputEngineManager *self,
                 g_debug ("KioskInputEngineManager: Active input engine is now '%s'", active_engine);
         }
 
-        g_free (self->active_engine);
-        self->active_engine = g_strdup (active_engine);
+        g_set_str (&self->active_engine, active_engine);
 
-        g_object_notify (G_OBJECT (self), "active-engine");
+        g_object_notify_by_pspec (G_OBJECT (self), kiosk_input_engine_manager_properties[PROP_ACTIVE_ENGINE]);
 }
 
 const char *

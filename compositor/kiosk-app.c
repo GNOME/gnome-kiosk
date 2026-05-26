@@ -80,10 +80,11 @@ static guint kiosk_app_signals[LAST_SIGNAL] = { 0 };
 static void create_running_state (KioskApp *app);
 static void unref_running_state (KioskAppRunningState *state);
 
-G_DEFINE_TYPE (KioskApp, kiosk_app, G_TYPE_OBJECT)
+G_DEFINE_FINAL_TYPE (KioskApp, kiosk_app, G_TYPE_OBJECT);
 
 const char *
-kiosk_app_get_id (KioskApp * app){
+kiosk_app_get_id (KioskApp *app)
+{
         if (app->info)
                 return g_app_info_get_id (G_APP_INFO (app->info));
         return app->window_id_string;
@@ -649,14 +650,9 @@ kiosk_app_class_init (KioskAppClass *klass)
                                                            0);
 
         props[PROP_COMPOSITOR] = g_param_spec_object ("compositor",
-                                                      "compositor",
-                                                      "compositor",
+                                                      NULL, NULL,
                                                       KIOSK_TYPE_COMPOSITOR,
-                                                      G_PARAM_CONSTRUCT_ONLY
-                                                      | G_PARAM_WRITABLE
-                                                      | G_PARAM_STATIC_NAME |
-                                                      G_PARAM_STATIC_NICK |
-                                                      G_PARAM_STATIC_BLURB);
+                                                      G_PARAM_CONSTRUCT_ONLY | G_PARAM_WRITABLE | G_PARAM_STATIC_NAME);
         /**
          * KioskApp:state:
          *
@@ -665,11 +661,10 @@ kiosk_app_class_init (KioskAppClass *klass)
          */
         props[PROP_STATE] =
                 g_param_spec_enum ("state",
-                                   "State",
-                                   "Application state",
+                                   NULL, NULL,
                                    KIOSK_TYPE_APP_STATE,
                                    KIOSK_APP_STATE_STOPPED,
-                                   G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+                                   G_PARAM_READABLE | G_PARAM_STATIC_NAME);
 
         /**
          * KioskApp:id:
@@ -679,11 +674,9 @@ kiosk_app_class_init (KioskAppClass *klass)
          */
         props[PROP_ID] =
                 g_param_spec_string ("id",
-                                     "Application id",
-                                     "The desktop file id of this KioskApp",
+                                     NULL, NULL,
                                      NULL,
-                                     G_PARAM_READABLE |
-                                     G_PARAM_STATIC_STRINGS);
+                                     G_PARAM_READABLE | G_PARAM_STATIC_NAME);
 
         /**
          * KioskApp:app-info:
@@ -692,12 +685,9 @@ kiosk_app_class_init (KioskAppClass *klass)
          */
         props[PROP_APP_INFO] =
                 g_param_spec_object ("app-info",
-                                     "DesktopAppInfo",
-                                     "The DesktopAppInfo associated with this app",
+                                     NULL, NULL,
                                      G_TYPE_DESKTOP_APP_INFO,
-                                     G_PARAM_READWRITE |
-                                     G_PARAM_CONSTRUCT_ONLY |
-                                     G_PARAM_STATIC_STRINGS);
+                                     G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY | G_PARAM_STATIC_NAME);
 
         g_object_class_install_properties (gobject_class, N_PROPS, props);
 }

@@ -45,7 +45,7 @@ enum
 };
 static GParamSpec *kiosk_magnifier_properties[NUMBER_OF_PROPERTIES] = { NULL, };
 
-G_DEFINE_TYPE (KioskMagnifier, kiosk_magnifier, G_TYPE_OBJECT)
+G_DEFINE_FINAL_TYPE (KioskMagnifier, kiosk_magnifier, G_TYPE_OBJECT);
 
 static void kiosk_magnifier_set_property (GObject      *object,
                                           guint         property_id,

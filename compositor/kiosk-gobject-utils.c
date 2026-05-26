@@ -72,6 +72,7 @@ kiosk_gobject_utils_queue_callback (GObject             *self,
                            cancellable,
                            (GAsyncReadyCallback) on_task_wait_complete,
                            NULL);
+        g_task_set_source_tag (task, kiosk_gobject_utils_queue_callback);
 
         if (name != NULL) {
                 g_task_set_name (task, name);

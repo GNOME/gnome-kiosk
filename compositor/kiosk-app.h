@@ -13,7 +13,7 @@ G_DECLARE_FINAL_TYPE (KioskApp,
                       kiosk_app,
                       KIOSK,
                       APP,
-                      GObject)
+                      GObject);
 
 typedef enum
 {

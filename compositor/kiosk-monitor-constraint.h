@@ -9,8 +9,8 @@ typedef struct _KioskCompositor KioskCompositor;
 
 #define KIOSK_TYPE_MONITOR_CONSTRAINT (kiosk_monitor_constraint_get_type ())
 G_DECLARE_FINAL_TYPE (KioskMonitorConstraint, kiosk_monitor_constraint,
-                      KIOSK, MONITOR_CONSTRAINT, GObject)
+                      KIOSK, MONITOR_CONSTRAINT, GObject);
 
-KioskMonitorConstraint *kiosk_monitor_constraint_new (KioskCompositor * compositor);
+KioskMonitorConstraint *kiosk_monitor_constraint_new (KioskCompositor *compositor);
 
 G_END_DECLS

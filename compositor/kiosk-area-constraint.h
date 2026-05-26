@@ -10,10 +10,10 @@ typedef struct _KioskCompositor KioskCompositor;
 
 #define KIOSK_TYPE_AREA_CONSTRAINT (kiosk_area_constraint_get_type ())
 G_DECLARE_FINAL_TYPE (KioskAreaConstraint, kiosk_area_constraint,
-                      KIOSK, AREA_CONSTRAINT, GObject)
+                      KIOSK, AREA_CONSTRAINT, GObject);
 
-KioskAreaConstraint *kiosk_area_constraint_new (KioskCompositor * compositor,
-                                                MtkRectangle * area,
-                                                gboolean is_absolute);
+KioskAreaConstraint *kiosk_area_constraint_new (KioskCompositor *compositor,
+                                                MtkRectangle    *area,
+                                                gboolean         is_absolute);
 
 G_END_DECLS

@@ -13,9 +13,9 @@ G_BEGIN_DECLS
 
 #define KIOSK_TYPE_WINDOW_TRACKER (kiosk_window_tracker_get_type ())
 G_DECLARE_FINAL_TYPE (KioskWindowTracker, kiosk_window_tracker,
-                      KIOSK, WINDOW_TRACKER, GObject)
+                      KIOSK, WINDOW_TRACKER, GObject);
 
-KioskApp *kiosk_window_tracker_get_focused_app (KioskWindowTracker * tracker);
+KioskApp *kiosk_window_tracker_get_focused_app (KioskWindowTracker *tracker);
 KioskWindowTracker *kiosk_window_tracker_new (KioskCompositor *compositor,
                                               KioskAppSystem  *app_system);
 

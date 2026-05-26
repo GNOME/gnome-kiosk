@@ -66,11 +66,11 @@ static void on_focused_app_changed (KioskWindowTracker *self,
 static void on_monitors_changed (MetaMonitorManager *monitor_manager,
                                  gpointer            user_data);
 
-G_DEFINE_TYPE_WITH_CODE (KioskShellIntrospectService,
-                         kiosk_shell_introspect_service,
-                         KIOSK_TYPE_SHELL_INTROSPECT_DBUS_SERVICE_SKELETON,
-                         G_IMPLEMENT_INTERFACE (KIOSK_TYPE_SHELL_INTROSPECT_DBUS_SERVICE,
-                                                kiosk_shell_introspect_dbus_service_interface_init));
+G_DEFINE_FINAL_TYPE_WITH_CODE (KioskShellIntrospectService,
+                               kiosk_shell_introspect_service,
+                               KIOSK_TYPE_SHELL_INTROSPECT_DBUS_SERVICE_SKELETON,
+                               G_IMPLEMENT_INTERFACE (KIOSK_TYPE_SHELL_INTROSPECT_DBUS_SERVICE,
+                                                      kiosk_shell_introspect_dbus_service_interface_init));
 
 static void kiosk_shell_introspect_service_set_property (GObject      *object,
                                                          guint         property_id,
@@ -96,14 +96,9 @@ kiosk_shell_introspect_service_class_init (KioskShellIntrospectServiceClass *she
 
         kiosk_shell_introspect_service_properties[PROP_COMPOSITOR] =
                 g_param_spec_object ("compositor",
-                                     "compositor",
-                                     "compositor",
+                                     NULL, NULL,
                                      KIOSK_TYPE_COMPOSITOR,
-                                     G_PARAM_CONSTRUCT_ONLY
-                                     | G_PARAM_WRITABLE
-                                     | G_PARAM_STATIC_NAME
-                                     | G_PARAM_STATIC_NICK
-                                     | G_PARAM_STATIC_BLURB);
+                                     G_PARAM_CONSTRUCT_ONLY | G_PARAM_WRITABLE | G_PARAM_STATIC_NAME);
         g_object_class_install_properties (object_class,
                                            NUMBER_OF_PROPERTIES,
                                            kiosk_shell_introspect_service_properties);
@@ -331,7 +326,7 @@ kiosk_shell_introspect_add_window_properties (KioskApp        *app,
         g_variant_builder_add (window_properties_builder,
                                "{sv}",
                                "client-type",
-                               g_variant_new ("u", client_type));
+                               g_variant_new_uint32 (client_type));
 
         is_hidden = meta_window_is_hidden (window);
         g_variant_builder_add (window_properties_builder,
@@ -349,11 +344,11 @@ kiosk_shell_introspect_add_window_properties (KioskApp        *app,
         g_variant_builder_add (window_properties_builder,
                                "{sv}",
                                "width",
-                               g_variant_new ("u", frame_rect.width));
+                               g_variant_new_uint32 (frame_rect.width));
         g_variant_builder_add (window_properties_builder,
                                "{sv}",
                                "height",
-                               g_variant_new ("u", frame_rect.height));
+                               g_variant_new_uint32 (frame_rect.height));
 
         title = meta_window_get_title (window);
         if (title) {

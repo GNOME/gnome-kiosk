@@ -68,7 +68,7 @@ typedef enum
         MONITOR_FOUND,
 } KioskWindowConfigMonitor;
 
-G_DEFINE_TYPE (KioskWindowConfig, kiosk_window_config, G_TYPE_OBJECT)
+G_DEFINE_FINAL_TYPE (KioskWindowConfig, kiosk_window_config, G_TYPE_OBJECT);
 
 static gboolean
 kiosk_window_config_wants_window_fullscreen (KioskWindowConfig *self,

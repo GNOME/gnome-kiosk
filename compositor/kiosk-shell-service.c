@@ -36,11 +36,11 @@ static GParamSpec *kiosk_shell_service_properties[NUMBER_OF_PROPERTIES] = { NULL
 
 static void kiosk_shell_dbus_service_interface_init (KioskShellDBusServiceIface *interface);
 
-G_DEFINE_TYPE_WITH_CODE (KioskShellService,
-                         kiosk_shell_service,
-                         KIOSK_TYPE_SHELL_DBUS_SERVICE_SKELETON,
-                         G_IMPLEMENT_INTERFACE (KIOSK_TYPE_SHELL_DBUS_SERVICE,
-                                                kiosk_shell_dbus_service_interface_init));
+G_DEFINE_FINAL_TYPE_WITH_CODE (KioskShellService,
+                               kiosk_shell_service,
+                               KIOSK_TYPE_SHELL_DBUS_SERVICE_SKELETON,
+                               G_IMPLEMENT_INTERFACE (KIOSK_TYPE_SHELL_DBUS_SERVICE,
+                                                      kiosk_shell_dbus_service_interface_init));
 
 static void kiosk_shell_service_set_property (GObject      *object,
                                               guint         property_id,
@@ -65,14 +65,9 @@ kiosk_shell_service_class_init (KioskShellServiceClass *shell_service_class)
         object_class->dispose = kiosk_shell_service_dispose;
 
         kiosk_shell_service_properties[PROP_COMPOSITOR] = g_param_spec_object ("compositor",
-                                                                               "compositor",
-                                                                               "compositor",
+                                                                               NULL, NULL,
                                                                                KIOSK_TYPE_COMPOSITOR,
-                                                                               G_PARAM_CONSTRUCT_ONLY
-                                                                               | G_PARAM_WRITABLE
-                                                                               | G_PARAM_STATIC_NAME
-                                                                               | G_PARAM_STATIC_NICK
-                                                                               | G_PARAM_STATIC_BLURB);
+                                                                               G_PARAM_CONSTRUCT_ONLY | G_PARAM_WRITABLE | G_PARAM_STATIC_NAME);
         g_object_class_install_properties (object_class, NUMBER_OF_PROPERTIES, kiosk_shell_service_properties);
 }
 

@@ -47,11 +47,11 @@ static GParamSpec *kiosk_shell_screenshot_service_properties[NUMBER_OF_PROPERTIE
 
 static void kiosk_shell_screenshot_dbus_service_interface_init (KioskShellScreenshotDBusServiceIface *interface);
 
-G_DEFINE_TYPE_WITH_CODE (KioskShellScreenshotService,
-                         kiosk_shell_screenshot_service,
-                         KIOSK_TYPE_SHELL_SCREENSHOT_DBUS_SERVICE_SKELETON,
-                         G_IMPLEMENT_INTERFACE (KIOSK_TYPE_SHELL_SCREENSHOT_DBUS_SERVICE,
-                                                kiosk_shell_screenshot_dbus_service_interface_init));
+G_DEFINE_FINAL_TYPE_WITH_CODE (KioskShellScreenshotService,
+                               kiosk_shell_screenshot_service,
+                               KIOSK_TYPE_SHELL_SCREENSHOT_DBUS_SERVICE_SKELETON,
+                               G_IMPLEMENT_INTERFACE (KIOSK_TYPE_SHELL_SCREENSHOT_DBUS_SERVICE,
+                                                      kiosk_shell_screenshot_dbus_service_interface_init));
 
 static void kiosk_shell_screenshot_service_set_property (GObject      *object,
                                                          guint         property_id,

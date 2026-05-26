@@ -84,7 +84,7 @@ enum
 };
 static GParamSpec *kiosk_screenshot_properties[NUMBER_OF_PROPERTIES] = { NULL, };
 
-G_DEFINE_TYPE (KioskScreenshot, kiosk_screenshot, G_TYPE_OBJECT);
+G_DEFINE_FINAL_TYPE (KioskScreenshot, kiosk_screenshot, G_TYPE_OBJECT);
 
 static void
 kiosk_screenshot_dispose (GObject *object)
@@ -158,14 +158,9 @@ kiosk_screenshot_class_init (KioskScreenshotClass *screenshot_class)
         object_class->dispose = kiosk_screenshot_dispose;
 
         kiosk_screenshot_properties[PROP_COMPOSITOR] = g_param_spec_object ("compositor",
-                                                                            "compositor",
-                                                                            "compositor",
+                                                                            NULL, NULL,
                                                                             KIOSK_TYPE_COMPOSITOR,
-                                                                            G_PARAM_CONSTRUCT_ONLY
-                                                                            | G_PARAM_WRITABLE
-                                                                            | G_PARAM_STATIC_NAME
-                                                                            | G_PARAM_STATIC_NICK
-                                                                            | G_PARAM_STATIC_BLURB);
+                                                                            G_PARAM_CONSTRUCT_ONLY | G_PARAM_WRITABLE | G_PARAM_STATIC_NAME);
         g_object_class_install_properties (object_class, NUMBER_OF_PROPERTIES, kiosk_screenshot_properties);
 
         signals[SCREENSHOT_TAKEN] =
@@ -452,7 +447,7 @@ draw_cursor_image (KioskScreenshot *screenshot,
         CoglTexture *texture;
         int width, height;
         int stride;
-        guint8 *data;
+        g_autofree guint8 *data = NULL;
         MetaCursorTracker *tracker;
         cairo_surface_t *cursor_surface;
         cairo_t *cr;
@@ -513,7 +508,6 @@ draw_cursor_image (KioskScreenshot *screenshot,
 
         cairo_destroy (cr);
         cairo_surface_destroy (cursor_surface);
-        g_free (data);
 }
 
 static void
@@ -522,7 +516,7 @@ grab_screenshot (KioskScreenshot     *screenshot,
                  GTask               *result)
 {
         int width, height;
-        GTask *task;
+        g_autoptr (GTask) task = NULL;
 
         meta_display_get_size (screenshot->display, &width, &height);
 
@@ -536,8 +530,8 @@ grab_screenshot (KioskScreenshot     *screenshot,
         screenshot->screenshot_area.height = height;
 
         task = g_task_new (screenshot, NULL, on_screenshot_written, result);
+        g_task_set_source_tag (task, grab_screenshot);
         g_task_run_in_thread (task, write_screenshot_thread);
-        g_object_unref (task);
 }
 
 static void
@@ -545,7 +539,7 @@ grab_window_screenshot (KioskScreenshot     *screenshot,
                         KioskScreenshotFlag  flags,
                         GTask               *result)
 {
-        GTask *task;
+        g_autoptr (GTask) task = NULL;
         MetaWindow *window = meta_display_get_focus_window (screenshot->display);
         ClutterActor *window_actor;
         gfloat actor_x, actor_y;
@@ -589,8 +583,8 @@ grab_window_screenshot (KioskScreenshot     *screenshot,
         g_signal_emit (screenshot, signals[SCREENSHOT_TAKEN], 0, &rect);
 
         task = g_task_new (screenshot, NULL, on_screenshot_written, result);
+        g_task_set_source_tag (task, grab_window_screenshot);
         g_task_run_in_thread (task, write_screenshot_thread);
-        g_object_unref (task);
 }
 
 static gboolean
@@ -759,6 +753,7 @@ kiosk_screenshot_screenshot_area (KioskScreenshot     *screenshot,
                        (MtkRectangle *) &screenshot->screenshot_area);
 
         task = g_task_new (screenshot, NULL, on_screenshot_written, result);
+        g_task_set_source_tag (task, kiosk_screenshot_screenshot_area);
         g_task_run_in_thread (task, write_screenshot_thread);
 }
 
