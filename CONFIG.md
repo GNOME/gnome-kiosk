@@ -105,6 +105,7 @@ The following "*match*" keys as supported:
  * `match-class` (string) - Matches the window class
  * `match-sandboxed-app-id` (string) - Matches the sandboxed application id
  * `match-tag` (string)   - Matches the window tag
+ * `match-window-type` (string) - Matches the window type (`normal`, `dialog`, `menu`).
 
 The following "*set*" keys are supported:
 

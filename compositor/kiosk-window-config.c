@@ -646,6 +646,50 @@ kiosk_window_config_match_string_key (KioskWindowConfig *kiosk_window_config,
         return is_a_match;
 }
 
+static gboolean
+kiosk_window_config_window_type_matches (MetaWindowType  window_type,
+                                         const char     *type_name)
+{
+        if (g_ascii_strcasecmp (type_name, "normal") == 0)
+                return window_type == META_WINDOW_NORMAL;
+        if (g_ascii_strcasecmp (type_name, "dialog") == 0)
+                return window_type == META_WINDOW_DIALOG ||
+                       window_type == META_WINDOW_MODAL_DIALOG;
+        if (g_ascii_strcasecmp (type_name, "menu") == 0)
+                return window_type == META_WINDOW_MENU ||
+                       window_type == META_WINDOW_DROPDOWN_MENU ||
+                       window_type == META_WINDOW_POPUP_MENU;
+
+        g_warning ("KioskWindowConfig: Unsupported match-window-type: %s", type_name);
+        return FALSE;
+}
+
+static gboolean
+kiosk_window_config_match_type_key (KioskWindowConfig *kiosk_window_config,
+                                    const char        *section_name,
+                                    MetaWindow        *window)
+{
+        g_autofree gchar *type_name = NULL;
+        MetaWindowType window_type;
+        gboolean is_a_match;
+
+        if (!kiosk_window_config_check_for_string_value (kiosk_window_config,
+                                                         section_name,
+                                                         "match-window-type",
+                                                         &type_name))
+                return TRUE;
+
+        window_type = meta_window_get_window_type (window);
+        is_a_match = kiosk_window_config_window_type_matches (window_type, type_name);
+        g_debug ("KioskWindowConfig: Window type %d %s key 'match-window-type=%s' from section [%s]",
+                 window_type,
+                 is_a_match ? "matches" : "does not match",
+                 type_name,
+                 section_name);
+
+        return is_a_match;
+}
+
 #define VALUE_OR_EMPTY(v) (v ? v : "")
 static gboolean
 kiosk_window_config_match_window (KioskWindowConfig *kiosk_window_config,
@@ -682,6 +726,11 @@ kiosk_window_config_match_window (KioskWindowConfig *kiosk_window_config,
                                                    section_name,
                                                    "match-tag",
                                                    match_value))
+                return FALSE;
+
+        if (!kiosk_window_config_match_type_key (kiosk_window_config,
+                                                 section_name,
+                                                 window))
                 return FALSE;
 
         return TRUE;
