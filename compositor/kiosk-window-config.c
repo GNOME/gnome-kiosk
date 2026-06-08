@@ -7,6 +7,7 @@
 #include "kiosk-window-config.h"
 #include "kiosk-monitor-constraint.h"
 #include "kiosk-area-constraint.h"
+#include "kiosk-lock-move-constraint.h"
 
 #include <meta/display.h>
 #include <meta/meta-backend.h>
@@ -49,6 +50,8 @@ struct _KioskWindowConfig
         GHashTable         *locked_monitors;
         /* <MetaWindow * window, KioskAreaConstraint *> */
         GHashTable         *locked_areas;
+        /* <MetaWindow * window, KioskLockMoveConstraint *> */
+        GHashTable         *locked_moves;
         /* Set of <MetaWindow * window> */
         GHashTable         *window_initial_config;
 };
@@ -233,6 +236,7 @@ kiosk_window_config_constructed (GObject *object)
         self->windows_on_monitors = g_hash_table_new_full (NULL, NULL, NULL, g_free);
         self->locked_monitors = g_hash_table_new_full (NULL, NULL, NULL, g_object_unref);
         self->locked_areas = g_hash_table_new_full (NULL, NULL, NULL, g_object_unref);
+        self->locked_moves = g_hash_table_new_full (NULL, NULL, NULL, g_object_unref);
         self->window_initial_config = g_hash_table_new (g_direct_hash, g_direct_equal);
 
         g_signal_connect (self->display,
@@ -293,6 +297,7 @@ kiosk_window_config_finalize (GObject *object)
         g_clear_pointer (&self->windows_on_monitors, g_hash_table_unref);
         g_clear_pointer (&self->locked_monitors, g_hash_table_unref);
         g_clear_pointer (&self->locked_areas, g_hash_table_unref);
+        g_clear_pointer (&self->locked_moves, g_hash_table_unref);
         g_clear_pointer (&self->window_initial_config, g_hash_table_destroy);
 
         G_OBJECT_CLASS (kiosk_window_config_parent_class)->finalize (object);
@@ -860,6 +865,21 @@ kiosk_window_config_should_lock_window_on_area (KioskWindowConfig *self,
 }
 
 static gboolean
+kiosk_window_config_should_lock_window_move (KioskWindowConfig *self,
+                                             MetaWindow        *window)
+{
+        gboolean lock_move = FALSE;
+
+        if (kiosk_window_config_get_boolean_for_window (self,
+                                                        window,
+                                                        "lock-move",
+                                                        &lock_move))
+                return lock_move;
+
+        return FALSE;
+}
+
+static gboolean
 kiosk_window_config_wants_window_type (KioskWindowConfig *self,
                                        MetaWindow        *window,
                                        MetaWindowType    *window_type)
@@ -1055,6 +1075,7 @@ kiosk_window_config_on_window_unmanaged (MetaWindow *window,
         KioskWindowConfig *self = KIOSK_WINDOW_CONFIG (user_data);
         KioskMonitorConstraint *monitor_constraint;
         KioskAreaConstraint *area_constraint;
+        KioskLockMoveConstraint *move_constraint;
 
         g_signal_handlers_disconnect_by_func (window,
                                               G_CALLBACK (kiosk_window_config_on_window_configure),
@@ -1078,6 +1099,12 @@ kiosk_window_config_on_window_unmanaged (MetaWindow *window,
                 g_hash_table_remove (self->locked_areas, window);
         }
 
+        move_constraint = g_hash_table_lookup (self->locked_moves, window);
+        if (move_constraint) {
+                meta_window_remove_external_constraint (window, META_EXTERNAL_CONSTRAINT (move_constraint));
+                g_hash_table_remove (self->locked_moves, window);
+        }
+
         kiosk_window_config_unset_initial (self, window);
 }
 
@@ -1092,6 +1119,7 @@ kiosk_window_config_on_window_created (MetaDisplay *display,
         gboolean lock_on_monitor;
         gboolean lock_on_monitor_area;
         gboolean lock_on_area;
+        gboolean lock_move;
 
         kiosk_window_config_set_initial (self, window);
 
@@ -1147,6 +1175,18 @@ kiosk_window_config_on_window_created (MetaDisplay *display,
                 constraint = kiosk_area_constraint_new (self->compositor, &lock_area, TRUE);
                 g_hash_table_insert (self->locked_areas, window, constraint);
                 meta_window_add_external_constraint (window, META_EXTERNAL_CONSTRAINT (constraint));
+        }
+
+        lock_move = kiosk_window_config_should_lock_window_move (self, window);
+        if (lock_move) {
+                KioskLockMoveConstraint *move_constraint;
+
+                g_debug ("KioskWindowConfig: Window %s lock move=TRUE",
+                         meta_window_get_description (window));
+                move_constraint = kiosk_lock_move_constraint_new ();
+                g_hash_table_insert (self->locked_moves, window, move_constraint);
+                meta_window_add_external_constraint (window,
+                                                     META_EXTERNAL_CONSTRAINT (move_constraint));
         }
 }
 
