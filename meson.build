@@ -255,6 +255,8 @@ compositor_sources = [
         'compositor/kiosk-input-source-group.h',
         'compositor/kiosk-lock-move-constraint.c',
         'compositor/kiosk-lock-move-constraint.h',
+        'compositor/kiosk-lock-resize-constraint.c',
+        'compositor/kiosk-lock-resize-constraint.h',
         'compositor/kiosk-input-sources-manager.c',
         'compositor/kiosk-input-sources-manager.h',
         'compositor/kiosk-magnifier.c',

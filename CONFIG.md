@@ -120,6 +120,7 @@ The following "*set*" keys are supported:
  * `lock-on-area` (string) - Lock the window within a specific area using absolute coordinates (format: "x,y WxH")
  * `set-window-type` (string) - Change the window type
  * `lock-move` (boolean) - Prevent the user from moving the window
+ * `lock-resize` (boolean) - Prevent the user from resizing the window
 
 Notes:
 
@@ -170,7 +171,10 @@ Resizing a window may also imply a move when resized from the top, the left,
 or from the top-left corner. In that case, if `lock-move` is set, the resize
 will be prevented as well along the affected axis.
 
-This option can be combined with `lock-on-area` and `lock-on-monitor-area`:
+The `lock-resize` option, when set to `true`, prevents the user from resizing
+the window interactively.
+
+These options can be combined with `lock-on-area` and `lock-on-monitor-area`:
 the area constraints keep the window within bounds, while `lock-move` prevents the
 user from changing the window position.
 
@@ -204,12 +208,15 @@ user from changing the window position.
   match-class=FixedApp
   lock-on-area=200,150 640x480
 
-  # Fix a window at a specific position, then prevent user move
+  # Fix a window at a specific size and position, then prevent user move/resize
   [kiosk-app]
   match-class=KioskApp
   set-x=100
   set-y=100
+  set-width=800
+  set-height=600
   lock-move=true
+  lock-resize=true
 
   # Set the window type to match the window tag name for the supported types
   [desktop]
