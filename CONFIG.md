@@ -121,6 +121,7 @@ The following "*set*" keys are supported:
  * `set-window-type` (string) - Change the window type
  * `lock-move` (boolean) - Prevent the user from moving the window
  * `lock-resize` (boolean) - Prevent the user from resizing the window
+ * `set-strut` (string) - Reserve a screen area as a strut based on the window geometry (format: "side")
 
 Notes:
 
@@ -178,6 +179,21 @@ These options can be combined with `lock-on-area` and `lock-on-monitor-area`:
 the area constraints keep the window within bounds, while `lock-move` prevents the
 user from changing the window position.
 
+The `set-strut` option reserves a rectangular area of the screen as a strut,
+reducing the available work area for other windows.<br>
+The strut is associated with the matching window and removed automatically when
+that window is closed.<br>
+The value is a side name (`top`, `bottom`, `left`, or `right`). The strut
+rectangle is the intersection of the window with each monitor it overlaps:
+
+ * The strut covers the window's footprint on that monitor
+ * If a window spans two monitors, struts are created on both
+ * The strut is not applied when its thickness exceeds 75% of the monitor
+   width (for left/right) or height (for top/bottom), to avoid reserving
+   almost the entire work area
+ * The strut rectangle is recomputed automatically when the window moves or is
+   resized, and when the screen layout changes
+
 ## Example
 
 ```
@@ -228,6 +244,7 @@ user from changing the window position.
   match-tag=dock
   set-window-type=dock
   set-fullscreen=false
+  set-strut=top
 
   [splash]
   match-tag=splash
