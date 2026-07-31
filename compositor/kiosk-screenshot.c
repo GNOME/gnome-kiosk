@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <cairo.h>
 #include <cogl/cogl.h>
 
 #include <meta/display.h>
@@ -23,6 +24,16 @@
 #include <meta/meta-background.h>
 
 /* This code is a largely based on GNOME Shell implementation of ShellScreenshot */
+
+static cairo_user_data_key_t data_key;
+
+static void
+bitmap_unmap_and_unref (void *data)
+{
+        CoglBitmap *bitmap = data;
+        cogl_bitmap_unmap (bitmap);
+        g_object_unref (bitmap);
+}
 
 typedef enum _KioskScreenshotFlag
 {
@@ -425,7 +436,7 @@ do_grab_screenshot (KioskScreenshot     *screenshot,
                                             &screenshot_rect, scale,
                                             cairo_image_surface_get_data (image),
                                             cairo_image_surface_get_stride (image),
-                                            COGL_PIXEL_FORMAT_CAIRO_ARGB32_COMPAT,
+                                            COGL_PIXEL_FORMAT_ARGB32_NATIVE,
                                             NULL,
                                             paint_flags,
                                             &error)) {
@@ -474,7 +485,7 @@ draw_cursor_image (KioskScreenshot *screenshot,
         height = cogl_texture_get_height (texture);
         stride = 4 * width;
         data = g_new (guint8, stride * height);
-        cogl_texture_get_data (texture, COGL_PIXEL_FORMAT_CAIRO_ARGB32_COMPAT, stride, data);
+        cogl_texture_get_data (texture, COGL_PIXEL_FORMAT_ARGB32_NATIVE, stride, data);
 
         /* FIXME: cairo-gl? */
         cursor_surface = cairo_image_surface_create_for_data (data,
@@ -544,6 +555,9 @@ grab_window_screenshot (KioskScreenshot     *screenshot,
         ClutterActor *window_actor;
         gfloat actor_x, actor_y;
         MtkRectangle rect;
+        g_autoptr (CoglBitmap) bitmap = NULL;
+        uint8_t *data;
+        int width, height, stride;
 
         window_actor = CLUTTER_ACTOR (meta_window_get_compositor_private (window));
         clutter_actor_get_position (window_actor, &actor_x, &actor_y);
@@ -555,15 +569,31 @@ grab_window_screenshot (KioskScreenshot     *screenshot,
 
         screenshot->screenshot_area = rect;
 
-        screenshot->image = meta_window_actor_get_image (META_WINDOW_ACTOR (window_actor),
-                                                         NULL);
-
-        if (!screenshot->image) {
+        bitmap = meta_window_actor_paint_to_bitmap (META_WINDOW_ACTOR (window_actor), NULL,
+                                                    COGL_PIXEL_FORMAT_ARGB32_NATIVE);
+        if (!bitmap) {
                 g_task_report_new_error (screenshot, on_screenshot_written, result, NULL,
                                          G_IO_ERROR, G_IO_ERROR_FAILED,
                                          "Capturing window failed");
                 return;
         }
+
+        width = cogl_bitmap_get_width (bitmap);
+        height = cogl_bitmap_get_height (bitmap);
+        stride = cogl_bitmap_get_rowstride (bitmap);
+        data = cogl_bitmap_map (bitmap, COGL_BUFFER_ACCESS_READ, 0, NULL);
+        if (!data) {
+                g_task_report_new_error (screenshot, on_screenshot_written, result, NULL,
+                                         G_IO_ERROR, G_IO_ERROR_FAILED,
+                                         "Capturing window failed");
+                return;
+        }
+
+        screenshot->image = cairo_image_surface_create_for_data (data, CAIRO_FORMAT_ARGB32,
+                                                                 width, height, stride);
+        cairo_surface_set_user_data (screenshot->image, &data_key,
+                                     g_steal_pointer (&bitmap),
+                                     bitmap_unmap_and_unref);
 
         screenshot->datetime = g_date_time_new_now_local ();
 
