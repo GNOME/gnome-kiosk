@@ -9,6 +9,7 @@
 #include "kiosk-app-system.h"
 #include "kiosk-window-tracker.h"
 #include "kiosk-window-config.h"
+#include "kiosk-session-presence.h"
 
 G_BEGIN_DECLS
 #define KIOSK_TYPE_COMPOSITOR (kiosk_compositor_get_type ())
@@ -23,6 +24,7 @@ KioskService *kiosk_compositor_get_service (KioskCompositor *compositor);
 KioskAppSystem *kiosk_compositor_get_app_system (KioskCompositor *compositor);
 KioskWindowTracker *kiosk_compositor_get_window_tracker (KioskCompositor *compositor);
 KioskWindowConfig *kiosk_compositor_get_window_config (KioskCompositor *compositor);
+KioskSessionPresence *kiosk_compositor_get_session_presence (KioskCompositor *compositor);
 gboolean kiosk_compositor_are_animations_enabled (KioskCompositor *compositor);
 
 G_END_DECLS

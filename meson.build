@@ -127,6 +127,18 @@ dbus_proxies += {
         'interface': 'SessionManager',
 }
 
+dbus_proxies += {
+        'prefix':   'org.gnome.SessionManager',
+        'namespace': 'Gsm',
+        'interface': 'Presence',
+}
+
+dbus_proxies += {
+        'prefix': 'org.gnome',
+        'namespace': 'Kiosk',
+        'interface': 'ScreenSaver',
+}
+
 dbus_interface_sources_map = {}
 foreach dbus_proxy : dbus_proxies
         dbus_interface = dbus_proxy['prefix'] + '.' + dbus_proxy['interface']
@@ -185,6 +197,17 @@ sources = gnome.gdbus_codegen(dbus_interface, dbus_interface_file,
 )
 dbus_interface_sources_map += { dbus_interface: sources }
 
+dbus_interface = 'org.gnome.Shell.Brightness'
+dbus_interface_file = join_paths('dbus-interfaces', dbus_interface + '.xml')
+sources = gnome.gdbus_codegen(dbus_interface, dbus_interface_file,
+        namespace: 'Kiosk',
+        interface_prefix: 'org.gnome',
+        annotations: [
+                [ dbus_interface, 'org.gtk.GDBus.C.Name', 'ShellBrightnessDBusService' ]
+        ]
+)
+dbus_interface_sources_map += { dbus_interface: sources }
+
 compositor_dependencies = []
 compositor_dependencies += c_compiler.find_library('m')
 compositor_dependencies += dependency('gio-2.0')
@@ -218,6 +241,8 @@ compositor_sources = [
         'compositor/kiosk-automount-manager.h',
         'compositor/kiosk-backgrounds.c',
         'compositor/kiosk-backgrounds.h',
+        'compositor/kiosk-brightness.c',
+        'compositor/kiosk-brightness.h',
         'compositor/kiosk-compositor.c',
         'compositor/kiosk-compositor.h',
         'compositor/kiosk-dbus-utils.c',
@@ -234,10 +259,16 @@ compositor_sources = [
         'compositor/kiosk-magnifier.h',
         'compositor/kiosk-monitor-constraint.c',
         'compositor/kiosk-monitor-constraint.h',
+        'compositor/kiosk-screensaver.c',
+        'compositor/kiosk-screensaver.h',
+        'compositor/kiosk-screensaver-service.c',
+        'compositor/kiosk-screensaver-service.h',
         'compositor/kiosk-screenshot.c',
         'compositor/kiosk-screenshot.h',
         'compositor/kiosk-service.c',
         'compositor/kiosk-service.h',
+        'compositor/kiosk-session-presence.c',
+        'compositor/kiosk-session-presence.h',
         'compositor/kiosk-shell-introspect-service.c',
         'compositor/kiosk-shell-introspect-service.h',
         'compositor/kiosk-shell-screenshot-service.c',
