@@ -1,5 +1,15 @@
 # NEWS
 
+## 51.beta
+
+- Add a basic screensaver and session presence support
+- Start gsd-power in systemd sessions
+- Add "lock-move" and "lock-resize" window configuration options
+- Add "set-strut" window configuration option
+- Add "match-window-type" window configuration filter
+- Add a sample root menu application and session (gnome-kiosk-menu)
+- Adapt to mutter API changes
+
 ## 51.alpha
 
 - Update for mutter 51 API
