@@ -10,11 +10,15 @@
 #include "kiosk-lock-move-constraint.h"
 #include "kiosk-lock-resize-constraint.h"
 
+#include <meta/boxes.h>
 #include <meta/display.h>
 #include <meta/meta-backend.h>
 #include <meta/meta-context.h>
 #include <meta/meta-monitor-manager.h>
 #include <meta/meta-external-constraint.h>
+#include <meta/meta-workspace-manager.h>
+#include <meta/workspace.h>
+#include <mtk/mtk-rectangle.h>
 
 #include <glib-object.h>
 #include <glib.h>
@@ -57,6 +61,8 @@ struct _KioskWindowConfig
         GHashTable         *locked_resizes;
         /* Set of <MetaWindow * window> */
         GHashTable         *window_initial_config;
+        /* <MetaWindow * window, MetaSide as gpointer> */
+        GHashTable         *window_struts;
 };
 
 enum
@@ -93,6 +99,108 @@ kiosk_window_config_on_window_created (MetaDisplay *display,
 static void
 kiosk_window_config_on_monitors_changed (MetaMonitorManager *monitor_manager,
                                          gpointer            user_data);
+
+static void
+kiosk_window_config_clear_workspace_struts (KioskWindowConfig *self)
+{
+        MetaWorkspaceManager *workspace_manager;
+        GList *workspaces, *l;
+
+        g_debug ("KioskWindowConfig: Clearing workspace struts");
+
+        workspace_manager = meta_display_get_workspace_manager (self->display);
+        workspaces = meta_workspace_manager_get_workspaces (workspace_manager);
+
+        for (l = workspaces; l; l = l->next) {
+                meta_workspace_set_builtin_struts (l->data, NULL);
+        }
+}
+
+static gboolean
+kiosk_window_config_strut_is_too_large (const MetaStrut    *strut,
+                                        const MtkRectangle *monitor_geometry)
+{
+        switch (strut->side) {
+        case META_SIDE_TOP:
+        case META_SIDE_BOTTOM:
+                return strut->rect.height > (monitor_geometry->height * 75 / 100);
+        case META_SIDE_LEFT:
+        case META_SIDE_RIGHT:
+                return strut->rect.width > (monitor_geometry->width * 75 / 100);
+        default:
+                return TRUE;
+        }
+}
+
+static void
+kiosk_window_config_update_workspace_struts (KioskWindowConfig *self)
+{
+        MetaWorkspaceManager *workspace_manager;
+        GList *workspaces, *l;
+        GHashTableIter iter;
+        gpointer window, side_ptr;
+        GSList *all_struts = NULL;
+        int n_monitors;
+
+        n_monitors = meta_display_get_n_monitors (self->display);
+
+        g_hash_table_iter_init (&iter, self->window_struts);
+        while (g_hash_table_iter_next (&iter, &window, &side_ptr)) {
+                MetaSide side = GPOINTER_TO_INT (side_ptr);
+                MtkRectangle window_frame;
+                int monitor;
+
+                meta_window_get_frame_rect (window, &window_frame);
+
+                for (monitor = 0; monitor < n_monitors; monitor++) {
+                        MtkRectangle monitor_geometry;
+                        MtkRectangle intersection;
+                        MetaStrut *strut;
+
+                        meta_display_get_monitor_geometry (self->display, monitor,
+                                                           &monitor_geometry);
+                        if (!mtk_rectangle_intersect (&window_frame, &monitor_geometry,
+                                                      &intersection))
+                                continue;
+
+                        strut = g_new (MetaStrut, 1);
+                        strut->side = side;
+                        strut->rect = intersection;
+
+                        if (kiosk_window_config_strut_is_too_large (strut, &monitor_geometry)) {
+                                g_debug ("KioskWindowConfig: Ignoring strut for window %s on monitor %i, too large",
+                                         meta_window_get_description (window),
+                                         monitor);
+                                g_free (strut);
+                                continue;
+                        }
+
+                        all_struts = g_slist_append (all_struts, strut);
+                }
+        }
+
+        workspace_manager = meta_display_get_workspace_manager (self->display);
+        workspaces = meta_workspace_manager_get_workspaces (workspace_manager);
+
+        g_debug ("KioskWindowConfig: Updating workspace struts");
+        for (l = workspaces; l; l = l->next) {
+                meta_workspace_set_builtin_struts (l->data, all_struts);
+        }
+
+        g_slist_free_full (all_struts, g_free);
+}
+
+static void
+kiosk_window_config_on_window_struts_changed (MetaWindow *window,
+                                              gpointer    user_data)
+{
+        KioskWindowConfig *self = KIOSK_WINDOW_CONFIG (user_data);
+
+        if (!g_hash_table_contains (self->window_struts, window))
+                return;
+
+        kiosk_window_config_update_workspace_struts (self);
+}
 
 static gboolean
 kiosk_window_config_try_load_file (KioskWindowConfig *kiosk_window_config,
@@ -241,6 +349,7 @@ kiosk_window_config_constructed (GObject *object)
         self->locked_areas = g_hash_table_new_full (NULL, NULL, NULL, g_object_unref);
         self->locked_moves = g_hash_table_new_full (NULL, NULL, NULL, g_object_unref);
         self->locked_resizes = g_hash_table_new_full (NULL, NULL, NULL, g_object_unref);
+        self->window_struts = g_hash_table_new (NULL, NULL);
         self->window_initial_config = g_hash_table_new (g_direct_hash, g_direct_equal);
 
         g_signal_connect (self->display,
@@ -281,6 +390,9 @@ kiosk_window_config_dispose (GObject *object)
                                                       self);
                 g_clear_object (&self->config_file_monitor);
         }
+
+        g_clear_pointer (&self->window_struts, g_hash_table_unref);
+        kiosk_window_config_clear_workspace_struts (self);
 
         g_clear_weak_pointer (&self->compositor);
         g_clear_weak_pointer (&self->display);
@@ -838,6 +950,85 @@ kiosk_window_config_parse_lock_area (const char   *area_string,
 }
 
 static gboolean
+kiosk_window_config_parse_strut_side (const char *side_name,
+                                      MetaSide   *side)
+{
+        if (g_ascii_strcasecmp (side_name, "top") == 0) {
+                *side = META_SIDE_TOP;
+                return TRUE;
+        }
+
+        if (g_ascii_strcasecmp (side_name, "bottom") == 0) {
+                *side = META_SIDE_BOTTOM;
+                return TRUE;
+        }
+
+        if (g_ascii_strcasecmp (side_name, "left") == 0) {
+                *side = META_SIDE_LEFT;
+                return TRUE;
+        }
+
+        if (g_ascii_strcasecmp (side_name, "right") == 0) {
+                *side = META_SIDE_RIGHT;
+                return TRUE;
+        }
+
+        g_warning ("KioskWindowConfig: Invalid strut side '%s', expected 'top', 'bottom', 'left', or 'right'",
+                   side_name);
+        return FALSE;
+}
+
+static gboolean
+kiosk_window_config_parse_strut (const char *strut_string,
+                                 MetaSide   *side)
+{
+        g_autofree char *str = NULL;
+
+        if (!strut_string || !side)
+                return FALSE;
+
+        str = g_strstrip (g_strdup (strut_string));
+        if (!kiosk_window_config_parse_strut_side (str, side))
+                return FALSE;
+
+        g_debug ("KioskWindowConfig: Parsed strut side %d", *side);
+
+        return TRUE;
+}
+
+static void
+kiosk_window_config_setup_window_struts (KioskWindowConfig *self,
+                                         MetaWindow        *window)
+{
+        g_autofree gchar *strut_string = NULL;
+        MetaSide side;
+
+        if (!kiosk_window_config_get_string_for_window (self,
+                                                        window,
+                                                        "set-strut",
+                                                        &strut_string))
+                return;
+
+        if (!kiosk_window_config_parse_strut (strut_string, &side))
+                return;
+
+        g_hash_table_insert (self->window_struts, window, GINT_TO_POINTER (side));
+
+        g_signal_connect (window, "position-changed",
+                          G_CALLBACK (kiosk_window_config_on_window_struts_changed),
+                          self);
+        g_signal_connect (window, "size-changed",
+                          G_CALLBACK (kiosk_window_config_on_window_struts_changed),
+                          self);
+
+        g_debug ("KioskWindowConfig: Window %s set strut side %d",
+                 meta_window_get_description (window),
+                 side);
+
+        kiosk_window_config_update_workspace_struts (self);
+}
+
+static gboolean
 kiosk_window_config_should_lock_window_on_monitor_area (KioskWindowConfig *self,
                                                         MetaWindow        *window,
                                                         MtkRectangle      *area)
@@ -1067,6 +1258,8 @@ kiosk_window_config_on_monitors_changed (MetaMonitorManager *monitor_manager,
         while (g_hash_table_iter_next (&iter, &window, NULL)) {
                 kiosk_window_config_update_window_on_monitor (self, window);
         }
+
+        kiosk_window_config_update_workspace_struts (self);
 }
 
 static void
@@ -1106,6 +1299,10 @@ kiosk_window_config_on_window_unmanaged (MetaWindow *window,
                                               G_CALLBACK (kiosk_window_config_on_window_unmanaged),
                                               self);
 
+        g_signal_handlers_disconnect_by_func (window,
+                                              G_CALLBACK (kiosk_window_config_on_window_struts_changed),
+                                              self);
+
         g_hash_table_remove (self->windows_on_monitors, window);
 
         monitor_constraint = g_hash_table_lookup (self->locked_monitors, window);
@@ -1130,6 +1327,11 @@ kiosk_window_config_on_window_unmanaged (MetaWindow *window,
         if (resize_constraint) {
                 meta_window_remove_external_constraint (window, META_EXTERNAL_CONSTRAINT (resize_constraint));
                 g_hash_table_remove (self->locked_resizes, window);
+        }
+
+        if (g_hash_table_contains (self->window_struts, window)) {
+                g_hash_table_remove (self->window_struts, window);
+                kiosk_window_config_update_workspace_struts (self);
         }
 
         kiosk_window_config_unset_initial (self, window);
@@ -1228,6 +1430,8 @@ kiosk_window_config_on_window_created (MetaDisplay *display,
                 meta_window_add_external_constraint (window,
                                                      META_EXTERNAL_CONSTRAINT (resize_constraint));
         }
+
+        kiosk_window_config_setup_window_struts (self, window);
 }
 
 static void
