@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Kiosk Menu Session (Wayland Display Server)
+Comment=This session logs you into the Kiosk Menu application
+Exec=gnome-session --session gnome-kiosk-menu
+TryExec=gnome-session
+Type=Application
+DesktopNames=GNOME-Kiosk;GNOME;
+X-GDM-SessionRegisters=false
+X-GDM-CanRunHeadless=true

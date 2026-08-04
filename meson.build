@@ -405,6 +405,10 @@ if get_option('notification-daemon')
         subdir('notification-daemon')
 endif
 
+if get_option('kiosk-menu')
+        subdir('kiosk-menu')
+endif
+
 gnome.post_install(
   gtk_update_icon_cache: true,
   glib_compile_schemas: true,

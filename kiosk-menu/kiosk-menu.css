@@ -1,0 +1,44 @@
+/* GNOME Kiosk Menu styling */
+
+popover.menu-popover contents {
+    padding: 6px 0;
+    background-color: @theme_bg_color;
+}
+
+popover.menu-popover .menu-listbox {
+    background: transparent;
+}
+
+popover.menu-popover .menu-listbox row {
+    min-width: 200px;
+    color: @theme_fg_color;
+}
+
+popover.menu-popover .menu-row-content {
+    margin: 8px 12px;
+    spacing: 12px;
+}
+
+popover.menu-popover .menu-row-icon {
+    -gtk-icon-size: 24px;
+}
+
+popover.menu-popover .menu-listbox row:not(.separator-row):hover {
+    background-color: alpha(@theme_selected_bg_color, 0.1);
+}
+
+popover.menu-popover .menu-listbox row:not(.separator-row):active,
+popover.menu-popover .menu-listbox row:not(.separator-row):selected {
+    background-color: @theme_selected_bg_color;
+    color: @theme_selected_fg_color;
+}
+
+popover.menu-popover .menu-listbox row.separator-row {
+    min-height: 0;
+    padding: 0;
+}
+
+popover.menu-popover separator {
+    margin: 6px 0;
+    background-color: @borders;
+}

@@ -1,0 +1,555 @@
+#!/usr/bin/env python3
+"""
+GNOME Kiosk Menu
+A sample fullscreen application that displays the desktop background and provides
+a popup menu for launching applications. It is intended as an example and starting
+point for building a custom root menu for kiosk environments.
+"""
+
+import gi
+gi.require_version('Gtk', '4.0')
+gi.require_version('Gst', '1.0')
+gi.require_version('Gdk', '4.0')
+gi.require_version('Gio', '2.0')
+gi.require_version('GioUnix', '2.0')
+
+# Try to use glycin for image loading, fall back to GTK if not available
+HAVE_GLYCIN = False
+try:
+    gi.require_version('Gly', '2')
+    gi.require_version('GlyGtk4', '2')
+    from gi.repository import Gly, GlyGtk4
+    HAVE_GLYCIN = True
+except (ValueError, ImportError):
+    pass
+
+from gi.repository import Gtk, Gst, Gdk, GLib, Gio, GioUnix
+import os
+import sys
+import gettext
+import locale
+
+# Set up internationalization
+GETTEXT_PACKAGE = '@GETTEXT_PACKAGE@'
+LOCALEDIR = '@LOCALEDIR@'
+
+try:
+    locale.bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR)
+    locale.textdomain(GETTEXT_PACKAGE)
+    gettext.bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR)
+    gettext.textdomain(GETTEXT_PACKAGE)
+except AttributeError:
+    # Python built without locale support
+    pass
+
+# Translation function
+_ = gettext.gettext
+
+# Configuration paths
+SYSTEM_CONFIG_DIR = '@DATADIR@/@PACKAGE@'
+USER_CONFIG_DIR = os.path.expanduser('~/.config/gnome-kiosk')
+CONFIG_FILENAME = 'kiosk-menu.conf'
+CSS_FILENAME = 'kiosk-menu.css'
+
+# GSettings schema for background
+BACKGROUND_SCHEMA = 'org.gnome.desktop.background'
+BACKGROUND_PICTURE_URI = 'picture-uri'
+BACKGROUND_PICTURE_OPTIONS = 'picture-options'
+BACKGROUND_PRIMARY_COLOR = 'primary-color'
+BACKGROUND_SECONDARY_COLOR = 'secondary-color'
+BACKGROUND_COLOR_SHADING_TYPE = 'color-shading-type'
+
+# GSettings schema for interface (color scheme)
+INTERFACE_SCHEMA = 'org.gnome.desktop.interface'
+INTERFACE_COLOR_SCHEME = 'color-scheme'
+
+# Log domain for debug messages; use G_MESSAGES_DEBUG=GnomeKioskMenu or G_MESSAGES_DEBUG=all to enable
+LOG_DOMAIN = 'GnomeKioskMenu'
+
+
+def _my_g_debug(msg):
+    """Log a debug message. Enable with G_MESSAGES_DEBUG=LOG_DOMAIN or all."""
+    fields = GLib.Variant('a{sv}', {'MESSAGE': GLib.Variant('s', str(msg))})
+    GLib.log_variant(LOG_DOMAIN, GLib.LogLevelFlags.LEVEL_DEBUG, fields)
+
+
+def _find_data_file(filename):
+    """Search for a data file in user, XDG system config, then system data dirs.
+
+    Returns the first existing path, or None if not found.
+    """
+    paths = [os.path.join(USER_CONFIG_DIR, filename)]
+
+    for config_dir in GLib.get_system_config_dirs():
+        if config_dir:
+            paths.append(os.path.join(config_dir, 'gnome-kiosk', filename))
+
+    paths.append(os.path.join(SYSTEM_CONFIG_DIR, filename))
+
+    _my_g_debug(f"Looking for {filename} in: {paths}")
+    for path in paths:
+        if os.path.exists(path):
+            return path
+    return None
+
+
+class ApplicationEntry:
+    """Represents an application entry from a .desktop file."""
+
+    def __init__(self, desktop_file_id):
+        self.desktop_file_id = desktop_file_id
+        self.name = None
+        self.exec_cmd = None
+        self.icon_name = None
+        self.valid = False
+        self._load_desktop_file()
+
+    def _load_desktop_file(self):
+        """Load application info from .desktop file."""
+        _my_g_debug(f"Loading desktop file: {self.desktop_file_id}")
+        app_info = GioUnix.DesktopAppInfo.new(self.desktop_file_id)
+        if app_info is None:
+            print(f"Warning: Could not find desktop file: {self.desktop_file_id}")
+            return
+
+        self.name = app_info.get_display_name() or app_info.get_name()
+        self.exec_cmd = app_info.get_commandline()
+        self.icon_name = None
+
+        # Try to get icon
+        icon = app_info.get_icon()
+        if icon:
+            if isinstance(icon, Gio.ThemedIcon):
+                names = icon.get_names()
+                if names:
+                    self.icon_name = names[0]
+            elif isinstance(icon, Gio.FileIcon):
+                self.icon_name = icon.get_file().get_path()
+
+        self.valid = self.name is not None and self.exec_cmd is not None
+        _my_g_debug(f"  {self.desktop_file_id}: name={self.name!r}, valid={self.valid}")
+
+    def launch(self):
+        """Launch the application."""
+        if not self.valid:
+            _my_g_debug(f"Launch skipped (invalid): {self.desktop_file_id}")
+            return False
+
+        _my_g_debug(f"Launching: {self.name} ({self.desktop_file_id})")
+        try:
+            app_info = GioUnix.DesktopAppInfo.new(self.desktop_file_id)
+            if app_info:
+                app_info.launch([], None)
+                _my_g_debug("  Launched successfully")
+                return True
+        except GLib.Error as e:
+            print(f"Error launching {self.name}: {e.message}")
+
+        return False
+
+
+class KioskMenuWindow(Gtk.ApplicationWindow):
+    """Main fullscreen window with background and popup menu."""
+
+    def __init__(self, app, applications):
+        super().__init__(application=app, title="kiosk-menu", decorated=False)
+        self.applications = applications
+        self.app = app
+        _my_g_debug("Creating KioskMenuWindow")
+
+        self.background_picture = Gtk.Picture(can_shrink=True)
+        self.set_child(self.background_picture)
+
+        self._create_popup_menu()
+
+        click_gesture = Gtk.GestureClick(button=0)  # Listen to all mouse buttons
+        click_gesture.connect('pressed', self._on_click)
+        self.add_controller(click_gesture)
+
+        self._setup_background()
+        self.fullscreen()
+        _my_g_debug("Window created and fullscreen")
+
+    def _setup_background(self):
+        """Set up background from GSettings."""
+        _my_g_debug("Setting up background from GSettings")
+        try:
+            self.bg_settings = Gio.Settings.new(BACKGROUND_SCHEMA)
+
+            self.bg_settings.connect('changed::' + BACKGROUND_PICTURE_URI,
+                                     self._on_background_changed)
+            self.bg_settings.connect('changed::' + BACKGROUND_PICTURE_OPTIONS,
+                                     self._on_background_changed)
+            self.bg_settings.connect('changed::' + BACKGROUND_PRIMARY_COLOR,
+                                     self._on_background_changed)
+
+            # Load background asynchronously so it doesn't block application startup
+            GLib.idle_add(self._load_background, priority=GLib.PRIORITY_LOW)
+
+        except GLib.Error as e:
+            print(f"Warning: Could not load background settings: {e.message}")
+            self._set_fallback_background()
+
+    def _on_background_changed(self, settings, key):
+        """Handle background settings change."""
+        _my_g_debug(f"Background setting changed: {key}")
+        self._load_background()
+
+    def _load_background(self):
+        """Load background image from settings."""
+        picture_uri = self.bg_settings.get_string(BACKGROUND_PICTURE_URI)
+        picture_options = self.bg_settings.get_enum(BACKGROUND_PICTURE_OPTIONS)
+        _my_g_debug(f"Loading background: uri={picture_uri!r}, picture_options={picture_options}")
+
+        # picture_options: 0=none, 1=wallpaper, 2=centered, 3=scaled, 4=stretched, 5=zoom, 6=spanned
+        if picture_options == 0:
+            # No picture, use solid color
+            _my_g_debug("Using solid color background")
+            self._set_color_background()
+            self.background_picture.set_visible(False)
+            return GLib.SOURCE_REMOVE
+
+        if not picture_uri:
+            _my_g_debug("No picture URI, using fallback background")
+            self._set_fallback_background()
+            return GLib.SOURCE_REMOVE
+
+        # Loosely map picture options to Gtk.ContentFit
+        # 1=wallpaper (tiled) - use COVER as GTK4 Picture doesn't support tiling
+        # 2=centered - use SCALE_DOWN to show at original size or smaller
+        # 3=scaled - use CONTAIN to fit within bounds keeping aspect ratio
+        # 4=stretched - use FILL to stretch ignoring aspect ratio
+        # 5=zoom - use COVER to fill keeping aspect ratio (may crop)
+        # 6=spanned - use COVER for multi-monitor spanning
+        content_fit_map = {
+            1: Gtk.ContentFit.COVER,      # wallpaper (tiled) - best approximation
+            2: Gtk.ContentFit.SCALE_DOWN, # centered
+            3: Gtk.ContentFit.CONTAIN,    # scaled
+            4: Gtk.ContentFit.FILL,       # stretched
+            5: Gtk.ContentFit.COVER,      # zoom
+            6: Gtk.ContentFit.COVER,      # spanned - we don't support this anyways
+        }
+        content_fit = content_fit_map.get(picture_options, Gtk.ContentFit.COVER)
+        self.background_picture.set_content_fit(content_fit)
+
+        # Handle file:// URIs
+        if picture_uri.startswith('file://'):
+            file_path = picture_uri[7:]
+        else:
+            file_path = picture_uri
+
+        # Expand ~ in path
+        file_path = os.path.expanduser(file_path)
+
+        if not os.path.exists(file_path):
+            print(f"Warning: Background file not found: {file_path}")
+            _my_g_debug(f"Background file not found: {file_path}")
+            self._set_fallback_background()
+            return GLib.SOURCE_REMOVE
+
+        file = Gio.File.new_for_path(file_path)
+        _my_g_debug(f"Loading background image: {file_path} (glycin={HAVE_GLYCIN})")
+
+        if HAVE_GLYCIN:
+            self._load_background_with_glycin(file)
+        else:
+            self._load_background_with_gtk(file)
+
+        return GLib.SOURCE_REMOVE
+
+    def _load_background_with_glycin(self, file):
+        """Load background image using glycin library."""
+        _my_g_debug("Starting glycin async load")
+        try:
+            loader = Gly.Loader.new(file)
+            loader.load_async(None, self._on_glycin_image_loaded)
+        except GLib.Error as e:
+            print(f"Warning: Could not load background image: {e.message}")
+            self._set_fallback_background()
+
+    def _on_glycin_image_loaded(self, loader, result):
+        """Callback when glycin finishes loading the image."""
+        try:
+            image = loader.load_finish(result)
+            image.next_frame_async(None, self._on_glycin_frame_loaded)
+        except GLib.Error as e:
+            print(f"Warning: Failed to load image: {e.message}")
+            self._set_fallback_background()
+
+    def _on_glycin_frame_loaded(self, image, result):
+        """Callback when glycin finishes loading a frame."""
+        try:
+            frame = image.next_frame_finish(result)
+            if frame is not None:
+                texture = GlyGtk4.frame_get_texture(frame)
+                self.background_picture.set_paintable(texture)
+                self.background_picture.set_visible(True)
+                _my_g_debug("Background image loaded (glycin)")
+            else:
+                print("Warning: No frame returned")
+                _my_g_debug("Glycin returned no frame")
+                self._set_fallback_background()
+        except GLib.Error as e:
+            print(f"Warning: Failed to get frame: {e.message}")
+            self._set_fallback_background()
+
+    def _load_background_with_gtk(self, file):
+        """Load background image using GTK's built-in loader."""
+        _my_g_debug("Loading background with GTK Picture.set_file")
+        try:
+            self.background_picture.set_file(file)
+            self.background_picture.set_visible(True)
+            _my_g_debug("Background image loaded (GTK)")
+        except GLib.Error as e:
+            print(f"Warning: Could not load background image: {e.message}")
+            self._set_fallback_background()
+
+    def _set_color_background(self):
+        """Set a solid color background."""
+        primary_color = self.bg_settings.get_string(BACKGROUND_PRIMARY_COLOR)
+        _my_g_debug(f"Setting solid color background: {primary_color}")
+        css_provider = Gtk.CssProvider()
+        css = f"window {{ background-color: {primary_color}; }}"
+        css_provider.load_from_string(css)
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(),
+            css_provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+
+    def _set_fallback_background(self):
+        """Set a fallback dark background."""
+        _my_g_debug("Setting fallback dark background")
+        css_provider = Gtk.CssProvider()
+        css = "window { background-color: #2e3436; }"
+        css_provider.load_from_string(css)
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(),
+            css_provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+
+    def _create_popup_menu(self):
+        """Create the popup menu with applications and icons."""
+        _my_g_debug("Creating popup menu")
+        self.popover = Gtk.Popover(has_arrow=False, position=Gtk.PositionType.BOTTOM)
+        self.popover.set_parent(self)
+
+        # Apply menu styling from CSS file
+        css_provider = Gtk.CssProvider()
+        css_file = _find_data_file(CSS_FILENAME)
+        if css_file is not None:
+            _my_g_debug(f"Loading menu CSS: {css_file}")
+            css_provider.load_from_path(css_file)
+            Gtk.StyleContext.add_provider_for_display(
+                Gdk.Display.get_default(),
+                css_provider,
+                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+            )
+        self.popover.add_css_class("menu-popover")
+
+        # Create a listbox to hold menu items
+        self.menu_listbox = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
+        self.menu_listbox.add_css_class("menu-listbox")
+        self.menu_listbox.connect('row-activated', self._on_row_activated)
+        self.popover.set_child(self.menu_listbox)
+
+        need_separator = False
+
+        # Add application entries, handling separators and exit
+        for entry in self.applications:
+            if entry is None:
+                # Separator - mark that we need one before the next item
+                if self.menu_listbox.get_first_child() is not None:
+                    need_separator = True
+            elif entry == "exit":
+                # Add separator before exit if needed
+                if need_separator:
+                    separator_row = Gtk.ListBoxRow(selectable=False, activatable=False)
+                    separator_row.add_css_class("separator-row")
+                    separator_row.set_child(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
+                    self.menu_listbox.append(separator_row)
+                    need_separator = False
+
+                row = self._create_menu_row(
+                    _("Exit"),
+                    "application-exit-symbolic",
+                    "exit"
+                )
+                self.menu_listbox.append(row)
+            elif entry.valid:
+                # Add separator if pending
+                if need_separator:
+                    separator_row = Gtk.ListBoxRow(selectable=False, activatable=False)
+                    separator_row.add_css_class("separator-row")
+                    separator_row.set_child(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
+                    self.menu_listbox.append(separator_row)
+                    need_separator = False
+
+                icon_name = entry.icon_name if entry.icon_name else "application-x-executable"
+                row = self._create_menu_row(
+                    entry.name,
+                    icon_name,
+                    entry
+                )
+                self.menu_listbox.append(row)
+
+    def _create_menu_row(self, label_text, icon_name, user_data):
+        """Create a menu row with icon and label."""
+        row = Gtk.ListBoxRow()
+        row.user_data = user_data
+
+        row_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        row_box.add_css_class("menu-row-content")
+
+        # Create icon - handle both themed icons and file paths
+        if icon_name and os.path.isabs(icon_name) and os.path.exists(icon_name):
+            # Icon is a file path
+            icon = Gtk.Image(file=icon_name)
+        else:
+            # Icon is a themed icon name
+            icon = Gtk.Image(icon_name=icon_name)
+        icon.add_css_class("menu-row-icon")
+
+        label = Gtk.Label(label=label_text, xalign=0, hexpand=True)
+
+        row_box.append(icon)
+        row_box.append(label)
+        row.set_child(row_box)
+
+        return row
+
+    def _on_row_activated(self, listbox, row):
+        """Handle row activation in the menu."""
+        self.popover.popdown()
+
+        user_data = row.user_data
+        if user_data == "exit":
+            _my_g_debug("Exit selected, quitting application")
+            self.app.quit()
+        elif isinstance(user_data, ApplicationEntry):
+            user_data.launch()
+
+    def _on_click(self, gesture, n_press, x, y):
+        """Handle click on the window."""
+        _my_g_debug(f"Click at ({x:.0f}, {y:.0f}), showing menu")
+        # Position the popover at the click location
+        rect = Gdk.Rectangle()
+        rect.x = int(x)
+        rect.y = int(y)
+        rect.width = 1
+        rect.height = 1
+        self.popover.set_pointing_to(rect)
+        self.popover.popup()
+
+class KioskMenuApp(Gtk.Application):
+    """Main application class."""
+
+    def __init__(self):
+        super().__init__(
+            application_id='org.gnome.Kiosk.Menu',
+            flags=Gio.ApplicationFlags.FLAGS_NONE
+        )
+        self.applications = []
+        self.window = None
+
+    def do_startup(self):
+        _my_g_debug("Application startup")
+        Gtk.Application.do_startup(self)
+
+        # Set up color scheme (dark/light theme) handling
+        self._setup_color_scheme()
+
+        # Load application configuration
+        self._load_config()
+
+    def _setup_color_scheme(self):
+        """Set up color scheme based on system settings."""
+        _my_g_debug("Setting up color scheme")
+        try:
+            self.interface_settings = Gio.Settings.new(INTERFACE_SCHEMA)
+            self.interface_settings.connect('changed::' + INTERFACE_COLOR_SCHEME,
+                                            self._on_color_scheme_changed)
+            self._apply_color_scheme()
+        except GLib.Error as e:
+            print(f"Warning: Could not load interface settings: {e.message}")
+
+    def _on_color_scheme_changed(self, settings, key):
+        """Handle color scheme settings change."""
+        self._apply_color_scheme()
+
+    def _apply_color_scheme(self):
+        """Apply the color scheme from settings."""
+        color_scheme = self.interface_settings.get_string(INTERFACE_COLOR_SCHEME)
+        _my_g_debug(f"Applying color scheme: {color_scheme}")
+        gtk_settings = Gtk.Settings.get_default()
+
+        # color-scheme values: 'default', 'prefer-dark', 'prefer-light'
+        if color_scheme == 'prefer-dark':
+            gtk_settings.set_property('gtk-application-prefer-dark-theme', True)
+        else:
+            gtk_settings.set_property('gtk-application-prefer-dark-theme', False)
+
+    def do_activate(self):
+        _my_g_debug("Application activate")
+        if self.window is None:
+            self.window = KioskMenuWindow(self, self.applications)
+        self.window.present()
+
+    def _load_config(self):
+        """Load application list from configuration file."""
+        config_file = _find_data_file(CONFIG_FILENAME)
+
+        if config_file is None:
+            print(f"Warning: No configuration file found. Searched in:")
+            print(f"  - {os.path.join(USER_CONFIG_DIR, CONFIG_FILENAME)}")
+            for config_dir in GLib.get_system_config_dirs():
+                if config_dir:
+                    print(f"  - {os.path.join(config_dir, 'gnome-kiosk', CONFIG_FILENAME)}")
+            print(f"  - {os.path.join(SYSTEM_CONFIG_DIR, CONFIG_FILENAME)}")
+            return
+
+        _my_g_debug(f"Loading configuration from: {config_file}")
+
+        try:
+            with open(config_file, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    # Skip empty lines and comments
+                    if not line or line.startswith('#'):
+                        continue
+
+                    # Handle separator
+                    if line == '--':
+                        self.applications.append(None)
+                        continue
+
+                    # Handle exit entry
+                    if line == 'exit':
+                        self.applications.append("exit")
+                        continue
+
+                    # Each line should be a .desktop file ID
+                    desktop_id = line
+                    if not desktop_id.endswith('.desktop'):
+                        desktop_id += '.desktop'
+
+                    app_entry = ApplicationEntry(desktop_id)
+                    if app_entry.valid:
+                        self.applications.append(app_entry)
+                        _my_g_debug(f"  Added application: {desktop_id}")
+                    else:
+                        print(f"  Skipped (invalid): {desktop_id}")
+
+        except IOError as e:
+            print(f"Error reading configuration file: {e}")
+
+
+def main():
+    _my_g_debug("Starting kiosk-menu")
+    app = KioskMenuApp()
+    return app.run(sys.argv)
+
+
+if __name__ == '__main__':
+    sys.exit(main())

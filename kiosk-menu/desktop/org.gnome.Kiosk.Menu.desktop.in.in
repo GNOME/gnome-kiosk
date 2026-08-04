@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Kiosk Menu
+Type=Application
+Exec=@bindir@/gnome-kiosk-menu
+Categories=GNOME;GTK;Core;System;
+NoDisplay=true
+X-GNOME-HiddenUnderSystemd=true
