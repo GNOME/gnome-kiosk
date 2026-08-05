@@ -20,7 +20,6 @@
 #include <meta/meta-background-actor.h>
 #include <meta/meta-background-content.h>
 #include <meta/meta-background-group.h>
-#include <meta/meta-background-image.h>
 #include <meta/meta-background.h>
 
 /* This code is a largely based on GNOME Shell implementation of ShellScreenshot */
