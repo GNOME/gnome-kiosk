@@ -1479,8 +1479,6 @@ kiosk_window_config_on_window_created (MetaDisplay *display,
                 meta_window_add_external_constraint (window,
                                                      META_EXTERNAL_CONSTRAINT (resize_constraint));
         }
-
-        kiosk_window_config_setup_window_struts (self, window);
 }
 
 static void
@@ -1595,6 +1593,9 @@ kiosk_window_config_apply_initial_config (KioskWindowConfig *kiosk_window_config
                 g_debug ("KioskWindowConfig: Setting window type 0x%x", window_type);
                 meta_window_set_type (window, window_type);
         }
+
+        /* Apply struts last as it's based on the window size and location */
+        kiosk_window_config_setup_window_struts (kiosk_window_config, window);
 }
 
 KioskWindowConfig *
