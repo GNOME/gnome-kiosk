@@ -1061,6 +1061,12 @@ kiosk_window_config_setup_window_struts (KioskWindowConfig *self,
         if (!kiosk_window_config_parse_strut (strut_string, &side))
                 return;
 
+        if (meta_window_get_window_type (window) != META_WINDOW_DOCK) {
+                g_warning ("KioskWindowConfig: Cannot set struts from window %s as it is not a dock window",
+                           meta_window_get_description (window));
+                return;
+        }
+
         g_hash_table_insert (self->window_struts, window, GINT_TO_POINTER (side));
 
         g_signal_connect (window, "position-changed",
@@ -1479,8 +1485,6 @@ kiosk_window_config_on_window_created (MetaDisplay *display,
                 meta_window_add_external_constraint (window,
                                                      META_EXTERNAL_CONSTRAINT (resize_constraint));
         }
-
-        kiosk_window_config_setup_window_struts (self, window);
 }
 
 static void
@@ -1595,6 +1599,9 @@ kiosk_window_config_apply_initial_config (KioskWindowConfig *kiosk_window_config
                 g_debug ("KioskWindowConfig: Setting window type 0x%x", window_type);
                 meta_window_set_type (window, window_type);
         }
+
+        /* Apply struts last as it's based on the window size and location */
+        kiosk_window_config_setup_window_struts (kiosk_window_config, window);
 }
 
 KioskWindowConfig *
