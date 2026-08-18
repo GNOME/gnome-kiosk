@@ -1398,7 +1398,7 @@ kiosk_window_config_on_window_created (MetaDisplay *display,
                                        gpointer     user_data)
 {
         KioskWindowConfig *self = KIOSK_WINDOW_CONFIG (user_data);
-        const char *output_name;
+        g_autofree const char *output_name = NULL;
         MtkRectangle lock_area;
         gboolean lock_on_monitor;
         gboolean lock_on_monitor_area;
